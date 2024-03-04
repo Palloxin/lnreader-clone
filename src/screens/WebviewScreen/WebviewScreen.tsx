@@ -7,11 +7,18 @@ import { useTheme } from '@hooks/persisted';
 import { WebviewScreenProps } from '@navigators/types';
 import { getUserAgent } from '@hooks/persisted/useUserAgent';
 import { resolveUrl } from '@services/plugin/fetch';
+import { storage } from '@plugins/helpers/storage';
 import Appbar from './components/Appbar';
+import Menu from './components/Menu';
+
+type StorageData = {
+  localStorage?: Record<string, any>;
+  sessionStorage?: Record<string, any>;
+};
 
 const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   const { name, url, pluginId, isNovel } = route.params;
-  const uri = pluginId ? resolveUrl(pluginId, url, isNovel) : url;
+  const uri = resolveUrl(pluginId, url, isNovel);
 
   const theme = useTheme();
   const webViewRef = useRef<WebView | null>(null);
@@ -21,11 +28,29 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   const [currentUrl, setCurrentUrl] = useState(uri);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [tempData, setTempData] = useState<StorageData>();
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const handleNavigation = (e: WebViewNavigation) => {
+    if (!e.loading) {
+      setTitle(e.title);
+    }
     setCurrentUrl(e.url);
     setCanGoBack(e.canGoBack);
     setCanGoForward(e.canGoForward);
+  };
+
+  const saveData = () => {
+    if (pluginId && tempData) {
+      storage.mmkv.set(
+        pluginId + '_LocalStorage',
+        JSON.stringify(tempData?.localStorage || {}),
+      );
+      storage.mmkv.set(
+        pluginId + '_SessionStorage',
+        JSON.stringify(tempData?.sessionStorage || {}),
+      );
+    }
   };
 
   useBackHandler(() => {
@@ -33,11 +58,22 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
       webViewRef.current?.goBack();
       return true;
     }
+    saveData();
     return false;
   });
 
+  const injectJavaScriptCode =
+    'window.ReactNativeWebView.postMessage(JSON.stringify({localStorage, sessionStorage}))';
+
   return (
     <>
+      <Menu
+        theme={theme}
+        currentUrl={currentUrl}
+        webView={webViewRef}
+        visible={menuVisible}
+        setMenuVisible={setMenuVisible}
+      />
       <Appbar
         title={title}
         theme={theme}
@@ -45,7 +81,11 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
         canGoBack={canGoBack}
         canGoForward={canGoForward}
         webView={webViewRef}
-        navigation={navigation}
+        setMenuVisible={setMenuVisible}
+        goBack={() => {
+          saveData();
+          navigation.goBack();
+        }}
       />
       <ProgressBar
         color={theme.primary}
@@ -56,13 +96,13 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
         userAgent={getUserAgent()}
         ref={webViewRef}
         source={{ uri }}
-        onLoadProgress={({ nativeEvent }) => {
-          setProgress(nativeEvent.progress);
-        }}
-        onLoadEnd={({ nativeEvent }) => {
-          setTitle(nativeEvent.title);
-        }}
+        onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
         onNavigationStateChange={handleNavigation}
+        injectedJavaScript={injectJavaScriptCode}
+        setDisplayZoomControls={true}
+        onMessage={({ nativeEvent }) =>
+          setTempData(JSON.parse(nativeEvent.data))
+        }
       />
     </>
   );
