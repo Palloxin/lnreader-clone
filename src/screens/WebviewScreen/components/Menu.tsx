@@ -21,11 +21,11 @@ const Menu: React.FC<MenuProps> = ({
   webView,
   setMenuVisible,
 }) => {
-  const insets = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
 
   return (
     <Pressable onPress={() => setMenuVisible(false)} style={styles.container}>
-      <View style={[styles.menuContainer, { top: insets.top }]}>
+      <View style={[styles.menuContainer, { top }]}>
         <Pressable
           style={[styles.menuButton, { backgroundColor: theme.surface2 }]}
           onPress={() => {

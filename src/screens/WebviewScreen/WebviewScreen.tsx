@@ -59,7 +59,8 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
     if (menuVisible) {
       setMenuVisible(false);
       return true;
-    } else if (canGoBack) {
+    }
+    if (canGoBack) {
       webViewRef.current?.goBack();
       return true;
     }
