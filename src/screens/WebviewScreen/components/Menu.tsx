@@ -98,6 +98,5 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 15,
-    marginVertical: 5,
   },
 });
