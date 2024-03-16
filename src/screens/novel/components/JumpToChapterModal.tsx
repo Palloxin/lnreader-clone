@@ -3,9 +3,9 @@ import { FlashList, FlashListProps } from '@shopify/flash-list';
 import React, { useState } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { getString } from '@strings/translations';
-import { Button } from '@components';
+import { Button, SwitchItem } from '@components';
 
-import { Modal, Portal, Switch, TextInput, Text } from 'react-native-paper';
+import { Modal, Portal, TextInput, Text } from 'react-native-paper';
 import { useTheme } from '@hooks/persisted';
 import { ChapterInfo, NovelInfo } from '@database/types';
 import { NovelScreenProps } from '@navigators/types';
@@ -27,6 +27,8 @@ const JumpToChapterModal = ({
   novel,
   chapterListRef,
 }: JumpToChapterModalProps) => {
+  const minNumber = Math.min(...chapters.map(c => c.chapterNumber || -1));
+  const maxNumber = Math.max(...chapters.map(c => c.chapterNumber || -1));
   const theme = useTheme();
   const [mode, setMode] = useState(false);
   const [openChapter, setOpenChapter] = useState(false);
@@ -100,15 +102,20 @@ const JumpToChapterModal = ({
   const onSubmit = () => {
     if (!mode) {
       const num = Number(text);
-      if (num && num > 0 && num <= chapters.length) {
+      if (num && num >= minNumber && num <= maxNumber) {
         if (openChapter) {
-          return navigateToChapter(chapters[num - 1]);
+          const chapter = chapters.find(c => c.chapterNumber === num);
+          if (chapter) {
+            return navigateToChapter(chapter);
+          }
+        } else {
+          const index = chapters.findIndex(c => c.chapterNumber === num);
+          return scrollToIndex(index);
         }
-        return scrollToIndex(num - 1);
       }
       return setError(
         getString('novelScreen.jumpToChapterModal.error.validChapterNumber') +
-          ` (${num <= 0 ? '≤ 0' : '≤ ' + chapters.length})`,
+          ` (${num < minNumber ? '≥ ' + minNumber : '≤ ' + maxNumber})`,
       );
     } else {
       const searchedChapters = chapters.filter(chap =>
@@ -160,7 +167,7 @@ const JumpToChapterModal = ({
               mode
                 ? getString('novelScreen.jumpToChapterModal.chapterName')
                 : getString('novelScreen.jumpToChapterModal.chapterNumber') +
-                  ` (≤ ${chapters.length})`
+                  ` (≥ ${minNumber},  ≤ ${maxNumber})`
             }
             onChangeText={onChangeText}
             onSubmitEditing={onSubmit}
@@ -172,26 +179,20 @@ const JumpToChapterModal = ({
             error={error.length > 0}
           />
           <Text style={[styles.errorText, { color: errorColor }]}>{error}</Text>
-          <View style={styles.switch}>
-            <Text style={{ color: theme.onSurface }}>
-              {getString('novelScreen.jumpToChapterModal.openChapter')}
-            </Text>
-            <Switch
-              value={openChapter}
-              onValueChange={() => setOpenChapter(!openChapter)}
-              color={theme.primary}
-            />
-          </View>
-          <View style={styles.switch}>
-            <Text style={{ color: theme.onSurface }}>
-              {getString('novelScreen.jumpToChapterModal.chapterName')}
-            </Text>
-            <Switch
-              value={mode}
-              onValueChange={() => setMode(!mode)}
-              color={theme.primary}
-            />
-          </View>
+          <SwitchItem
+            label={getString('novelScreen.jumpToChapterModal.openChapter')}
+            value={openChapter}
+            theme={theme}
+            onPress={() => setOpenChapter(!openChapter)}
+            size={20}
+          />
+          <SwitchItem
+            label={getString('novelScreen.jumpToChapterModal.chapterName')}
+            value={mode}
+            theme={theme}
+            onPress={() => setMode(!mode)}
+            size={20}
+          />
         </View>
         {result.length ? (
           <View style={[styles.flashlist, { borderColor: theme.outline }]}>
@@ -237,12 +238,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     paddingTop: 12,
-  },
-  switch: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 8,
   },
   flashlist: {
     marginTop: 8,

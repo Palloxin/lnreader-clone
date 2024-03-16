@@ -1,92 +1,91 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import TextTicker from 'react-native-text-ticker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MarqueeText from 'react-native-marquee';
-import { IconButton } from 'react-native-paper';
-import WebView from 'react-native-webview';
 
+import { IconButtonV2 } from '@components';
 import { ThemeColors } from '@theme/types';
 
 interface AppbarProps {
   title: string;
   theme: ThemeColors;
+  loading: boolean;
   currentUrl: string;
   canGoBack: boolean;
   canGoForward: boolean;
   webView: RefObject<WebView>;
-  goBack: () => void;
   setMenuVisible: () => void;
+  goBack: () => void;
 }
 
 const Appbar: React.FC<AppbarProps> = ({
   title,
   theme,
+  loading,
   currentUrl,
   canGoBack,
   canGoForward,
   webView,
-  goBack,
   setMenuVisible,
+  goBack,
 }) => {
   const { top } = useSafeAreaInsets();
 
   return (
     <View
-      style={{
-        paddingTop: top,
-        backgroundColor: theme.surface,
-        flexDirection: 'row',
-      }}
+      style={[
+        styles.container,
+        { paddingTop: top, backgroundColor: theme.surface },
+      ]}
     >
-      <IconButton
-        icon="close"
-        iconColor={theme.onSurface}
+      <IconButtonV2
+        name="close"
+        color={theme.onSurface}
         onPress={goBack}
-        theme={{ colors: { ...theme } }}
+        theme={theme}
       />
-
-      <View style={{ flex: 1, justifyContent: 'center' }}>
+      <View style={styles.titleContainer}>
         <Text
-          style={{
-            color: theme.onSurface,
-            textAlign: 'left',
-          }}
+          style={[styles.title, { color: theme.onSurface }]}
           numberOfLines={1}
         >
           {title}
         </Text>
-        <MarqueeText
-          style={{ color: theme.onSurface, textAlign: 'left' }}
-          speed={0.5}
-          marqueeOnStart={true}
-          loop={true}
-          consecutive={true}
-          delay={2000}
+        <TextTicker
+          style={[styles.url, { color: theme.onSurfaceVariant }]}
+          loop
+          scrollSpeed={45}
+          bounceSpeed={100}
+          marqueeDelay={1000}
+          bounceDelay={1000}
+          isInteraction={false}
+          disabled={loading}
         >
           {currentUrl}
-        </MarqueeText>
+        </TextTicker>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-        <IconButton
-          icon="arrow-left"
-          iconColor={theme.onSurface}
+      <View style={styles.iconContainer}>
+        <IconButtonV2
+          name="arrow-left"
+          color={theme.onSurface}
           disabled={!canGoBack}
           onPress={() => webView.current?.goBack()}
-          theme={{ colors: { ...theme } }}
+          theme={theme}
         />
 
-        <IconButton
-          icon="arrow-right"
-          iconColor={theme.onSurface}
+        <IconButtonV2
+          name="arrow-right"
+          color={theme.onSurface}
           disabled={!canGoForward}
           onPress={() => webView.current?.goForward()}
-          theme={{ colors: { ...theme } }}
+          theme={theme}
         />
-        <IconButton
-          icon="dots-vertical"
-          iconColor={theme.onSurface}
+
+        <IconButtonV2
+          name="dots-vertical"
+          color={theme.onSurface}
           onPress={() => setMenuVisible(true)}
-          theme={{ colors: { ...theme } }}
+          theme={theme}
         />
       </View>
     </View>
@@ -94,3 +93,24 @@ const Appbar: React.FC<AppbarProps> = ({
 };
 
 export default Appbar;
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+  },
+  titleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    paddingLeft: 2,
+    fontSize: 18,
+  },
+  url: {
+    fontSize: 16,
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+});

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { ProgressBar } from 'react-native-paper';
 
+import { getPlugin } from '@plugins/pluginManager';
 import { useBackHandler } from '@hooks';
 import { useTheme } from '@hooks/persisted';
 import { WebviewScreenProps } from '@navigators/types';
@@ -18,11 +19,13 @@ type StorageData = {
 
 const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   const { name, url, pluginId, isNovel } = route.params;
+  const isSave = getPlugin(pluginId)?.webStorageUtilized;
   const uri = resolveUrl(pluginId, url, isNovel);
 
   const theme = useTheme();
   const webViewRef = useRef<WebView | null>(null);
 
+  const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [title, setTitle] = useState(name || '');
   const [currentUrl, setCurrentUrl] = useState(uri);
@@ -35,13 +38,14 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
     if (!e.loading) {
       setTitle(e.title);
     }
+    setLoading(e.loading);
     setCurrentUrl(e.url);
     setCanGoBack(e.canGoBack);
     setCanGoForward(e.canGoForward);
   };
 
   const saveData = () => {
-    if (pluginId && tempData) {
+    if (pluginId && tempData && isSave) {
       storage.mmkv.set(
         pluginId + '_LocalStorage',
         JSON.stringify(tempData?.localStorage || {}),
@@ -54,6 +58,10 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   };
 
   useBackHandler(() => {
+    if (menuVisible) {
+      setMenuVisible(false);
+      return true;
+    }
     if (canGoBack) {
       webViewRef.current?.goBack();
       return true;
@@ -67,16 +75,10 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
 
   return (
     <>
-      <Menu
-        theme={theme}
-        currentUrl={currentUrl}
-        webView={webViewRef}
-        visible={menuVisible}
-        setMenuVisible={setMenuVisible}
-      />
       <Appbar
         title={title}
         theme={theme}
+        loading={loading && progress !== 1}
         currentUrl={currentUrl}
         canGoBack={canGoBack}
         canGoForward={canGoForward}
@@ -90,20 +92,30 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
       <ProgressBar
         color={theme.primary}
         progress={progress}
-        visible={progress !== 1}
+        visible={loading && progress !== 1}
       />
       <WebView
         userAgent={getUserAgent()}
         ref={webViewRef}
         source={{ uri }}
-        onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
-        onNavigationStateChange={handleNavigation}
-        injectedJavaScript={injectJavaScriptCode}
         setDisplayZoomControls={true}
+        setBuiltInZoomControls={false}
+        setSupportMultipleWindows={false}
+        injectedJavaScript={injectJavaScriptCode}
+        onNavigationStateChange={handleNavigation}
+        onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
         onMessage={({ nativeEvent }) =>
           setTempData(JSON.parse(nativeEvent.data))
         }
       />
+      {menuVisible ? (
+        <Menu
+          theme={theme}
+          currentUrl={currentUrl}
+          webView={webViewRef}
+          setMenuVisible={setMenuVisible}
+        />
+      ) : null}
     </>
   );
 };

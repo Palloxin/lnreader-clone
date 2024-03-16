@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - db
+      - build
 jobs:
   build-android:
     name: Build App
