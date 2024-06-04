@@ -61,7 +61,7 @@ public class EpubParser extends ReactContextBaseJavaModule implements ActivityEv
             PyObject epubParser = py.getModule("epubParser");
 
             if (epubPath != null && epubPath.toLowerCase().endsWith(".epub")) {
-                PyObject savePath = epubParser.callAttr("parseEpub", epubPath, "/data/data/com.rajarsheechatterjee.LNReader/files/");
+                PyObject savePath = epubParser.callAttr("parseEpub", epubPath, "/data/data/com.rajarsheechatterjee.LNReader4/files/");
                 promise.resolve(savePath.toString());
             }
         }
