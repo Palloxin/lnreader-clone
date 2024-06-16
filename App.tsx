@@ -37,7 +37,7 @@ if (!BackgroundService.isRunning()) {
   MMKVStorage.delete(BACKGROUND_ACTION);
 }
 
-NavigationBar.setBehaviorAsync('overlay-swipe');
+NavigationBar.setBehaviorAsync('inset-swipe');
 const App = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
