@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import { enableFreeze } from 'react-native-screens';
+import * as NavigationBar from 'expo-navigation-bar';
 
 enableFreeze(true);
 
@@ -36,6 +37,7 @@ if (!BackgroundService.isRunning()) {
   MMKVStorage.delete(BACKGROUND_ACTION);
 }
 
+NavigationBar.setBehaviorAsync('overlay-swipe');
 const App = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
