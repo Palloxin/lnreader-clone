@@ -13,7 +13,6 @@ import { GlobalSearchResult } from '../hooks/useGlobalSearch';
 import GlobalSearchNovelItem from './GlobalSearchNovelItem';
 import { useLibraryNovels } from '@screens/library/hooks/useLibrary';
 import { LibraryNovelInfo } from '@database/types';
-import GlobalSearchSkeletonLoading from '@screens/browse/loadingAnimation/GlobalSearchSkeletonLoading';
 import { switchNovelToLibrary } from '@database/queries/NovelQueries';
 
 interface GlobalSearchResultsListProps {
@@ -25,12 +24,27 @@ const GlobalSearchResultsList: React.FC<GlobalSearchResultsListProps> = ({
   searchResults,
   ListEmptyComponent,
 }) => {
-  const theme = useTheme();
-  const navigation = useNavigation<StackNavigationProp<any>>();
   const keyExtractor = useCallback(
     (item: GlobalSearchResult) => item.plugin.id,
     [],
   );
+
+  return (
+    <FlatList<GlobalSearchResult>
+      keyExtractor={keyExtractor}
+      data={searchResults}
+      contentContainerStyle={styles.resultList}
+      renderItem={({ item }) => <GlobalSearchSourceResults item={item} />}
+      ListEmptyComponent={ListEmptyComponent}
+    />
+  );
+};
+
+const GlobalSearchSourceResults: React.FC<{ item: GlobalSearchResult }> = ({
+  item,
+}) => {
+  const theme = useTheme();
+  const navigation = useNavigation<StackNavigationProp<any>>();
   const { library, setLibrary } = useLibraryNovels();
 
   const novelInLibrary = (pluginId: string, novelPath: string) =>
@@ -46,110 +60,103 @@ const GlobalSearchResultsList: React.FC<GlobalSearchResultsListProps> = ({
     [],
   );
 
-  return (
-    <FlatList<GlobalSearchResult>
-      keyExtractor={keyExtractor}
-      data={searchResults}
-      contentContainerStyle={styles.resultList}
-      renderItem={({ item }) => (
-        <>
-          <View>
-            <Pressable
-              android_ripple={{
-                color: color(theme.primary).alpha(0.12).string(),
-              }}
-              style={styles.sourceHeader}
-              onPress={() =>
-                navigation.navigate('SourceScreen', {
-                  pluginId: item.plugin.id,
-                  pluginName: item.plugin.name,
-                  site: item.plugin.site,
-                })
-              }
-            >
-              <View>
-                <Text style={[styles.sourceName, { color: theme.onSurface }]}>
-                  {item.plugin.name}
-                </Text>
-                <Text
-                  style={[styles.language, { color: theme.onSurfaceVariant }]}
-                >
-                  {item.plugin.lang}
-                </Text>
-              </View>
-              <MaterialCommunityIcons
-                name="arrow-right"
-                size={24}
-                color={theme.onSurface}
-              />
-            </Pressable>
-            {item.isLoading ? (
-              <GlobalSearchSkeletonLoading theme={theme} />
-            ) : item.error ? (
-              <Text style={[styles.error, { color: errorColor }]}>
-                {item.error}
+  let elm = useMemo(
+    () => (
+      <>
+        <View>
+          <Pressable
+            android_ripple={{
+              color: color(theme.primary).alpha(0.12).string(),
+            }}
+            style={styles.sourceHeader}
+            onPress={() =>
+              navigation.navigate('SourceScreen', {
+                pluginId: item.plugin.id,
+                pluginName: item.plugin.name,
+                site: item.plugin.site,
+              })
+            }
+          >
+            <View>
+              <Text style={[styles.sourceName, { color: theme.onSurface }]}>
+                {item.plugin.name}
               </Text>
-            ) : (
-              <FlatList
-                horizontal
-                contentContainerStyle={styles.novelsContainer}
-                keyExtractor={novelItem =>
-                  item.plugin.id + '_' + novelItem.path
-                }
-                data={item.novels}
-                ListEmptyComponent={
-                  <Text
-                    style={[
-                      styles.listEmpty,
-                      { color: theme.onSurfaceVariant },
-                    ]}
-                  >
-                    {getString('sourceScreen.noResultsFound')}
-                  </Text>
-                }
-                renderItem={({ item: novelItem }) => {
-                  const inLibrary = novelInLibrary(
-                    item.plugin.id,
-                    novelItem.path,
-                  );
+              <Text
+                style={[styles.language, { color: theme.onSurfaceVariant }]}
+              >
+                {item.plugin.lang}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="arrow-right"
+              size={24}
+              color={theme.onSurface}
+            />
+          </Pressable>
+          {item.isLoading ? (
+            // <GlobalSearchSkeletonLoading theme={theme} />
+            <Text style={[styles.error, { color: errorColor }]}>Loading</Text>
+          ) : item.error ? (
+            <Text style={[styles.error, { color: errorColor }]}>
+              {item.error}
+            </Text>
+          ) : (
+            <FlatList
+              horizontal
+              contentContainerStyle={styles.novelsContainer}
+              keyExtractor={novelItem => item.plugin.id + '_' + novelItem.path}
+              data={item.novels}
+              ListEmptyComponent={
+                <Text
+                  style={[styles.listEmpty, { color: theme.onSurfaceVariant }]}
+                >
+                  {getString('sourceScreen.noResultsFound')}
+                </Text>
+              }
+              renderItem={({ item: novelItem }) => {
+                const inLibrary = novelInLibrary(
+                  item.plugin.id,
+                  novelItem.path,
+                );
 
-                  return (
-                    <GlobalSearchNovelItem
-                      novel={novelItem}
-                      pluginId={item.plugin.id}
-                      inLibrary={inLibrary}
-                      navigateToNovel={navigateToNovel}
-                      theme={theme}
-                      onLongPress={() => {
-                        setLibrary(prevValues => {
-                          if (inLibrary) {
-                            return [
-                              ...prevValues.filter(
-                                novel => novel.path !== novelItem.path,
-                              ),
-                            ];
-                          } else {
-                            return [
-                              ...prevValues,
-                              {
-                                path: novelItem.path,
-                              } as LibraryNovelInfo,
-                            ];
-                          }
-                        });
-                        switchNovelToLibrary(novelItem.path, item.plugin.id);
-                      }}
-                    />
-                  );
-                }}
-              />
-            )}
-          </View>
-        </>
-      )}
-      ListEmptyComponent={ListEmptyComponent}
-    />
+                return (
+                  <GlobalSearchNovelItem
+                    novel={novelItem}
+                    pluginId={item.plugin.id}
+                    inLibrary={inLibrary}
+                    navigateToNovel={navigateToNovel}
+                    theme={theme}
+                    onLongPress={() => {
+                      setLibrary(prevValues => {
+                        if (inLibrary) {
+                          return [
+                            ...prevValues.filter(
+                              novel => novel.path !== novelItem.path,
+                            ),
+                          ];
+                        } else {
+                          return [
+                            ...prevValues,
+                            {
+                              path: novelItem.path,
+                            } as LibraryNovelInfo,
+                          ];
+                        }
+                      });
+                      switchNovelToLibrary(novelItem.path, item.plugin.id);
+                    }}
+                  />
+                );
+              }}
+            />
+          )}
+        </View>
+      </>
+    ),
+    [item.isLoading],
   );
+
+  return elm;
 };
 
 export default GlobalSearchResultsList;
