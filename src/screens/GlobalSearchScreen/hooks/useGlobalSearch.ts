@@ -41,7 +41,7 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
       }),
     );
 
-    setSearchResults(defaultResult);
+    setSearchResults(defaultResult.sort(novelResultSorter));
 
     let running = 0;
 
@@ -54,43 +54,29 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
         const res = await plugin.searchNovels(searchText, 1);
 
         setSearchResults(prevState =>
-          prevState.map(prevResult =>
-            prevResult.plugin.id === plugin.id
-              ? { ...prevResult, novels: res, isLoading: false }
-              : { ...prevResult },
-          ),
-        );
-
-        setSearchResults(prevState =>
-          prevState.sort(
-            (
-              { novels: a, plugin: { name: aName } },
-              { novels: b, plugin: { name: bName } },
-            ) => {
-              if (!a.length) {
-                return 1;
-              }
-              if (!b.length) {
-                return -1;
-              }
-
-              return aName.localeCompare(bName);
-            },
-          ),
+          prevState
+            .map(prevResult =>
+              prevResult.plugin.id === plugin.id
+                ? { ...prevResult, novels: res, isLoading: false }
+                : { ...prevResult },
+            )
+            .sort(novelResultSorter),
         );
       } catch (error: any) {
         const errorMessage = error?.message || String(error);
         setSearchResults(prevState =>
-          prevState.map(prevResult =>
-            prevResult.plugin.id === _plugin.id
-              ? {
-                  ...prevResult,
-                  novels: [],
-                  isLoading: false,
-                  error: errorMessage,
-                }
-              : { ...prevResult },
-          ),
+          prevState
+            .map(prevResult =>
+              prevResult.plugin.id === _plugin.id
+                ? {
+                    ...prevResult,
+                    novels: [],
+                    isLoading: false,
+                    error: errorMessage,
+                  }
+                : { ...prevResult },
+            )
+            .sort(novelResultSorter),
         );
       } finally {
         setProgress(
@@ -132,3 +118,20 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
 
   return { searchResults, globalSearch, progress };
 };
+
+function novelResultSorter(
+  { novels: a, plugin: { name: aName } }: GlobalSearchResult,
+  { novels: b, plugin: { name: bName } }: GlobalSearchResult,
+) {
+  if (!a.length && !b.length) {
+    return aName.localeCompare(bName);
+  }
+  if (!a.length) {
+    return 1;
+  }
+  if (!b.length) {
+    return -1;
+  }
+
+  return aName.localeCompare(bName);
+}
