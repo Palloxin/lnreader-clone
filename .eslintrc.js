@@ -1,4 +1,4 @@
-module.exports = {
+chattermodule.exports = {
   root: true,
   extends: '@react-native',
   parser: '@typescript-eslint/parser',

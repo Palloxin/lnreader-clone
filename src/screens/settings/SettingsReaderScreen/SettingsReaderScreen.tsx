@@ -47,7 +47,7 @@ const SettingsReaderScreen = () => {
     'artist': null,
     'author': 'LNReader-kun',
     'cover':
-      'file:///storage/emulated/0/Android/data/com.rajarsheechatterjee.LNReader/files/Novels/lightnovelcave/16/cover.png?1717862123181',
+      'file:///storage/emulated/0/Android/data/com.rajarsheechatterjee.LNReader2/files/Novels/lightnovelcave/16/cover.png?1717862123181',
     'genres': 'Action,Hero',
     'id': 16,
     'inLibrary': 1,
