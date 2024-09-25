@@ -17,6 +17,12 @@ export interface GlobalSearchResult {
 
 export const useGlobalSearch = ({ defaultSearchText }: Props) => {
   const isMounted = useRef(true);
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+    },
+    [],
+  );
 
   const { filteredInstalledPlugins } = usePlugins();
 
@@ -40,7 +46,6 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
     let running = 0;
 
     async function searchInPlugin(_plugin: PluginItem) {
-      running++;
       try {
         const plugin = getPlugin(_plugin.id);
         if (!plugin) {
@@ -91,7 +96,6 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
         setProgress(
           prevState => prevState + 1 / filteredInstalledPlugins.length,
         );
-        running--;
       }
     }
 
@@ -102,13 +106,20 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
 
     (async () => {
       for (let _plugin of filteredSortedInstalledPlugins) {
-        if (!isMounted.current) {
-          break;
-        }
         while (running >= globalSearchConcurrency) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        searchInPlugin(_plugin).then();
+        if (!isMounted.current) {
+          break;
+        }
+        running++;
+        searchInPlugin(_plugin)
+          .then(() => {
+            running--;
+          })
+          .catch(() => {
+            running--;
+          });
       }
     })();
   };
