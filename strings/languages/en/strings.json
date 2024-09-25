@@ -143,6 +143,7 @@
   },
   "browseSettings": "Browse Settings",
   "browseSettingsScreen": {
+    "concurrentSearches": "Concurrent Source Searches",
     "languages": "Languages",
     "onlyShowPinnedSources": "Only show pinned sources",
     "searchAllSources": "Search all sources",

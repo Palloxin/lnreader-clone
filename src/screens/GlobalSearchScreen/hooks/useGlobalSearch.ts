@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { NovelItem, PluginItem } from '@plugins/types';
 import { getPlugin } from '@plugins/pluginManager';
-import { usePlugins } from '@hooks/persisted';
+import { useBrowseSettings, usePlugins } from '@hooks/persisted';
 
 interface Props {
   defaultSearchText?: string;
@@ -23,6 +23,8 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
   const [searchResults, setSearchResults] = useState<GlobalSearchResult[]>([]);
   const [progress, setProgress] = useState(0);
 
+  const { globalSearchConcurrency } = useBrowseSettings();
+
   const globalSearch = (searchText: string) => {
     const defaultResult: GlobalSearchResult[] = filteredInstalledPlugins.map(
       plugin => ({
@@ -34,11 +36,6 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
     );
 
     setSearchResults(defaultResult);
-
-    //Sort so we load the plugins results in the same order as they show on the list
-    let filteredSortedInstalledPlugins = [...filteredInstalledPlugins].sort(
-      (a, b) => a.name.localeCompare(b.name),
-    );
 
     let running = 0;
 
@@ -98,12 +95,17 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
       }
     }
 
+    //Sort so we load the plugins results in the same order as they show on the list
+    let filteredSortedInstalledPlugins = [...filteredInstalledPlugins].sort(
+      (a, b) => a.name.localeCompare(b.name),
+    );
+
     (async () => {
       for (let _plugin of filteredSortedInstalledPlugins) {
         if (!isMounted.current) {
           break;
         }
-        while (running >= 2) {
+        while (running >= globalSearchConcurrency) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         searchInPlugin(_plugin).then();

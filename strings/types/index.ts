@@ -126,6 +126,7 @@ export interface StringMap {
   'browseScreen.updateFailed': 'string';
   'browseScreen.updatedTo': 'string';
   'browseSettings': 'string';
+  'browseSettingsScreen.concurrentSearches': 'string';
   'browseSettingsScreen.languages': 'string';
   'browseSettingsScreen.onlyShowPinnedSources': 'string';
   'browseSettingsScreen.searchAllSources': 'string';

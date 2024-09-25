@@ -14,6 +14,7 @@ import GlobalSearchNovelItem from './GlobalSearchNovelItem';
 import { useLibraryNovels } from '@screens/library/hooks/useLibrary';
 import { LibraryNovelInfo } from '@database/types';
 import { switchNovelToLibrary } from '@database/queries/NovelQueries';
+import GlobalSearchSkeletonLoading from '@screens/browse/loadingAnimation/GlobalSearchSkeletonLoading';
 
 interface GlobalSearchResultsListProps {
   searchResults: GlobalSearchResult[];
@@ -60,7 +61,7 @@ const GlobalSearchSourceResults: React.FC<{ item: GlobalSearchResult }> = ({
     [],
   );
 
-  let elm = useMemo(
+  return useMemo(
     () => (
       <>
         <View>
@@ -94,9 +95,9 @@ const GlobalSearchSourceResults: React.FC<{ item: GlobalSearchResult }> = ({
             />
           </Pressable>
           {item.isLoading ? (
-            // <GlobalSearchSkeletonLoading theme={theme} />
-            <Text style={[styles.error, { color: errorColor }]}>Loading</Text>
-          ) : item.error ? (
+            <GlobalSearchSkeletonLoading theme={theme} />
+          ) : // <Text style={[styles.error, {color: errorColor}]}>Loading</Text>
+          item.error ? (
             <Text style={[styles.error, { color: errorColor }]}>
               {item.error}
             </Text>
@@ -155,8 +156,6 @@ const GlobalSearchSourceResults: React.FC<{ item: GlobalSearchResult }> = ({
     ),
     [item.isLoading],
   );
-
-  return elm;
 };
 
 export default GlobalSearchResultsList;

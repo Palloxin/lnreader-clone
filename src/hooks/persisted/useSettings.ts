@@ -56,6 +56,7 @@ export interface AppSettings {
 export interface BrowseSettings {
   showMyAnimeList: boolean;
   showAniList: boolean;
+  globalSearchConcurrency: number;
 }
 
 export interface LibrarySettings {
@@ -153,6 +154,7 @@ const initialAppSettings: AppSettings = {
 const initialBrowseSettings: BrowseSettings = {
   showMyAnimeList: true,
   showAniList: true,
+  globalSearchConcurrency: 5,
 };
 
 export const initialChapterGeneralSettings: ChapterGeneralSettings = {
