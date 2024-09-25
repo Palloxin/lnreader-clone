@@ -14,6 +14,7 @@ import GlobalSearchNovelItem from './GlobalSearchNovelItem';
 import { useLibraryNovels } from '@screens/library/hooks/useLibrary';
 import { LibraryNovelInfo } from '@database/types';
 import { switchNovelToLibrary } from '@database/queries/NovelQueries';
+import GlobalSearchSkeletonLoading from '@screens/browse/loadingAnimation/GlobalSearchSkeletonLoading';
 
 interface GlobalSearchResultsListProps {
   searchResults: GlobalSearchResult[];
@@ -94,11 +95,11 @@ const GlobalSearchSourceResults: React.FC<{ item: GlobalSearchResult }> = ({
             />
           </Pressable>
           {item.isLoading ? (
-            // <GlobalSearchSkeletonLoading theme={theme} /> //Slow :pain:
-            <Text style={[styles.error, { color: theme.onSurface }]}>
-              Loading...
-            </Text>
-          ) : item.error ? (
+            <GlobalSearchSkeletonLoading theme={theme} /> //Slow :pain:
+          ) : // <Text style={[styles.error, { color: theme.onSurface }]}>
+          //   Loading...
+          // </Text>
+          item.error ? (
             <Text style={[styles.error, { color: errorColor }]}>
               {item.error}
             </Text>
