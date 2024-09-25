@@ -29,7 +29,7 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
   const [searchResults, setSearchResults] = useState<GlobalSearchResult[]>([]);
   const [progress, setProgress] = useState(0);
 
-  const { globalSearchConcurrency = 5 } = useBrowseSettings();
+  const { globalSearchConcurrency = 1 } = useBrowseSettings();
 
   const globalSearch = (searchText: string) => {
     const defaultResult: GlobalSearchResult[] = filteredInstalledPlugins.map(

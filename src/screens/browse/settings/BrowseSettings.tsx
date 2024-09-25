@@ -35,7 +35,7 @@ const BrowseSettings = ({ navigation }: BrowseSettingsScreenProp) => {
         theme={theme}
       />
       <ConcurrentSearchesModal
-        globalSearchConcurrency={globalSearchConcurrency ?? 5}
+        globalSearchConcurrency={globalSearchConcurrency ?? 1}
         modalVisible={globalSearchConcurrencyModal.value}
         hideModal={globalSearchConcurrencyModal.setFalse}
         theme={theme}
@@ -49,7 +49,7 @@ const BrowseSettings = ({ navigation }: BrowseSettingsScreenProp) => {
             </List.SubHeader>
             <List.Item
               title={getString('browseSettingsScreen.concurrentSearches')}
-              description={(globalSearchConcurrency ?? 5).toString()}
+              description={(globalSearchConcurrency ?? 1).toString()}
               onPress={globalSearchConcurrencyModal.setTrue}
               theme={theme}
             />
