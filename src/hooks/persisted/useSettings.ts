@@ -56,7 +56,7 @@ export interface AppSettings {
 export interface BrowseSettings {
   showMyAnimeList: boolean;
   showAniList: boolean;
-  globalSearchConcurrency: number;
+  globalSearchConcurrency?: number;
 }
 
 export interface LibrarySettings {
