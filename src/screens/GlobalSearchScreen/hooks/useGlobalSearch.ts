@@ -40,8 +40,65 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
       (a, b) => a.name.localeCompare(b.name),
     );
 
+    let running = 0;
+
+    async function searchInPlugin(_plugin: PluginItem) {
+      running++;
+      try {
+        const plugin = getPlugin(_plugin.id);
+        if (!plugin) {
+          throw new Error(`Unknown plugin: ${_plugin.id}`);
+        }
+        const res = await plugin.searchNovels(searchText, 1);
+
+        setSearchResults(prevState =>
+          prevState.map(prevResult =>
+            prevResult.plugin.id === plugin.id
+              ? { ...prevResult, novels: res, isLoading: false }
+              : { ...prevResult },
+          ),
+        );
+
+        setSearchResults(prevState =>
+          prevState.sort(
+            (
+              { novels: a, plugin: { name: aName } },
+              { novels: b, plugin: { name: bName } },
+            ) => {
+              if (!a.length) {
+                return 1;
+              }
+              if (!b.length) {
+                return -1;
+              }
+
+              return aName.localeCompare(bName);
+            },
+          ),
+        );
+      } catch (error: any) {
+        const errorMessage = error?.message || String(error);
+        setSearchResults(prevState =>
+          prevState.map(prevResult =>
+            prevResult.plugin.id === _plugin.id
+              ? {
+                  ...prevResult,
+                  novels: [],
+                  isLoading: false,
+                  error: errorMessage,
+                }
+              : { ...prevResult },
+          ),
+        );
+      } finally {
+        setProgress(
+          prevState => prevState + 1 / filteredInstalledPlugins.length,
+        );
+        running--;
+      }
+    }
+
     (async () => {
-      let running = 0;
       for (let _plugin of filteredSortedInstalledPlugins) {
         if (!isMounted.current) {
           break;
@@ -49,61 +106,7 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
         while (running >= 2) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        running++;
-        (async () => {
-          try {
-            const plugin = getPlugin(_plugin.id);
-            if (!plugin) {
-              throw new Error(`Unknown plugin: ${_plugin.id}`);
-            }
-            const res = await plugin.searchNovels(searchText, 1);
-
-            setSearchResults(prevState =>
-              prevState.map(prevResult =>
-                prevResult.plugin.id === plugin.id
-                  ? { ...prevResult, novels: res, isLoading: false }
-                  : { ...prevResult },
-              ),
-            );
-
-            setSearchResults(prevState =>
-              prevState.sort(
-                (
-                  { novels: a, plugin: { name: aName } },
-                  { novels: b, plugin: { name: bName } },
-                ) => {
-                  if (!a.length) {
-                    return 1;
-                  }
-                  if (!b.length) {
-                    return -1;
-                  }
-
-                  return aName.localeCompare(bName);
-                },
-              ),
-            );
-          } catch (error: any) {
-            const errorMessage = error?.message || String(error);
-            setSearchResults(prevState =>
-              prevState.map(prevResult =>
-                prevResult.plugin.id === _plugin.id
-                  ? {
-                      ...prevResult,
-                      novels: [],
-                      isLoading: false,
-                      error: errorMessage,
-                    }
-                  : { ...prevResult },
-              ),
-            );
-          } finally {
-            setProgress(
-              prevState => prevState + 1 / filteredInstalledPlugins.length,
-            );
-            running--;
-          }
-        })();
+        searchInPlugin(_plugin).then();
       }
     })();
   };
