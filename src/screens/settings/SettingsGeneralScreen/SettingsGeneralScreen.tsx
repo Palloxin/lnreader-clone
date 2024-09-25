@@ -50,6 +50,7 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
     ['lastUpdatedAt', 'libraryScreen.bottomSheet.sortOrders.lastUpdated'],
   ]);
   const {
+    disableLoadingAnimations,
     updateLibraryOnLaunch,
     downloadNewChapters,
     onlyUpdateOngoingNovels,
@@ -144,6 +145,19 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
               sortOrderDisplay[1]
             }
             onPress={novelSortModalRef.setTrue}
+            theme={theme}
+          />
+          <SettingSwitch
+            label={getString('generalSettingsScreen.disableLoadingAnimations')}
+            description={getString(
+              'generalSettingsScreen.disableLoadingAnimationsDesc',
+            )}
+            value={disableLoadingAnimations}
+            onPress={() =>
+              setAppSettings({
+                disableLoadingAnimations: !disableLoadingAnimations,
+              })
+            }
             theme={theme}
           />
           <List.Divider theme={theme} />

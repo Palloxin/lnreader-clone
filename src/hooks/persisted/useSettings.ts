@@ -28,6 +28,7 @@ export interface AppSettings {
   showUpdatesTab: boolean;
   showLabelsInNav: boolean;
   useFabForContinueReading: boolean;
+  disableLoadingAnimations: boolean;
 
   /**
    * Library settings
@@ -126,6 +127,7 @@ const initialAppSettings: AppSettings = {
   showUpdatesTab: true,
   showLabelsInNav: true,
   useFabForContinueReading: false,
+  disableLoadingAnimations: false,
 
   /**
    * Library settings

@@ -238,6 +238,8 @@ export interface StringMap {
   'generalSettingsScreen.refreshMetadata': 'string';
   'generalSettingsScreen.refreshMetadataDescription': 'string';
   'generalSettingsScreen.sortOrder': 'string';
+  'generalSettingsScreen.disableLoadingAnimations': 'string';
+  'generalSettingsScreen.disableLoadingAnimationsDesc': 'string';
   'generalSettingsScreen.updateLibrary': 'string';
   'generalSettingsScreen.updateLibraryDesc': 'string';
   'generalSettingsScreen.updateOngoing': 'string';
