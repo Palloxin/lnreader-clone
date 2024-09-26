@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { NovelItem, PluginItem } from '@plugins/types';
 import { getPlugin } from '@plugins/pluginManager';
 import { useBrowseSettings, usePlugins } from '@hooks/persisted';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Props {
   defaultSearchText?: string;
@@ -16,12 +17,20 @@ export interface GlobalSearchResult {
 }
 
 export const useGlobalSearch = ({ defaultSearchText }: Props) => {
-  const isMounted = useRef(true);
+  const isMounted = useRef(true); //if user closes the search screen, cancel the search
+  const isFocused = useRef(true); //if the user opens a sub-screen (e.g. novel screen), pause the search
   useEffect(
     () => () => {
       isMounted.current = false;
     },
     [],
+  );
+  useFocusEffect(
+    useCallback(() => {
+      isFocused.current = true;
+
+      return () => (isFocused.current = false);
+    }, []),
   );
 
   const { filteredInstalledPlugins } = usePlugins();
@@ -92,7 +101,7 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
 
     (async () => {
       for (let _plugin of filteredSortedInstalledPlugins) {
-        while (running >= globalSearchConcurrency) {
+        while (running >= globalSearchConcurrency || !isFocused.current) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         if (!isMounted.current) {

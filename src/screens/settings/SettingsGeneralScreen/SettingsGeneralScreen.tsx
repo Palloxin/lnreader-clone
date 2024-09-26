@@ -147,19 +147,6 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
             onPress={novelSortModalRef.setTrue}
             theme={theme}
           />
-          <SettingSwitch
-            label={getString('generalSettingsScreen.disableLoadingAnimations')}
-            description={getString(
-              'generalSettingsScreen.disableLoadingAnimationsDesc',
-            )}
-            value={disableLoadingAnimations}
-            onPress={() =>
-              setAppSettings({
-                disableLoadingAnimations: !disableLoadingAnimations,
-              })
-            }
-            theme={theme}
-          />
           <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>{getString('library')}</List.SubHeader>
           <SettingSwitch
@@ -243,6 +230,19 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
             value={disableHapticFeedback}
             onPress={() =>
               setAppSettings({ disableHapticFeedback: !disableHapticFeedback })
+            }
+            theme={theme}
+          />
+          <SettingSwitch
+            label={getString('generalSettingsScreen.disableLoadingAnimations')}
+            description={getString(
+              'generalSettingsScreen.disableLoadingAnimationsDesc',
+            )}
+            value={disableLoadingAnimations}
+            onPress={() =>
+              setAppSettings({
+                disableLoadingAnimations: !disableLoadingAnimations,
+              })
             }
             theme={theme}
           />
