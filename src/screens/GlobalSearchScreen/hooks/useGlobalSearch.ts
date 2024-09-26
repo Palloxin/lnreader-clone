@@ -100,21 +100,33 @@ export const useGlobalSearch = ({ defaultSearchText }: Props) => {
     );
 
     (async () => {
-      for (let _plugin of filteredSortedInstalledPlugins) {
-        while (running >= globalSearchConcurrency || !isFocused.current) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+      if (globalSearchConcurrency > 1) {
+        for (let _plugin of filteredSortedInstalledPlugins) {
+          while (running >= globalSearchConcurrency || !isFocused.current) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          if (!isMounted.current) {
+            break;
+          }
+          running++;
+          searchInPlugin(_plugin)
+            .then(() => {
+              running--;
+            })
+            .catch(() => {
+              running--;
+            });
         }
-        if (!isMounted.current) {
-          break;
+      } else {
+        for (let _plugin of filteredSortedInstalledPlugins) {
+          if (!isMounted.current) {
+            break;
+          }
+          while (!isFocused.current) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          await searchInPlugin(_plugin);
         }
-        running++;
-        searchInPlugin(_plugin)
-          .then(() => {
-            running--;
-          })
-          .catch(() => {
-            running--;
-          });
       }
     })();
   };
