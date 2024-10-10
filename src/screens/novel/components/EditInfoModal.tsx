@@ -119,7 +119,7 @@ const EditInfoModal = ({
         </View>
         <TextInput
           defaultValue={initialNovelInfo.name}
-          defaultValue={novelInfo.name}
+          value={novelInfo.name}
           placeholder={getString('novelScreen.edit.title', {
             title: novel.name,
           })}
@@ -132,7 +132,7 @@ const EditInfoModal = ({
         />
         <TextInput
           defaultValue={initialNovelInfo.author}
-          defaultValue={novelInfo.author}
+          value={novelInfo.author}
           placeholder={getString('novelScreen.edit.author', {
             author: novel.author,
           })}
@@ -145,7 +145,7 @@ const EditInfoModal = ({
         />
         <TextInput
           defaultValue={initialNovelInfo.artist}
-          defaultValue={novelInfo.artist}
+          value={novelInfo.artist}
           placeholder={'Artist: ' + novel.artist}
           numberOfLines={1}
           mode="outlined"
@@ -156,7 +156,7 @@ const EditInfoModal = ({
         />
         <TextInput
           defaultValue={initialNovelInfo.summary}
-          defaultValue={novelInfo.summary}
+          value={novelInfo.summary}
           placeholder={getString('novelScreen.edit.summary', {
             summary: novel.summary?.substring(0, 16),
           })}
