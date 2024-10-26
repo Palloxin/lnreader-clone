@@ -2,10 +2,10 @@ name: Lint
 on:
   push:
     branches:
-      - master
+      - ccdz
   pull_request:
     branches:
-      - master
+      - ccdz
 
 jobs:
   build:
