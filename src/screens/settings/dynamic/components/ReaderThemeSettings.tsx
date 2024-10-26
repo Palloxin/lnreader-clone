@@ -6,7 +6,7 @@ import { Button, ColorPreferenceItem, List } from '@components/index';
 import { useChapterReaderSettings, useTheme } from '@hooks/persisted';
 import { getString } from '@strings/translations';
 import ReaderTextAlignSelector from '@screens/reader/components/ReaderBottomSheet/ReaderTextAlignSelector';
-import ReaderTextSize from '../ReaderTextSize';
+import ReaderTextSize from './ReaderTextSize';
 import ReaderValueChange from '@screens/reader/components/ReaderBottomSheet/ReaderValueChange';
 import ReaderThemeSelector from '@screens/reader/components/ReaderBottomSheet/ReaderThemeSelector';
 import {
@@ -16,7 +16,7 @@ import {
 import { useBoolean } from '@hooks';
 import { Portal } from 'react-native-paper';
 import ColorPickerModal from '@components/ColorPickerModal/ColorPickerModal';
-import FontPickerModal from '../Modals/FontPickerModal';
+import FontPickerModal from '../modals/FontPickerModal';
 
 const ReaderThemeSettings = () => {
   const theme = useTheme();
@@ -45,9 +45,6 @@ const ReaderThemeSettings = () => {
 
   return (
     <>
-      <List.SubHeader theme={theme}>
-        {getString('readerSettings.readerTheme')}
-      </List.SubHeader>
       <ReaderThemeSelector
         label={getString('readerSettings.preset')}
         labelStyle={labelStyle}

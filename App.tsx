@@ -18,6 +18,13 @@ import AppErrorBoundary from '@components/AppErrorBoundary/AppErrorBoundary';
 import Main from './src/navigators/Main';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
+declare global {
+  interface ObjectConstructor {
+    typedKeys<T>(obj: T): Array<keyof T>;
+  }
+}
+Object.typedKeys = Object.keys as any;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => {
     return {
