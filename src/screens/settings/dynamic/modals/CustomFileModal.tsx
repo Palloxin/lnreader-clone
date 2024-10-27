@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  Touchable,
-  View,
-} from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Modal, overlay, TextInput } from 'react-native-paper';
 import { StorageAccessFramework } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
@@ -47,8 +40,8 @@ const CustomFileModal: React.FC<CustomFileModal> = ({
   const keyboardHeight = useKeyboardHeight();
 
   const modalAnim = useRef(new Animated.Value(30)).current;
-  const modalMB = useRef(new Animated.Value(WINDOW_HEIGHT * 0.25)).current;
-  const modalH = useRef(new Animated.Value(WINDOW_HEIGHT * 0.55)).current;
+  const modalMB = useRef(new Animated.Value(WINDOW_HEIGHT * 0.15 - 24)).current;
+  const modalH = useRef(new Animated.Value(WINDOW_HEIGHT * 0.7)).current;
   const modalBR = useRef(new Animated.Value(14)).current;
 
   const animate = (anim: Animated.Value, num: number) => {
@@ -68,8 +61,8 @@ const CustomFileModal: React.FC<CustomFileModal> = ({
     } else {
       animate(modalAnim, 30);
       animate(modalBR, 14);
-      animate(modalMB, WINDOW_HEIGHT * 0.225);
-      animate(modalH, WINDOW_HEIGHT * 0.55);
+      animate(modalMB, WINDOW_HEIGHT * 0.15 - 24);
+      animate(modalH, WINDOW_HEIGHT * 0.7);
     }
   }, [keyboardHeight]);
 
