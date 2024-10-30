@@ -16,7 +16,6 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CustomFileModal {
   visible: boolean;
@@ -44,7 +43,6 @@ const CustomFileModal: React.FC<CustomFileModal> = ({
   const theme = useTheme();
   const [text, setText] = useState('');
   const keyboardHeight = useKeyboardHeight();
-  const { top } = useSafeAreaInsets();
 
   const openDocumentPicker = async () => {
     try {
@@ -80,7 +78,7 @@ const CustomFileModal: React.FC<CustomFileModal> = ({
       marginHorizontal.value = 0;
       borderRadius.value = 0;
       marginBottom.value = keyboardHeight - 4;
-      height.value = WINDOW_HEIGHT - keyboardHeight - top;
+      height.value = WINDOW_HEIGHT - keyboardHeight;
       maxHeight.value = 0;
       buttonMargin.value = 0;
       padding.value = 12;
@@ -95,10 +93,10 @@ const CustomFileModal: React.FC<CustomFileModal> = ({
     }
   }, [keyboardHeight]);
 
-  const duration = 150;
+  const duration = 75;
   const animatedStyles = useAnimatedStyle(() => ({
     marginHorizontal: withTiming(marginHorizontal.value, { duration }),
-    marginBottom: withTiming(marginBottom.value, { duration: 75 }),
+    marginBottom: withTiming(marginBottom.value, { duration }),
     height: withTiming(height.value, { duration }),
     borderRadius: withTiming(borderRadius.value, { duration }),
     padding: withTiming(padding.value, { duration }),
