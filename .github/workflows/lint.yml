@@ -2,10 +2,10 @@ name: Lint
 on:
   push:
     branches:
-      - master
+      - new_arch
   pull_request:
     branches:
-      - master
+      - new_arch
 
 jobs:
   build:
