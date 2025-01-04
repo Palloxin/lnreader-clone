@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { ProgressBar } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +25,6 @@ type StorageData = {
 const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   const { name, url, pluginId, isNovel } = route.params;
   const isSave = getPlugin(pluginId)?.webStorageUtilized;
-  const uri = resolveUrl(pluginId, url, isNovel);
   const { bottom } = useSafeAreaInsets();
 
   const theme = useTheme();
@@ -33,7 +32,16 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
 
   const [progress, setProgress] = useState(0);
   const [title, setTitle] = useState(name || '');
-  const [currentUrl, setCurrentUrl] = useState(uri);
+  const [currentUrl, setCurrentUrl] = useState('about:blank');
+  useEffect(() => {
+    let canceled = false;
+    resolveUrl(pluginId, url, isNovel).then(
+      url => !canceled && setCurrentUrl(url),
+    );
+    return () => {
+      canceled = true;
+    }
+  }, []);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [tempData, setTempData] = useState<StorageData>();

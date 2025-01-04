@@ -41,7 +41,7 @@ export const fetchPage = async (
   return res;
 };
 
-export const resolveUrl = (
+export const resolveUrl = async (
   pluginId: string,
   path: string,
   isNovel?: boolean,
