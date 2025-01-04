@@ -32,5 +32,5 @@
       "@api/*": ["src/api/*"]
     }
   },
-  "exclude": ["node_modules", "babel.config.js", "metro.config.js", "android/app/src/main/assets/plugin_deps"]
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js"]
 }
