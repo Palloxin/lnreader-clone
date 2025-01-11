@@ -7,7 +7,6 @@ interface PluginThread {
 }
 
 export function getPluginThread(): PluginThread {
-  getWebView();
   return {
     initPlugin(pluginId: string, pluginCode: string) {
       return getWebView().injectJavaScript(
@@ -42,57 +41,59 @@ function getWebView() {
       },
       source: {
         baseUrl: undefined,
+        // language=HTML
         html: `
-        <!DOCTYPE html>
+          <!DOCTYPE html>
           <html>
-              <--! Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
-              <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>
-              
-              <script>
-                window.pluginsMap = new Map();
-                window.loadPlugin = function(pluginId, pluginCode) {
-                  const plugin = initPlugin(pluginId, pluginCode);
-                  window.plugin = plugin;
-                }
-				
-                const packages = {
-                  // 'htmlparser2': { Parser },
-                  // 'cheerio': { load },
-                  'cheerio': {
-                    load: function(html) {
-                      let elm = document.createElement('div');
-                      elm.innerHTML = html;
-                      return $(elm.firstChild);
-                    },
-                  // 'dayjs': dayjs,
-                  // 'urlencode': { encode, decode },
-                  // '@libs/novelStatus': { NovelStatus },
-                  // '@libs/fetch': { fetchApi, fetchText, fetchProto },
-                  // '@libs/isAbsoluteUrl': { isUrlAbsolute },
-                  // '@libs/filterInputs': { FilterTypes },
-                  // '@libs/defaultCover': { defaultCover },
-                };
-				function initPlugin(pluginId, pluginCode) {
-                  const _require = (packageName) => {
-                    if (packageName === '@libs/storage') {
-                      return {
-                        storage: new Storage(pluginId),
-                        localStorage: new LocalStorage(pluginId),
-                        sessionStorage: new SessionStorage(pluginId),
-                      };
-                    }
-                    return packages[packageName];
+          <!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
+          <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>
+
+          <script>
+            window.pluginsMap = new Map();
+            window.loadPlugin = function (pluginId, pluginCode) {
+              window.plugin = initPlugin(pluginId, pluginCode);
+            }
+
+            const packages = {
+              // 'htmlparser2': { Parser },
+              // 'cheerio': { load },
+              'cheerio': {
+                load: function (html) {
+                  let parser = new DOMParser();
+                  let elm = parser.parseFromString(html, 'text/html');
+                  return $(elm.firstChild);
+                },
+              }
+              // 'dayjs': dayjs,
+              // 'urlencode': { encode, decode },
+              // '@libs/novelStatus': { NovelStatus },
+              // '@libs/fetch': { fetchApi, fetchText, fetchProto },
+              // '@libs/isAbsoluteUrl': { isUrlAbsolute },
+              // '@libs/filterInputs': { FilterTypes },
+              // '@libs/defaultCover': { defaultCover },
+            };
+
+            function initPlugin(pluginId, pluginCode) {
+              const _require = (packageName) => {
+                if (packageName === '@libs/storage') {
+                  return {
+                    storage: new Storage(pluginId),
+                    localStorage: new LocalStorage(pluginId),
+                    sessionStorage: new SessionStorage(pluginId),
                   };
-                  
-                  return Function(
-                    'require',
-                    'module',
-                    'const exports = module.exports = {};\\n' + pluginCode + '\\nreturn exports.default',
-                  )(_require, {});
                 }
-              </script>
+                return packages[packageName];
+              };
+
+              return Function(
+                  'require',
+                  'module',
+                  'const exports = module.exports = {};\\n' + pluginCode + '\\nreturn exports.default',
+              )(_require, {});
+            }
+          </script>
           </html>
-          `,
+        `,
       },
     });
   }
