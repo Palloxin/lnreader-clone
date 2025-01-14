@@ -2,77 +2,141 @@ import { assetsUriPrefix } from '@screens/reader/components/WebViewReader';
 import { fetchApi } from '@plugins/helpers/fetch';
 import { Plugin, PopularNovelsOptions } from '@plugins/types';
 import { Filters } from '@plugins/types/filterTypes';
-import { PluginContext, PluginManager } from '@native/PluginManager';
+import { JsContext, PluginManager } from '@native/PluginManager';
+import { defaultCover } from '@plugins/helpers/constants';
 
 interface PluginThread {
   initPlugin(pluginId: string, pluginCode: string): Promise<Plugin>;
 }
 
-// let loadedPlugins = new Set<string>();
-
 export function getPluginThread(): PluginThread {
   return {
-    async initPlugin(pluginId: string, pluginCode: string) {
+    async initPlugin(pluginId: string, pluginCode: string): Promise<Plugin> {
       console.log('initPlugin', pluginId);
       await loadPlugin(pluginId, pluginCode);
+      console.log('initPlugin-finished', pluginId);
 
-      let ret = {
+      return {
+        // url: string; // the url of raw code
+        // iconUrl: string;
+        // customJS?: string;
+        // customCSS?: string;
+        // hasUpdate?: boolean;
+        // hasSettings?: boolean;
         id: await webviewCode(pluginId, `return plugin.id;`),
         name: await webviewCode(pluginId, `return plugin.name;`),
+        lang: await webviewCode(pluginId, `return plugin.lang;`),
         icon: await webviewCode(pluginId, `return plugin.icon;`),
         site: await webviewCode(pluginId, `return plugin.site;`),
         version: await webviewCode(pluginId, `return plugin.version;`),
         filters: await webviewCode(pluginId, `return plugin.filters;`),
-        pluginSettings: await webviewCode(pluginId, `return plugin.pluginSettings;`),
-        // imageRequestInit?: ImageRequestInit;
-        // filters?: Filters;
-        // pluginSettings: any;
-        popularNovels: async (
-          pageNo: number,
-          options?: PopularNovelsOptions<Filters>,
-        ) => {
-          return await webviewCodeAsync(
+        imgRequestInit: await webviewCode(
             pluginId,
-            `return await plugin.popularNovels(${JSON.stringify(
-              pageNo,
-            )}, ${JSON.stringify(options)});`,
+            `return plugin.imgRequestInit;`,
+        ),
+        pluginSettings: await webviewCode(
+            pluginId,
+            `return plugin.pluginSettings;`,
+        ),
+        // @ts-ignore
+        popularNovels: async (
+            pageNo: number,
+            options?: PopularNovelsOptions<Filters>,
+        ) => {
+          console.log(pluginId, "popularNovels", pageNo, options)
+          return await webviewCodeAsync(
+              pluginId,
+              `return await plugin.popularNovels(${JSON.stringify(
+                  pageNo,
+              )}, ${JSON.stringify(options)});`,
           );
         },
-        // parseNovel: (novelPath: string) => Promise<SourceNovel>;
-        // parsePage?: (novelPath: string, page: string) => Promise<SourcePage>;
-        // parseChapter: (chapterPath: string) => Promise<string>;
-        // searchNovels: (searchTerm: string, pageNo: number) => Promise<NovelItem[]>;
-        // resolveUrl?: (path: string, isNovel?: boolean) => string;
-        // webStorageUtilized?: boolean;
+        // @ts-ignore
+        parseNovel: async (novelPath: string) => {
+          console.log(pluginId, 'parseNovel', novelPath);
+          return await webviewCodeAsync(
+              pluginId,
+              `return await plugin.parseNovel(${JSON.stringify(novelPath)});`,
+          );
+        },
+        // @ts-ignore
+        parsePage: (await webviewCode(pluginId, `return !!plugin.parsePage;`))
+            ? async (novelPath: string, page: string) => {
+              console.log(pluginId, 'parsePage', novelPath, page);
+              return await webviewCodeAsync(
+                  pluginId,
+                  `return await plugin.parsePage(${JSON.stringify(
+                      novelPath,
+                  )}, ${JSON.stringify(page)});`,
+              );
+            }
+            : undefined,
+        // @ts-ignore
+        parseChapter: async (chapterPath: string) => {
+          console.log(pluginId, 'parseChapter', chapterPath);
+          return await webviewCodeAsync(
+              pluginId,
+              `return await plugin.parseChapter(${JSON.stringify(chapterPath)});`,
+          );
+        },
+        // @ts-ignore
+        searchNovels: async (searchTerm: string, pageNo: number) => {
+          console.log(pluginId, 'searchNovels', searchTerm, pageNo);
+          return await webviewCodeAsync(
+              pluginId,
+              `return await plugin.searchNovels(${JSON.stringify(
+                  searchTerm,
+              )}, ${JSON.stringify(pageNo)});`,
+          );
+        },
+        // @ts-ignore
+        resolveUrl: (await webviewCode(pluginId, `return !!plugin.resolveUrl;`))
+            ? async (path: string, isNovel?: boolean) => {
+              console.log(pluginId, 'resolveUrl', path, isNovel);
+              return await webviewCodeAsync(
+                  pluginId,
+                  `return await plugin.resolveUrl(${JSON.stringify(
+                      path,
+                  )}, ${JSON.stringify(isNovel)});`,
+              );
+            }
+            : undefined,
+        webStorageUtilized: await webviewCode(
+            pluginId,
+            `return plugin.webStorageUtilized;`,
+        ),
       };
-      console.log(ret);
-      return ret;
     },
   };
 }
 
-let webviewCallbacks = new Map<number, (ret: any) => void>();
+let webviewCallbacks = new Map<
+  number,
+  (ret: any | null, err: string | null) => void
+>();
 
 async function webviewCode(pluginId: string, code: string) {
   let context = await getPluginContext();
-  return JSON.parse(await context.eval(`
-	(new Function("plugin", ${JSON.stringify(
-    code,
-  )}))(pluginsMap.get(${JSON.stringify(pluginId)}))
-  `));
+  return JSON.parse(
+    await context.eval(
+      `(new Function("plugin", ${JSON.stringify(
+        code,
+      )}))(pluginsMap.get(${JSON.stringify(pluginId)}))`,
+    ),
+  );
 }
 
 async function webviewCodeAsync(pluginId: string, code: string) {
   let id = Math.floor(Math.random() * 100000);
 
-  return new Promise(async resolve => {
-    webviewCallbacks.set(id, (ret: any) => {
-      resolve(ret);
+  return new Promise(async (resolve, reject) => {
+    webviewCallbacks.set(id, (ret: any, err: string | null) => {
+      if (err !== null) reject(new Error(err));
+      else resolve(ret);
     });
 
     let context = await getPluginContext();
-    context.eval(`
-		(new AsyncFunction("plugin", ${JSON.stringify(
+    context.eval(`(new AsyncFunction("plugin", ${JSON.stringify(
       code,
     )}))(pluginsMap.get(${JSON.stringify(pluginId)})).then(ret=>{
 			window.PluginManager.sendMessage(JSON.stringify({
@@ -82,8 +146,12 @@ async function webviewCodeAsync(pluginId: string, code: string) {
 			}));
 		}).catch(err=>{
           console.error(err.stack);
-		});
-	`);
+			window.PluginManager.sendMessage(JSON.stringify({
+				type: 'webview-code-err',
+				id: ${id},
+				msg: err.message
+			}));
+		});`);
   });
 }
 
@@ -91,35 +159,48 @@ async function loadPlugin(pluginId: string, pluginCode: string) {
   // loadedPlugins.add(pluginId);
   let context = await getPluginContext();
   await context.eval(`
-    loadPlugin(${JSON.stringify(pluginId)}, ${JSON.stringify(
-    pluginCode,
-  )});
+    loadPlugin(${JSON.stringify(pluginId)}, ${JSON.stringify(pluginCode)});
   `);
 }
 
-let pluginContext: PluginContext | null = null;
+let pluginContext: JsContext | null = null;
 
-async function getPluginContext(): PluginContext {
+async function getPluginContext(): Promise<JsContext> {
   if (!pluginContext) {
     let resData = new Map();
 
     let con = await PluginManager.createJsContext(
       // language=HTML
       `
-		  <!DOCTYPE html>
-		  <html>
-		  <!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
-<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
+				<!DOCTYPE html>
+				<html>
+				<!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
+				<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
 
-          <script src="https://bundle.run/cheerio@1.0.0-rc.6"></script>
-		  </html>
-      `,
+				<!--                TODO: host our own bundles -->
+				<script src="https://bundle.run/cheerio@1.0.0-rc.6"></script>
+				<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+				</html>
+            `,
       (data: string) => {
-        __DEV__ && console.log('[Plugin Native Req] ' + data);
         const event = JSON.parse(data);
+        if (__DEV__) {
+          if (event.type !== 'webview-code-res') {
+            console.log('[Plugin Native Req] ' + data);
+          } else {
+            console.log(
+              '[Plugin Native Res] ' +
+                JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
+            );
+          }
+        }
         switch (event.type) {
           case 'webview-code-res':
-            webviewCallbacks.get(event.id)?.(event.data);
+            webviewCallbacks.get(event.id)?.(event.data, null);
+            break;
+          case 'webview-code-err':
+            webviewCallbacks.get(event.id)?.(null, event.msg);
             break;
           case 'fetchApi':
             // @ts-ignore
@@ -132,10 +213,16 @@ async function getPluginContext(): PluginContext {
 
               let data = {
                 ok: res.ok,
+                status: res.status,
+                url: res.url,
                 resId: resId,
               };
               pluginContext!.eval(
                 `nativeRes(${event.id}, ${JSON.stringify(data)});`,
+              );
+            }).catch(err=>{
+              pluginContext!.eval(
+                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
               );
             });
             break;
@@ -149,9 +236,6 @@ async function getPluginContext(): PluginContext {
                   `nativeRes(${event.id}, ${JSON.stringify(res)});`,
                 );
               });
-          case 'debug':
-            //already logged by the onLogMessage
-            break;
         }
       },
     );
@@ -185,6 +269,18 @@ async function getPluginContext(): PluginContext {
           Checkbox: 'CheckboxGroup',
           XCheckbox: 'ExcludableCheckboxGroup',
       }
+      //NOTE: this is duplicated in plugin/types/index.ts
+      const NovelStatus = {
+        Unknown : 'Unknown',
+        Ongoing : 'Ongoing',
+        Completed : 'Completed',
+        Licensed : 'Licensed',
+        PublishingFinished : 'Publishing Finished',
+        Cancelled : 'Cancelled',
+        OnHiatus : 'On Hiatus',
+        "Publishing Finished" : 'PublishingFinished',
+        "On Hiatus" : 'OnHiatus',
+      }
 
       const packages = {
           // 'htmlparser2': { Parser },
@@ -201,27 +297,31 @@ async function getPluginContext(): PluginContext {
             //       };
             //   }
           // },
-          // 'dayjs': dayjs,
+          'dayjs': dayjs,
           // 'urlencode': { encode, decode },
-          // '@libs/novelStatus': { NovelStatus },
+          '@libs/novelStatus': { NovelStatus },
           // '@libs/fetch': { fetchApi, fetchText, fetchProto },
           '@libs/fetch': {
               fetchApi: async function (...params) {
                   let nativeFetchData = await native('fetchApi', params);
                   return {
                       ok: nativeFetchData.ok,
+                      status: nativeFetchData.status,
+                      url: nativeFetchData.url,
                       text: async function () {
                           return await native('fetchApi-text', nativeFetchData.resId);
                       },
                       json: async function () {
-                          //TODO
+                          return await native('fetchApi-json', nativeFetchData.resId);
                       },
                   }
               }
           },
           '@libs/isAbsoluteUrl': {isUrlAbsolute},
           '@libs/filterInputs': {FilterTypes},
-          // '@libs/defaultCover': { defaultCover },
+          '@libs/defaultCover': { defaultCover: ${JSON.stringify(
+            defaultCover,
+          )} },
       };
 
       let nativeCallbacks = new Map();
@@ -229,9 +329,10 @@ async function getPluginContext(): PluginContext {
       async function native(type, data) {
           let id = Math.floor(Math.random() * 100000);
 
-          return new Promise(resolve => {
-              nativeCallbacks.set(id, (ret) => {
-                  resolve(ret);
+          return new Promise((resolve, reject) => {
+              nativeCallbacks.set(id, (ret, err) => {
+				  if(err !== null) reject(new Error(err))
+                  else resolve(ret);
               });
 
               window.PluginManager.sendMessage(JSON.stringify({
@@ -242,8 +343,11 @@ async function getPluginContext(): PluginContext {
           });
       }
 
-      window.nativeRes = function (id, res) {
-          nativeCallbacks.get(id)(res);
+      function nativeRes(id, res) {
+          nativeCallbacks.get(id)(res, null);
+      }
+      function nativeResErr(id, res) {
+          nativeCallbacks.get(id)(null, res);
       }
 
       function initPlugin(pluginId, pluginCode) {
@@ -255,6 +359,9 @@ async function getPluginContext(): PluginContext {
                       // sessionStorage: new SessionStorage(pluginId),
                   };
               }
+			  if(!(packageName in packages)){
+				  console.error(pluginId + " is importing unknown package: " + packageName)
+			  }
               return packages[packageName];
           };
 

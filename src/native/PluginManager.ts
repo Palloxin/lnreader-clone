@@ -6,18 +6,20 @@ interface PluginManagerInterface {
   eval: (id: JsContextId, code: string) => Promise<string>;
 }
 
+export interface JsContext {
+  eval: (code: string) => Promise<string>;
+}
+
 type JsContextId = string;
 
 const { PluginManager: PluginManagerNative } = NativeModules as {
   PluginManager: PluginManagerInterface;
 };
-// export const PluginManager = PluginManagerN as PluginManagerInterface;
 
 const contextToMsgCb = new Map();
 
 export const PluginManager = {
-  createJsContext: async (html: string, onMessage: (msg: string) => void) => {
-    // console.log('createJsContext', html, onMessage);
+  createJsContext: async (html: string, onMessage: (msg: string) => void): Promise<JsContext> => {
     let jsContextId = await PluginManagerNative.createJsContext(html);
     contextToMsgCb.set(jsContextId, onMessage);
     return {
@@ -30,7 +32,6 @@ export const PluginManager = {
 
 const eventEmitter = new NativeEventEmitter(NativeModules.PluginManager);
 eventEmitter.addListener('PluginManager', event => {
-  console.log("Event", event);
   contextToMsgCb.get(event.id)(event.message)
 });
 eventEmitter.addListener('NativeDebug', event => {

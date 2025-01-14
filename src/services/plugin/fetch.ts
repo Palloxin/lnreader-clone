@@ -1,4 +1,4 @@
-import { getPlugin, getPluginAsync } from '@plugins/pluginManager';
+import { getPluginAsync } from '@plugins/pluginManager';
 import { isUrlAbsolute } from '@plugins/helpers/isAbsoluteUrl';
 
 export const fetchNovel = async (pluginId: string, novelPath: string) => {
@@ -37,8 +37,7 @@ export const fetchPage = async (
   if (!plugin || !plugin.parsePage) {
     throw new Error('Cant parse page!');
   }
-  const res = await plugin.parsePage(novelPath, page);
-  return res;
+  return await plugin.parsePage(novelPath, page);
 };
 
 export const resolveUrl = async (
@@ -55,7 +54,7 @@ export const resolveUrl = async (
       throw new Error(`Unknown plugin: ${pluginId}`);
     }
     if (plugin.resolveUrl) {
-      return plugin.resolveUrl(path, isNovel);
+      return await plugin.resolveUrl(path, isNovel);
     }
   } catch (e) {
     return path;

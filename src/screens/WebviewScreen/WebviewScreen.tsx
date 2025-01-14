@@ -32,15 +32,16 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
 
   const [progress, setProgress] = useState(0);
   const [title, setTitle] = useState(name || '');
-  const [currentUrl, setCurrentUrl] = useState('about:blank');
+  const [currentUrl, setCurrentUrl] = useState('');
   useEffect(() => {
     let canceled = false;
-    resolveUrl(pluginId, url, isNovel).then(
-      url => !canceled && setCurrentUrl(url),
-    );
+    resolveUrl(pluginId, url, isNovel).then(url => {
+      if (canceled) return;
+      setCurrentUrl(url);
+    });
     return () => {
       canceled = true;
-    }
+    };
   }, []);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -104,10 +105,10 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
         progress={progress}
         visible={progress !== 1}
       />
-      <WebView
+      {currentUrl ? <WebView
         userAgent={getUserAgent()}
         ref={webViewRef}
-        source={{ uri }}
+        source={{ uri: currentUrl }}
         setDisplayZoomControls={true}
         setBuiltInZoomControls={false}
         setSupportMultipleWindows={false}
@@ -118,7 +119,7 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
           setTempData(JSON.parse(nativeEvent.data))
         }
         containerStyle={{ paddingBottom: bottom }}
-      />
+      /> : null}
       {menuVisible ? (
         <Menu
           theme={theme}
