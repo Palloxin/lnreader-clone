@@ -1,5 +1,5 @@
 import { assetsUriPrefix } from '@screens/reader/components/WebViewReader';
-import { fetchApi } from '@plugins/helpers/fetch';
+import { fetchApi, fetchProto, fetchText } from '@plugins/helpers/fetch';
 import { Plugin, PopularNovelsOptions } from '@plugins/types';
 import { Filters } from '@plugins/types/filterTypes';
 import { JsContext, PluginManager } from '@native/PluginManager';
@@ -31,79 +31,79 @@ export function getPluginThread(): PluginThread {
         version: await webviewCode(pluginId, `return plugin.version;`),
         filters: await webviewCode(pluginId, `return plugin.filters;`),
         imgRequestInit: await webviewCode(
-            pluginId,
-            `return plugin.imgRequestInit;`,
+          pluginId,
+          `return plugin.imgRequestInit;`,
         ),
         pluginSettings: await webviewCode(
-            pluginId,
-            `return plugin.pluginSettings;`,
+          pluginId,
+          `return plugin.pluginSettings;`,
         ),
         // @ts-ignore
         popularNovels: async (
-            pageNo: number,
-            options?: PopularNovelsOptions<Filters>,
+          pageNo: number,
+          options?: PopularNovelsOptions<Filters>,
         ) => {
-          console.log(pluginId, "popularNovels", pageNo, options)
+          console.log(pluginId, 'popularNovels', pageNo, options);
           return await webviewCodeAsync(
-              pluginId,
-              `return await plugin.popularNovels(${JSON.stringify(
-                  pageNo,
-              )}, ${JSON.stringify(options)});`,
+            pluginId,
+            `return await plugin.popularNovels(${JSON.stringify(
+              pageNo,
+            )}, ${JSON.stringify(options)});`,
           );
         },
         // @ts-ignore
         parseNovel: async (novelPath: string) => {
           console.log(pluginId, 'parseNovel', novelPath);
           return await webviewCodeAsync(
-              pluginId,
-              `return await plugin.parseNovel(${JSON.stringify(novelPath)});`,
+            pluginId,
+            `return await plugin.parseNovel(${JSON.stringify(novelPath)});`,
           );
         },
         // @ts-ignore
         parsePage: (await webviewCode(pluginId, `return !!plugin.parsePage;`))
-            ? async (novelPath: string, page: string) => {
+          ? async (novelPath: string, page: string) => {
               console.log(pluginId, 'parsePage', novelPath, page);
               return await webviewCodeAsync(
-                  pluginId,
-                  `return await plugin.parsePage(${JSON.stringify(
-                      novelPath,
-                  )}, ${JSON.stringify(page)});`,
+                pluginId,
+                `return await plugin.parsePage(${JSON.stringify(
+                  novelPath,
+                )}, ${JSON.stringify(page)});`,
               );
             }
-            : undefined,
+          : undefined,
         // @ts-ignore
         parseChapter: async (chapterPath: string) => {
           console.log(pluginId, 'parseChapter', chapterPath);
           return await webviewCodeAsync(
-              pluginId,
-              `return await plugin.parseChapter(${JSON.stringify(chapterPath)});`,
+            pluginId,
+            `return await plugin.parseChapter(${JSON.stringify(chapterPath)});`,
           );
         },
         // @ts-ignore
         searchNovels: async (searchTerm: string, pageNo: number) => {
           console.log(pluginId, 'searchNovels', searchTerm, pageNo);
           return await webviewCodeAsync(
-              pluginId,
-              `return await plugin.searchNovels(${JSON.stringify(
-                  searchTerm,
-              )}, ${JSON.stringify(pageNo)});`,
+            pluginId,
+            `return await plugin.searchNovels(${JSON.stringify(
+              searchTerm,
+            )}, ${JSON.stringify(pageNo)});`,
           );
         },
         // @ts-ignore
         resolveUrl: (await webviewCode(pluginId, `return !!plugin.resolveUrl;`))
-            ? async (path: string, isNovel?: boolean) => {
+          ? async (path: string, isNovel?: boolean) => {
               console.log(pluginId, 'resolveUrl', path, isNovel);
               return await webviewCodeAsync(
-                  pluginId,
-                  `return await plugin.resolveUrl(${JSON.stringify(
-                      path,
-                  )}, ${JSON.stringify(isNovel)});`,
+                pluginId,
+                `return await plugin.resolveUrl(${JSON.stringify(
+                  path,
+                )}, ${JSON.stringify(isNovel)});`,
               );
             }
-            : undefined,
+          : undefined,
         webStorageUtilized: await webviewCode(
-            pluginId,
-            `return plugin.webStorageUtilized;`,
+          pluginId,
+          `return plugin.webStorageUtilized;`,
         ),
       };
     },
@@ -186,13 +186,18 @@ async function getPluginContext(): Promise<JsContext> {
       (data: string) => {
         const event = JSON.parse(data);
         if (__DEV__) {
-          if (event.type !== 'webview-code-res') {
-            console.log('[Plugin Native Req] ' + data);
-          } else {
+          if (event.type === 'webview-code-res') {
             console.log(
               '[Plugin Native Res] ' +
                 JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
             );
+          } else if (event.type === 'fetchProto') {
+            console.log(
+              '[Plugin Native Res] ' +
+                JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
+            );
+          } else {
+            console.log('[Plugin Native Req] ' + data);
           }
         }
         switch (event.type) {
@@ -204,27 +209,29 @@ async function getPluginContext(): Promise<JsContext> {
             break;
           case 'fetchApi':
             // @ts-ignore
-            fetchApi(...event.data).then(res => {
-              let resId = Math.floor(Math.random() * 100000);
-              resData.set(resId, res);
-              setTimeout(() => {
-                resData.delete(resId);
-              }, 10000);
+            fetchApi(...event.data)
+              .then(res => {
+                let resId = Math.floor(Math.random() * 100000);
+                resData.set(resId, res);
+                setTimeout(() => {
+                  resData.delete(resId);
+                }, 10000);
 
-              let data = {
-                ok: res.ok,
-                status: res.status,
-                url: res.url,
-                resId: resId,
-              };
-              pluginContext!.eval(
-                `nativeRes(${event.id}, ${JSON.stringify(data)});`,
-              );
-            }).catch(err=>{
-              pluginContext!.eval(
+                let data = {
+                  ok: res.ok,
+                  status: res.status,
+                  url: res.url,
+                  resId: resId,
+                };
+                pluginContext!.eval(
+                  `nativeRes(${event.id}, ${JSON.stringify(data)});`,
+                );
+              })
+              .catch(err => {
+                pluginContext!.eval(
                   `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
-              );
-            });
+                );
+              });
             break;
           case 'fetchApi-text':
             resData
@@ -236,6 +243,46 @@ async function getPluginContext(): Promise<JsContext> {
                   `nativeRes(${event.id}, ${JSON.stringify(res)});`,
                 );
               });
+            break;
+          case 'fetchApi-json':
+            resData
+              .get(event.data)
+              .json()
+              // @ts-ignore
+              .then(res => {
+                pluginContext!.eval(
+                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+                );
+              });
+            break;
+          case 'fetchText':
+            // @ts-ignore
+            fetchText(...event.data)
+              .then(res => {
+                pluginContext!.eval(
+                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+                );
+              })
+              .catch(err => {
+                pluginContext!.eval(
+                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
+                );
+              });
+            break;
+          case 'fetchProto':
+            // @ts-ignore
+            fetchProto(...event.data)
+              .then(res => {
+                pluginContext!.eval(
+                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+                );
+              })
+              .catch(err => {
+                pluginContext!.eval(
+                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
+                );
+              });
+            break;
         }
       },
     );
@@ -300,7 +347,6 @@ async function getPluginContext(): Promise<JsContext> {
           'dayjs': dayjs,
           // 'urlencode': { encode, decode },
           '@libs/novelStatus': { NovelStatus },
-          // '@libs/fetch': { fetchApi, fetchText, fetchProto },
           '@libs/fetch': {
               fetchApi: async function (...params) {
                   let nativeFetchData = await native('fetchApi', params);
@@ -313,9 +359,15 @@ async function getPluginContext(): Promise<JsContext> {
                       },
                       json: async function () {
                           return await native('fetchApi-json', nativeFetchData.resId);
-                      },
+                      }
                   }
-              }
+              },
+			  fetchText: async function (...params) {
+				  return await native('fetchText', params);
+			  },
+			  fetchProto: async function (...params) {
+				  return await native('fetchProto', params);
+			  }
           },
           '@libs/isAbsoluteUrl': {isUrlAbsolute},
           '@libs/filterInputs': {FilterTypes},

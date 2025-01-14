@@ -32,6 +32,7 @@ export const PluginManager = {
 
 const eventEmitter = new NativeEventEmitter(NativeModules.PluginManager);
 eventEmitter.addListener('PluginManager', event => {
+  // console.log("Event", event);
   contextToMsgCb.get(event.id)(event.message)
 });
 eventEmitter.addListener('NativeDebug', event => {
