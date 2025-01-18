@@ -172,14 +172,14 @@ async function getPluginContext(): Promise<JsContext> {
     let con = await PluginManager.createJsContext(
       // language=HTML
       `
-				<!DOCTYPE html>
-				<html>
-				<!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
-				<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
-						  <script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
+		  <!DOCTYPE html>
+		  <html>
+		  <!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
+		  <!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
+		  <script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
 
-				</html>
-            `,
+		  </html>
+      `,
       (data: string) => {
         const event = JSON.parse(data);
         if (__DEV__) {

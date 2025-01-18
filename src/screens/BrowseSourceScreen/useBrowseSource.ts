@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NovelItem } from '@plugins/types';
 
-import { getPlugin, getPluginAsync } from '@plugins/pluginManager';
+import { getPluginAsync } from '@plugins/pluginManager';
 import { FilterToValues, Filters } from '@plugins/types/filterTypes';
 
 export const useBrowseSource = (
@@ -13,12 +13,27 @@ export const useBrowseSource = (
   const [error, setError] = useState<string>();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterValues, setFilterValues] = useState<Filters | undefined>(
-    getPlugin(pluginId)?.filters,
+  const [filterValues, setFilterValues] = useState<Filters | undefined | null>(
+    // getPlugin(pluginId)?.filters,
+    null,
   );
   const [selectedFilters, setSelectedFilters] = useState<
-    FilterToValues<Filters> | undefined
+    FilterToValues<Filters> | undefined | null
   >(filterValues);
+  useEffect(() => {
+    let canceled = false;
+    getPluginAsync(pluginId).then(plugin => {
+      if (canceled) return;
+      console.log('ASync loaded plugin', plugin.filters);
+      setFilterValues(plugin?.filters);
+      setSelectedFilters(plugin?.filters);
+      refetchNovels(plugin?.filters);
+    });
+
+    return () => {
+      canceled = true;
+    };
+  }, [pluginId]);
   const [hasNextPage, setHasNextPage] = useState(true);
 
   const isScreenMounted = useRef(true);
@@ -73,15 +88,16 @@ export const useBrowseSource = (
   }, []);
 
   useEffect(() => {
-    fetchNovels(currentPage, selectedFilters);
+    if (selectedFilters != null) fetchNovels(currentPage, selectedFilters);
   }, [fetchNovels, currentPage]);
 
-  const refetchNovels = () => {
+  const refetchNovels = (selectedFilters2?: FilterToValues<Filters>) => {
     setError('');
     setIsLoading(true);
     setNovels([]);
     setCurrentPage(1);
-    fetchNovels(1, selectedFilters);
+    if (selectedFilters2 || selectedFilters != null)
+      fetchNovels(1, selectedFilters2 || selectedFilters);
   };
 
   const clearFilters = useCallback(

@@ -162,6 +162,7 @@ const getPluginAsync = async (pluginId: string) => {
 
 const getPlugin = (pluginId: string) => {
   if (!plugins[pluginId]) {
+    console.log("Sync getPlugin before plugin is loaded! " + new Error().stack);
     //getPluginAsync will make sure plugin is loaded
     getPluginAsync(pluginId);
   }
