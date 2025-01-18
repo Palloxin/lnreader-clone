@@ -12,6 +12,8 @@ interface PluginThread {
 export function getPluginThread(): PluginThread {
   return {
     async initPlugin(pluginId: string, pluginCode: string): Promise<Plugin> {
+      await getPluginContext(); //make sure the plugin thread is ready
+
       console.log('initPlugin', pluginId);
       await loadPlugin(pluginId, pluginCode);
       console.log('initPlugin-finished', pluginId);
@@ -164,126 +166,135 @@ async function loadPlugin(pluginId: string, pluginCode: string) {
 }
 
 let pluginContext: JsContext | null = null;
+let pluginContextPromise: Promise<JsContext> | null = null;
 
 async function getPluginContext(): Promise<JsContext> {
-  if (!pluginContext) {
-    let resData = new Map();
+  if (pluginContext) return pluginContext;
+  if (pluginContextPromise) return await pluginContextPromise;
+  pluginContextPromise = makePluginContext();
+  return await pluginContextPromise;
+}
 
-    let con = await PluginManager.createJsContext(
-      // language=HTML
-      `
-		  <!DOCTYPE html>
-		  <html>
-		  <!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
-		  <!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
-		  <script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
+async function makePluginContext(): Promise<JsContext> {
+  console.log('Creating plugin thread...');
+  let resData = new Map();
 
-		  </html>
-      `,
-      (data: string) => {
-        const event = JSON.parse(data);
-        if (__DEV__) {
-          if (event.type === 'webview-code-res') {
-            console.log(
-              '[Plugin Native Res] ' +
-                JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
-            );
-          } else if (event.type === 'fetchProto') {
-            console.log(
-              '[Plugin Native Res] ' +
-                JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
-            );
-          } else {
-            console.log('[Plugin Native Req] ' + data);
-          }
+  let con = await PluginManager.createJsContext(
+    // language=HTML
+    `
+			<!DOCTYPE html>
+			<html>
+			<!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
+			<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
+			<script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
+
+			</html>
+        `,
+    (data: string) => {
+      const event = JSON.parse(data);
+      if (__DEV__) {
+        if (event.type === 'webview-code-res') {
+          console.log(
+            '[Plugin Native Res] ' +
+              JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
+          );
+        } else if (event.type === 'fetchProto') {
+          console.log(
+            '[Plugin Native Res] ' +
+              JSON.stringify({ ...event, data: '[REDACTED FOR SPACE]' }),
+          );
+        } else {
+          console.log('[Plugin Native Req] ' + data);
         }
-        switch (event.type) {
-          case 'webview-code-res':
-            webviewCallbacks.get(event.id)?.(event.data, null);
-            break;
-          case 'webview-code-err':
-            webviewCallbacks.get(event.id)?.(null, event.msg);
-            break;
-          case 'fetchApi':
-            // @ts-ignore
-            fetchApi(...event.data)
-              .then(res => {
-                let resId = Math.floor(Math.random() * 100000);
-                resData.set(resId, res);
-                setTimeout(() => {
-                  resData.delete(resId);
-                }, 10000);
+      }
+      switch (event.type) {
+        case 'webview-code-res':
+          webviewCallbacks.get(event.id)?.(event.data, null);
+          break;
+        case 'webview-code-err':
+          webviewCallbacks.get(event.id)?.(null, event.msg);
+          break;
+        case 'fetchApi':
+          // @ts-ignore
+          fetchApi(...event.data)
+            .then(res => {
+              let resId = Math.floor(Math.random() * 100000);
+              resData.set(resId, res);
+              setTimeout(() => {
+                resData.delete(resId);
+              }, 10000);
 
-                let data = {
-                  ok: res.ok,
-                  status: res.status,
-                  url: res.url,
-                  resId: resId,
-                };
-                pluginContext!.eval(
-                  `nativeRes(${event.id}, ${JSON.stringify(data)});`,
-                );
-              })
-              .catch(err => {
-                pluginContext!.eval(
-                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
-                );
-              });
-            break;
-          case 'fetchApi-text':
-            resData
-              .get(event.data)
-              .text()
-              // @ts-ignore
-              .then(res => {
-                pluginContext!.eval(
-                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
-                );
-              });
-            break;
-          case 'fetchApi-json':
-            resData
-              .get(event.data)
-              .json()
-              // @ts-ignore
-              .then(res => {
-                pluginContext!.eval(
-                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
-                );
-              });
-            break;
-          case 'fetchText':
+              let data = {
+                ok: res.ok,
+                status: res.status,
+                url: res.url,
+                resId: resId,
+              };
+              pluginContext!.eval(
+                `nativeRes(${event.id}, ${JSON.stringify(data)});`,
+              );
+            })
+            .catch(err => {
+              pluginContext!.eval(
+                `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
+              );
+            });
+          break;
+        case 'fetchApi-text':
+          resData
+            .get(event.data)
+            .text()
             // @ts-ignore
-            fetchText(...event.data)
-              .then(res => {
-                pluginContext!.eval(
-                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
-                );
-              })
-              .catch(err => {
-                pluginContext!.eval(
-                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
-                );
-              });
-            break;
-          case 'fetchProto':
+            .then(res => {
+              pluginContext!.eval(
+                `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+              );
+            });
+          break;
+        case 'fetchApi-json':
+          resData
+            .get(event.data)
+            .json()
             // @ts-ignore
-            fetchProto(...event.data)
-              .then(res => {
-                pluginContext!.eval(
-                  `nativeRes(${event.id}, ${JSON.stringify(res)});`,
-                );
-              })
-              .catch(err => {
-                pluginContext!.eval(
-                  `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
-                );
-              });
-            break;
-        }
-      },
-    );
-    await con.eval(`
+            .then(res => {
+              pluginContext!.eval(
+                `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+              );
+            });
+          break;
+        case 'fetchText':
+          // @ts-ignore
+          fetchText(...event.data)
+            .then(res => {
+              pluginContext!.eval(
+                `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+              );
+            })
+            .catch(err => {
+              pluginContext!.eval(
+                `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
+              );
+            });
+          break;
+        case 'fetchProto':
+          // @ts-ignore
+          fetchProto(...event.data)
+            .then(res => {
+              pluginContext!.eval(
+                `nativeRes(${event.id}, ${JSON.stringify(res)});`,
+              );
+            })
+            .catch(err => {
+              pluginContext!.eval(
+                `nativeResErr(${event.id}, ${JSON.stringify(err?.message)});`,
+              );
+            });
+          break;
+      }
+    },
+  );
+  console.log('Adding custom js to plugin thread...');
+  await con.eval(`
       window.onerror = function (msg, url, lineNo, columnNo, error) {
         console.error(error.stack)
       }
@@ -443,8 +454,6 @@ async function getPluginContext(): Promise<JsContext> {
           return false; // Anything else must be relative
       }
 	`);
-    pluginContext = con;
-  }
-
-  return pluginContext;
+  pluginContext = con;
+  console.log('Plugin thread made!');
 }
