@@ -178,10 +178,6 @@ async function getPluginContext(): Promise<JsContext> {
 				<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
 						  <script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
 
-				<!--                TODO: host our own bundles -->
-				<script src="https://bundle.run/cheerio@1.0.0-rc.6"></script>
-				<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-
 				</html>
             `,
       (data: string) => {
@@ -330,7 +326,7 @@ async function getPluginContext(): Promise<JsContext> {
 
       const packages = {
           'htmlparser2': { Parser: require("htmlparser2").Parser },
-          'cheerio': { load: cheerio.load },
+          'cheerio': { load: require("cheerio").load },
           // 'cheerio': {
           //     load: function (html) {
           //         let parser = new DOMParser();
@@ -343,7 +339,7 @@ async function getPluginContext(): Promise<JsContext> {
             //       };
             //   }
           // },
-          'dayjs': dayjs,
+          'dayjs': require("dayjs"),
           // 'urlencode': { encode, decode },
           '@libs/novelStatus': { NovelStatus },
           '@libs/fetch': {
