@@ -41,16 +41,23 @@ class PluginManager(context: ReactApplicationContext) :
                         })
                 }
             }, "PluginManager")
-            //onmessage
+            view.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    promise.resolve(pluginContext.uuid)
+                }
+            }
             view.webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
                     reactApplicationContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                        .emit("NativeDebug", "[PluginManagerWebConsole] ${consoleMessage?.message()}")
+                        .emit(
+                            "NativeDebug",
+                            "[PluginManagerWebConsole] ${consoleMessage?.message()}"
+                        )
                     return super.onConsoleMessage(consoleMessage)
                 }
             }
             plugins[pluginContext.uuid] = pluginContext
-            promise.resolve(pluginContext.uuid)
         }
     }
 

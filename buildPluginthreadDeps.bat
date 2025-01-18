@@ -1,0 +1,1 @@
+browserify -r htmlparser2 > android/app/src/main/assets/plugin_deps/bundle.js

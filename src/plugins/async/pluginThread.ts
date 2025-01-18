@@ -176,6 +176,7 @@ async function getPluginContext(): Promise<JsContext> {
 				<html>
 				<!-- Cheerio is just implementing jquery for places without a builtin html parser, so cus this is a browser, just use browsers html parser -->
 				<!--		  <script src="${assetsUriPrefix}/plugin_deps/jquery-3.7.1.min.js"></script>-->
+						  <script src="${assetsUriPrefix}/plugin_deps/bundle.js"></script>
 
 				<!--                TODO: host our own bundles -->
 				<script src="https://bundle.run/cheerio@1.0.0-rc.6"></script>
@@ -286,8 +287,6 @@ async function getPluginContext(): Promise<JsContext> {
         }
       },
     );
-    //TODO: in native code when creating the js context we need to wait for it to finish loading
-    await new Promise(resolve => setTimeout(resolve, 5000));
     await con.eval(`
       window.onerror = function (msg, url, lineNo, columnNo, error) {
         console.error(error.stack)
@@ -330,7 +329,7 @@ async function getPluginContext(): Promise<JsContext> {
       }
 
       const packages = {
-          // 'htmlparser2': { Parser },
+          'htmlparser2': { Parser: require("htmlparser2").Parser },
           'cheerio': { load: cheerio.load },
           // 'cheerio': {
           //     load: function (html) {
