@@ -98,10 +98,14 @@ const fetchPlugins = async (): Promise<PluginItem[]> => {
 
 const loadingPlugins = new Map();
 
-const getPluginAsync = async (pluginId: string): Promise<Plugin | undefined> => {
+const getPluginAsync = async (
+  pluginId: string,
+): Promise<Plugin | undefined> => {
   if (!plugins[pluginId]) {
     let loading = loadingPlugins.get(pluginId);
-    if (loading) return await loading;
+    if (loading) {
+      return await loading;
+    }
     const filePath = `${PLUGIN_STORAGE}/${pluginId}/index.js`;
     try {
       const code = FileManager.readFile(filePath);

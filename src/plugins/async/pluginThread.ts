@@ -155,17 +155,18 @@ async function loadPlugin(pluginId: string, pluginCode: string) {
   let storage = new Storage(pluginId);
   let localStorage = new LocalStorage(pluginId).get();
   let sessionStorage = new SessionStorage(pluginId).get();
-  let storageBlob: any[] = []
-	storage.getAllKeys().forEach((key) => {
-		storageBlob.push([
-			key,
-			storage.get(key)
-		])
-	})
+  let storageBlob: any[] = [];
+  storage.getAllKeys().forEach(key => {
+    storageBlob.push([key, storage.get(key)]);
+  });
 
   let context = await getPluginContext();
   await context.eval(`
-    loadPlugin(${JSON.stringify(pluginId)}, ${JSON.stringify(pluginCode)}, ${JSON.stringify(localStorage)}, ${JSON.stringify(sessionStorage)}, ${JSON.stringify(storageBlob)});
+    loadPlugin(${JSON.stringify(pluginId)}, ${JSON.stringify(
+    pluginCode,
+  )}, ${JSON.stringify(localStorage)}, ${JSON.stringify(
+    sessionStorage,
+  )}, ${JSON.stringify(storageBlob)});
   `);
 }
 
@@ -295,14 +296,14 @@ async function makePluginContext(): Promise<JsContext> {
               );
             });
           break;
-		  case 'storage-set':
-			  const storage1 = new Storage(event.data.pluginId);
-			  storage1.set(event.data.key, event.data.data);
-			  break;
-		  case 'storage-delete':
-			  const storage2 = new Storage(event.data.pluginId);
-			  storage2.delete(event.data.key);
-			  break;
+        case 'storage-set':
+          const storage1 = new Storage(event.data.pluginId);
+          storage1.set(event.data.key, event.data.data);
+          break;
+        case 'storage-delete':
+          const storage2 = new Storage(event.data.pluginId);
+          storage2.delete(event.data.key);
+          break;
       }
     },
   );
