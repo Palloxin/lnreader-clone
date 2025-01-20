@@ -76,7 +76,10 @@ export const InstalledTab = memo(
 
     const searchedPlugins = useMemo(() => {
       const sortedInstalledPlugins = filteredInstalledPlugins.sort(
-        (plgFirst, plgSecond) => plgFirst.name.localeCompare(plgSecond.name),
+        (plgFirst, plgSecond) =>
+          plgFirst.name && plgSecond.name
+            ? plgFirst.name.localeCompare(plgSecond.name)
+            : 0,
       );
       if (searchText) {
         const lowerCaseSearchText = searchText.toLocaleLowerCase();
