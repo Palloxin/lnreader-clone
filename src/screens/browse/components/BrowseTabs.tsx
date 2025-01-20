@@ -31,7 +31,7 @@ import Animated, {
 import { Portal } from 'react-native-paper';
 import SourceSettingsModal from './Modals/SourceSettings';
 import { useBoolean } from '@hooks';
-import { getPlugin } from '@plugins/pluginManager';
+import { getPlugin, getPluginAsync } from '@plugins/pluginManager';
 
 interface AvailableTabProps {
   searchText: string;
@@ -57,7 +57,7 @@ export const InstalledTab = memo(
     const settingsModal = useBoolean();
     const [selectedPluginId, setSelectedPluginId] = useState<string>('');
 
-    const pluginSettings = getPlugin(selectedPluginId)?.pluginSettings;
+    const pluginSettings = selectedPluginId ? getPlugin(selectedPluginId)?.pluginSettings : null;
 
     const navigateToSource = useCallback(
       (plugin: PluginItem, showLatestNovels?: boolean) => {
@@ -173,7 +173,8 @@ export const InstalledTab = memo(
                   name="cog-outline"
                   size={22}
                   color={theme.primary}
-                  onPress={() => {
+                  onPress={async () => {
+                    await getPluginAsync(item.id); //force plugin load if its not already
                     setSelectedPluginId(item.id);
                     settingsModal.setTrue();
                   }}

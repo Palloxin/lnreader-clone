@@ -15,6 +15,7 @@ export interface ChapterItem {
   page?: string;
 }
 
+//NOTE: the is duplicated in pluginThread.js
 export enum NovelStatus {
   Unknown = 'Unknown',
   Ongoing = 'Ongoing',
