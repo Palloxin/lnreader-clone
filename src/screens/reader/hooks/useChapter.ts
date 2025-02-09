@@ -1,4 +1,5 @@
 import {
+  getChapter as getDbChapter,
   getNextChapter,
   getPrevChapter,
   markChapterRead,
@@ -97,7 +98,9 @@ export default function useChapter(webViewRef: RefObject<WebView>) {
           })
           .catch(e => setError(e.message));
       }
-      setChapterText(sanitizeChapterText(text));
+      setChapterText(
+        sanitizeChapterText(novel.pluginId, novel.name, chapter.name, text),
+      );
       const [nextChap, prevChap] = await Promise.all([
         getNextChapter(chapter.novelId, chapter.id),
         getPrevChapter(chapter.novelId, chapter.id),
@@ -186,10 +189,17 @@ export default function useChapter(webViewRef: RefObject<WebView>) {
   useEffect(() => {
     setLoading(true);
     getChapter().finally(() => setLoading(false));
+
     if (!incognitoMode) {
       insertHistory(chapter.id);
-      setLastRead(chapter);
+      getDbChapter(chapter.id).then(result => setLastRead(result));
     }
+
+    return () => {
+      if (!incognitoMode) {
+        getDbChapter(chapter.id).then(result => setLastRead(result));
+      }
+    };
   }, [chapter]);
 
   const refetch = () => {
