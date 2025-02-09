@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - cloneable
+      - master
 jobs:
   build-android:
     name: Build App
