@@ -116,8 +116,8 @@ export default class ServiceManager {
       taskList[0].task.name !== 'DOWNLOAD_CHAPTER'
     ) {
       let now = Date.now();
-      if (now - this.lastNotifUpdate > 1000) {
-        let delay = 1000 - now - this.lastNotifUpdate;
+      if (now - this.lastNotifUpdate > 8000) {
+        let delay = 8000 - now - this.lastNotifUpdate;
         let id = ++this.currentPendingUpdate;
         setTimeout(() => {
           if (this.currentPendingUpdate !== id) {
