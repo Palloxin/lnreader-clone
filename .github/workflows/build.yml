@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - master2
 jobs:
   build-android:
     name: Build App
@@ -28,7 +28,7 @@ jobs:
     
       - name: Install Dependencies
         run: |
-          npm install
+          npm install react-native-boost
 
       - name: Create .env
         run: |
