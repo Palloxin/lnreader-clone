@@ -31,6 +31,7 @@ module.exports = function (api) {
           },
         },
       ],
+      'react-native-boost/plugin',
       'react-native-reanimated/plugin',
       [
         'module:react-native-dotenv',
