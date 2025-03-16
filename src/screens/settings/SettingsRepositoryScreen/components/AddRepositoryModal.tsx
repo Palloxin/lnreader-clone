@@ -51,25 +51,25 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
           defaultValue={repositoryUrl}
           placeholder={'Repo URL'}
           onChangeText={setRepositoryUrl}
-          mode="outlined"
+          mode='outlined'
           underlineColor={theme.outline}
           theme={{ colors: { ...theme } }}
         />
         <View style={styles.btnContainer}>
           <Button
-            title={getString(isEditMode ? "common.ok" : "common.add")}
+            title={getString(isEditMode ? 'common.ok' : 'common.add')}
             onPress={async () => {
               if (
                 !new RegExp(/https?:\/\/(.*?)plugins\.min\.json/).test(
                   repositoryUrl
                 )
               ) {
-                showToast("Repository URL is invalid");
+                showToast('Repository URL is invalid');
                 return;
               }
 
               if (await isRepoUrlDuplicate(repositoryUrl)) {
-                showToast("A respository with this url already exists!");
+                showToast('A respository with this url already exists!');
               } else {
                 if (isEditMode && repository) {
                   updateRepository(repository?.id, repositoryUrl);
@@ -78,11 +78,11 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
                 }
                 onSuccess();
               }
-              setRepositoryUrl("");
+              setRepositoryUrl('');
               closeModal();
             }}
           />
-          <Button title={getString("common.cancel")} onPress={closeModal} />
+          <Button title={getString('common.cancel')} onPress={closeModal} />
         </View>
       </Modal>
     </Portal>
