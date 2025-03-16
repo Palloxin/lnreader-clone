@@ -51,7 +51,7 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
           defaultValue={repositoryUrl}
           placeholder={'Repo URL'}
           onChangeText={setRepositoryUrl}
-          mode='outlined'
+          mode="outlined"
           underlineColor={theme.outline}
           theme={{ colors: { ...theme } }}
         />
@@ -61,7 +61,7 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
             onPress={async () => {
               if (
                 !new RegExp(/https?:\/\/(.*?)plugins\.min\.json/).test(
-                  repositoryUrl
+                  repositoryUrl,
                 )
               ) {
                 showToast('Repository URL is invalid');
