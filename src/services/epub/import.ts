@@ -104,7 +104,7 @@ const insertLocalChapter = (
               /=(?<=\b(?:href|src)=)(["'])(.*?)\1/g,
               ($0, $1, $2: string) => {
                 if ($2) {
-                  staticPaths.push(epubContentDir + "/" + $2);
+                  staticPaths.push(epubContentDir + '/' + $2);
                 }
                 return `="file://${novelDir}/${$2
                   .split(/[\/\\]/)
