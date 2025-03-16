@@ -61,8 +61,8 @@ const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
             onPress={async () => {
               if (
                   !new RegExp(/https?:\/\/(.+?)plugins\.min\.json/).test(
-                      repositoryUrl,
-                  )
+                    repositoryUrl,
+                )
               ) {
                 showToast('Repository URL is invalid');
                 return;
