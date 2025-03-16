@@ -99,15 +99,15 @@ const insertLocalChapter = (
             }
             const staticPaths: string[] = [];
             const novelDir = NOVEL_STORAGE + '/local/' + novelId;
-            const epubContentDir = path.replace(/[^\\\/]+$/, '');
+            const epubContentDir = path.replace(/[^\/\\]+$/, '');
             chapterText = chapterText.replace(
-              /(href|src)=(["'])(.*?)\2/g,
-              ($0, $1, $2, $3: string) => {
-                if ($3) {
-                  staticPaths.push(epubContentDir + '/' + $3);
+              /=(?<=\b(?:href|src)=)=(["'])(.*?)\1/g,
+              ($0, $1, $2: string) => {
+                if ($2) {
+                  staticPaths.push(epubContentDir + '/' + $2);
                 }
-                return `${$1}="file://${novelDir}/${$3
-                  .split(/[\\\/]/)
+                return `="file://${novelDir}/${$2
+                  .split(/[\/\\]/)
                   ?.pop()}"`;
               },
             );
@@ -178,7 +178,7 @@ export const importEpub = async (
     for (let i = 0; i < novel.chapters?.length; i++) {
       const chapter = novel.chapters[i];
       if (!chapter.name) {
-        chapter.name = chapter.path.split(/[\\\/]/).pop() || 'unknown';
+        chapter.name = chapter.path.split(/[\/\\]/).pop() || 'unknown';
       }
 
       setMeta(meta => ({
@@ -212,7 +212,7 @@ export const importEpub = async (
     if (await FileManager.exists(filePath)) {
       await FileManager.moveFile(
         filePath,
-        novelDir + '/' + filePath.split(/[\\\/]/).pop(),
+        novelDir + '/' + filePath.split(/[\/\\]/).pop(),
       );
     }
   }
