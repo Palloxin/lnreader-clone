@@ -106,7 +106,9 @@ const insertLocalChapter = (
                 if ($2) {
                   staticPaths.push(epubContentDir + "/" + $2);
                 }
-                return `="file://${novelDir}/${$2.split(/[\/\\]/)?.pop()}"`;
+                return `="file://${novelDir}/${$2
+                  .split(/[\/\\]/)
+                  ?.pop()}"`;
               },
             );
             await FileManager.mkdir(novelDir + '/' + insertId);
