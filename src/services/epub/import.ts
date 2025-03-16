@@ -101,7 +101,7 @@ const insertLocalChapter = (
             const novelDir = NOVEL_STORAGE + '/local/' + novelId;
             const epubContentDir = path.replace(/[^\/\\]+$/, '');
             chapterText = chapterText.replace(
-              /=(?<=\b(?:href|src)=)=(["'])(.*?)\1/g,
+              /=(?<=\b(?:href|src)=)(["'])(.*?)\1/g,
               ($0, $1, $2: string) => {
                 if ($2) {
                   staticPaths.push(epubContentDir + '/' + $2);
