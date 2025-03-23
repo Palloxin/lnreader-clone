@@ -59,61 +59,32 @@ function createLGC(
   );
 }
 
-function ChapterSkeleton({
-  style,
-  disableLoadingAnimations,
+const ChapterSkeleton = React.memo(function ChapterSkeleton({
+  lgc,
+  backgroundStyle,
+  img,
 }: {
-  style?: StyleProp<ViewStyle>;
-  disableLoadingAnimations?: boolean;
+  lgc: React.JSX.Element;
+  backgroundStyle: StyleProp<ViewStyle>;
+  img?: boolean;
 }) {
-  const theme = useTheme();
-  const [highlightColor, backgroundColor] = useLoadingColors(theme);
-
-  const LGC = React.useMemo(
-    () => createLGC(highlightColor, style, disableLoadingAnimations),
-    [disableLoadingAnimations, highlightColor, style],
-  );
-
   return (
     <View style={[styles.chapter, styles.h40]}>
+      {img ? (
+        <View style={[styles.default, styles.img, backgroundStyle]}>{lgc}</View>
+      ) : (
+        <></>
+      )}
       <View style={[styles.flex, styles.chapterText]}>
-        <View
-          style={[
-            styles.default,
-            styles.h20,
-            {
-              backgroundColor: backgroundColor,
-            },
-          ]}
-        >
-          {LGC}
-        </View>
-        <View
-          style={[
-            styles.default,
-            styles.h15,
-            {
-              backgroundColor: backgroundColor,
-            },
-          ]}
-        >
-          {LGC}
-        </View>
+        <View style={[styles.default, styles.h20, backgroundStyle]}>{lgc}</View>
+        <View style={[styles.default, styles.h15, backgroundStyle]}>{lgc}</View>
       </View>
-      <View
-        style={[
-          styles.default,
-          styles.circle,
-          {
-            backgroundColor: backgroundColor,
-          },
-        ]}
-      >
-        {LGC}
+      <View style={[styles.default, styles.circle, backgroundStyle]}>
+        {lgc}
       </View>
     </View>
   );
-}
+});
 
 function VerticalBarSkeleton() {
   const [LGC, backgroundColor] = useSetupLoadingAnimations();
@@ -187,28 +158,42 @@ function NovelMetaSkeleton() {
   );
 }
 
-const ChapterListSkeleton = () => {
+const ChapterListSkeleton = ({ img }: { img?: boolean }) => {
   const sv = useSharedValue(0);
   const { disableLoadingAnimations } = useAppSettings();
 
   React.useEffect(() => {
     if (disableLoadingAnimations) return;
     sv.value = withRepeat(withSequence(0, withTiming(160, { duration })), -1);
-  }, [disableLoadingAnimations, sv]);
+  }, [disableLoadingAnimations]);
 
-  const style = useAnimatedProps(() => {
+  const skeletonItems = React.useMemo(() => Array.from({ length: 7 }), []);
+
+  const animatedProps = useAnimatedProps(() => {
     return {
       left: (sv.value + '%') as `${number}%`,
     };
   });
+  const theme = useTheme();
+  const [highlightColor, backgroundColor] = useLoadingColors(theme);
+
+  const LGC = React.useMemo(
+    () => createLGC(highlightColor, animatedProps, disableLoadingAnimations),
+    [disableLoadingAnimations, highlightColor],
+  );
+  const backgroundStyle = React.useMemo(
+    () => ({ backgroundColor }),
+    [backgroundColor],
+  );
 
   return (
     <>
-      {[...Array(7)].map((_, i) => (
+      {skeletonItems.map((_, i) => (
         <ChapterSkeleton
           key={i}
-          style={style}
-          disableLoadingAnimations={disableLoadingAnimations}
+          lgc={LGC}
+          backgroundStyle={backgroundStyle}
+          img={img}
         />
       ))}
     </>
@@ -251,6 +236,12 @@ const styles = StyleSheet.create({
     height: 30,
     width: 30,
   },
+  img: {
+    alignSelf: 'center',
+    marginRight: 20,
+    height: 40,
+    width: 40,
+  },
   h15: {
     height: 15,
   },
@@ -275,7 +266,7 @@ const styles = StyleSheet.create({
   },
   LG: {
     width: '60%',
-    height: 30,
+    height: 40,
     position: 'absolute',
     transform: [{ translateX: '-100%' }],
   },
