@@ -145,7 +145,6 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
   const [pages, setPages] = useState<string[]>(
     novel ? calculatePages(novel) : [],
   );
-  const [chaptersTeasers, _setChaptersTeasers] = useState<ChapterInfo[]>([]);
 
   const { defaultChapterSort } = useAppSettings();
 
@@ -594,7 +593,6 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
     lastRead,
     chapters,
     novelSettings,
-    chaptersTeasers,
     batchInformation,
     getNextChapterBatch,
     getNovel,
@@ -622,7 +620,7 @@ export const useNovel = (novelOrPath: string | NovelInfo, pluginId: string) => {
 
 export const deleteCachedNovels = async () => {
   const cachedNovels = await _getCachedNovels();
-  for (let novel of cachedNovels) {
+  for (const novel of cachedNovels) {
     MMKVStorage.delete(`${TRACKED_NOVEL_PREFIX}_${novel.id}`);
     MMKVStorage.delete(
       `${NOVEL_PAGE_INDEX_PREFIX}_${novel.pluginId}_${novel.path}`,

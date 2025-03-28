@@ -3,7 +3,6 @@ import { StyleSheet, View, FlatList, Text, FlatListProps } from 'react-native';
 import { useTheme } from '@hooks/persisted';
 
 import ListView from '../../components/ListView';
-import { useLibraryNovels } from '@screens/library/hooks/useLibrary';
 import { Appbar } from '@components';
 import { SourceNovelsScreenProps } from '@navigators/types';
 import { NovelInfo } from '@database/types';
@@ -30,7 +29,7 @@ const SourceNovels = ({ navigation, route }: SourceNovelsScreenProps) => {
   );
 
   return (
-    <View style={[styles.container]}>
+    <View style={styles.container}>
       <Appbar
         title={getString('browseScreen.selectNovel')}
         handleGoBack={navigation.goBack}

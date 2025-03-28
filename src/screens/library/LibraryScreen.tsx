@@ -43,7 +43,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SourceScreenSkeletonLoading from '@screens/browse/loadingAnimation/SourceScreenSkeletonLoading';
 import { Row } from '@components/Common';
 import { LibraryScreenProps } from '@navigators/types';
-import { LibraryNovelInfo, NovelInfo } from '@database/types';
+import { NovelInfo } from '@database/types';
 import * as DocumentPicker from 'expo-document-picker';
 import ServiceManager from '@services/ServiceManager';
 import useImport from '@hooks/persisted/useImport';
@@ -60,7 +60,7 @@ type TabViewLabelProps = {
     id: number;
     name: string;
     sort: number;
-    novelIds: Number[];
+    novelIds: number[];
     key: string;
     title: string;
   };
@@ -88,7 +88,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
 
   const { isLoading: isHistoryLoading, history, error } = useHistory();
 
-  const { importQueue, importNovel } = useImport();
+  const { importNovel } = useImport();
 
   const layout = useWindowDimensions();
 
@@ -208,14 +208,13 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
         id: number;
         name: string;
         sort: number;
-        novelIds: Number[];
+        novelIds: number[];
         key: string;
         title: string;
       };
     }) => {
       const ids = route.novelIds;
       const novels = library.filter(l => ids.includes(l.id));
-      console.log('renderScene', route);
 
       return isLoading ? (
         <SourceScreenSkeletonLoading theme={theme} />
@@ -442,7 +441,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
             {
               icon: 'check',
               onPress: async () => {
-                let promises: Promise<any>[] = [];
+                const promises: Promise<any>[] = [];
                 selectedNovelIds.map(id =>
                   promises.push(markAllChaptersRead(id)),
                 );
@@ -454,7 +453,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
             {
               icon: 'check-outline',
               onPress: async () => {
-                let promises: Promise<any>[] = [];
+                const promises: Promise<any>[] = [];
                 selectedNovelIds.map(id =>
                   promises.push(markAllChaptersUnread(id)),
                 );
@@ -482,39 +481,39 @@ export default React.memo(LibraryScreen);
 
 function createStyles(theme: ThemeColors) {
   return StyleSheet.create({
+    badgeCtn: {
+      borderRadius: 50,
+      marginLeft: 2,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      position: 'relative',
+    },
+    badgetText: {
+      fontSize: 12,
+    },
+    fab: {
+      bottom: 0,
+      margin: 16,
+      position: 'absolute',
+      right: 0,
+    },
+    fontWeight600: {
+      fontWeight: '600',
+    },
+    globalSearchBtn: {
+      margin: 16,
+    },
+    tabBar: {
+      borderBottomWidth: 1,
+      elevation: 0,
+    },
     tabBarIndicator: {
       backgroundColor: theme.primary,
       height: 3,
     },
     tabStyle: {
-      width: 'auto',
       minWidth: 100,
-    },
-    tabBar: {
-      elevation: 0,
-      borderBottomWidth: 1,
-    },
-    globalSearchBtn: {
-      margin: 16,
-    },
-    fab: {
-      position: 'absolute',
-      margin: 16,
-      right: 0,
-      bottom: 0,
-    },
-    badgeCtn: {
-      position: 'relative',
-      borderRadius: 50,
-      marginLeft: 2,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-    },
-    badgetText: {
-      fontSize: 12,
-    },
-    fontWeight600: {
-      fontWeight: '600',
+      width: 'auto',
     },
   });
 }

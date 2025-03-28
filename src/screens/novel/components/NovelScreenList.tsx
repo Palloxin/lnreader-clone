@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrackSheet from './Tracker/TrackSheet';
 import NovelBottomSheet from './NovelBottomSheet';
 import * as Haptics from 'expo-haptics';
-import { AnimatedFAB, Text } from 'react-native-paper';
+import { AnimatedFAB } from 'react-native-paper';
 import { ChapterListSkeleton } from '@components/Skeleton/Skeleton';
 import { LegendList, LegendListRef } from '@legendapp/list';
 import { BottomSheetModalMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
@@ -59,7 +59,6 @@ const NovelScreenList = ({
 }: NovelScreenListProps) => {
   const {
     chapters,
-    chaptersTeasers,
     deleteChapter,
     fetching,
     followNovel,
@@ -108,8 +107,8 @@ const NovelScreenList = ({
 
   const [isFabExtended, setIsFabExtended] = useState(true);
 
-  let novelBottomSheetRef = useRef<BottomSheetModalMethods>(null);
-  let trackerSheetRef = useRef<BottomSheetModalMethods>(null);
+  const novelBottomSheetRef = useRef<BottomSheetModalMethods>(null);
+  const trackerSheetRef = useRef<BottomSheetModalMethods>(null);
 
   const deleteDownloadsSnackbar = useBoolean();
 
@@ -248,7 +247,7 @@ const NovelScreenList = ({
         recycleItems
         ref={listRef}
         estimatedItemSize={64}
-        data={chapters.length ? chapters : chaptersTeasers}
+        data={chapters.length ? chapters : []}
         extraData={[
           chapters.length,
           selected.length,
@@ -368,17 +367,17 @@ const NovelScreenList = ({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { paddingBottom: 100 },
+  fab: {
+    bottom: 16,
+    margin: 16,
+    position: 'absolute',
+    right: 0,
+  },
   rowBack: {
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 16,
   },
 });
 

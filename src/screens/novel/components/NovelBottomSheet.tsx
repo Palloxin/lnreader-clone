@@ -96,9 +96,11 @@ const ChaptersSettingsSheet = ({
           label={getString('novelScreen.bottomSheet.filters.bookmarked')}
           status={!!filter.match('AND bookmark=1')}
           onPress={() => {
-            filter.match('AND bookmark=1')
-              ? filterChapters(filter.replace(' AND bookmark=1', ''))
-              : filterChapters(filter + ' AND bookmark=1');
+            filterChapters(
+              filter.match('AND bookmark=1')
+                ? filter.replace(' AND bookmark=1', '')
+                : filter + ' AND bookmark=1',
+            );
           }}
         />
       </View>
@@ -235,13 +237,13 @@ export default ChaptersSettingsSheet;
 
 const styles = StyleSheet.create({
   contentContainer: {
-    flex: 1,
-    borderTopRightRadius: 8,
     borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    flex: 1,
   },
   radius: {
-    borderTopRightRadius: 8,
     borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   transparent: {
     backgroundColor: 'transparent',
