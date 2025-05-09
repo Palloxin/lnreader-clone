@@ -36,7 +36,7 @@ const ReaderAppbar = ({
     'worklet';
     const animations = {
       originY: withTiming(0, {
-        duration: 150,
+        duration: 10,
         easing: fastOutSlowIn,
         reduceMotion: ReduceMotion.System,
       }),
@@ -55,11 +55,12 @@ const ReaderAppbar = ({
     'worklet';
     const animations = {
       originY: withTiming(-statusBarHeight, {
-        duration: 150,
+        duration: 10,
         easing: fastOutSlowIn,
         reduceMotion: ReduceMotion.System,
       }),
-      opacity: withTiming(0, { duration: 150 }),
+      opacity: withTiming(0, { duration: 10
+        0 }),
     };
     const initialValues = {
       originY: 0,
