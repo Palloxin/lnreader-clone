@@ -128,7 +128,7 @@ td {
   top: 50%;
   transform: translateY(-50%);
   right: 5vw;
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #ToolWrapper.horizontal {
@@ -151,7 +151,7 @@ td {
 #ToolWrapper.hidden {
   opacity: 0;
   right: 0;
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #ToolWrapper.hidden.horizontal {
