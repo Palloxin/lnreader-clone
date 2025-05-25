@@ -217,6 +217,10 @@ void clean_summary(std::string &summary)
     summary = std::regex_replace(summary, regx74, "†");
     std::regex regx75("&#135;");
     summary = std::regex_replace(summary, regx75, "‡");
+    std::regex regx76("&hellip;");
+    summary = std::regex_replace(summary, regx76, "…");
+    std::regex regx77("&quot;");
+    summary = std::regex_replace(summary, regx76, '"');
     std::regex regx78("&#177;");
     summary = std::regex_replace(summary, regx78, "±");
     std::regex regx79("&#171;");
