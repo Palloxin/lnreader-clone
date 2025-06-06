@@ -1,10 +1,4 @@
-import type {
-  AppSettings,
-  ChapterGeneralSettings,
-  ChapterReaderSettings,
-  LibrarySettings,
-  ReaderTheme,
-} from './constants/defaultValues';
+import type { FilteredSettings, ReaderTheme } from './constants/defaultValues';
 import type { ThemeColors } from '@theme/types';
 import InfoItem from './dynamic/components/InfoItem';
 
@@ -22,34 +16,12 @@ type settingsGroupTypes =
 
 export type SettingsTypeModes = 'single' | 'multiple' | 'order';
 
-export type ValueKey<T extends SettingOrigin> = T extends 'App'
-  ? keyof AppSettings
-  : T extends 'Library'
-  ? keyof LibrarySettings
-  : T extends 'lastUpdateTime'
-  ? 'showLastUpdateTime'
-  : T extends 'MMKV'
-  ? 'isDark'
-  : T extends 'GeneralChapter'
-  ? keyof ChapterGeneralSettings
-  : T extends 'ReaderChapter'
-  ? keyof ChapterReaderSettings
-  : never;
+export type SettingOrigin = 'lastUpdateTime' | 'MMKV';
 
-export type SettingOrigin =
-  | 'App'
-  | 'Library'
-  | 'lastUpdateTime'
-  | 'MMKV'
-  | 'GeneralChapter'
-  | 'ReaderChapter';
-
-export type ModalSettingsType<T extends SettingOrigin = 'App'> = {
-  settingOrigin: T;
-} & (
+export type ModalSettingsType =
   | {
       mode: 'single';
-      valueKey: ValueKey<T>;
+      valueKey: FilteredSettings<number>;
       description?: (value: number) => string;
       options: Array<{
         label: string;
@@ -62,90 +34,52 @@ export type ModalSettingsType<T extends SettingOrigin = 'App'> = {
       description?: (value: Array<boolean>) => string;
       options: Array<{
         label: string;
-        key: ValueKey<T>;
+        key: FilteredSettings<boolean>;
       }>;
     }
   | {
       mode: 'order';
-      valueKey: ValueKey<T>;
+      valueKey: FilteredSettings;
       description?: (value: string) => string;
-
       options: Array<{
         label: string;
         ASC: string;
         DESC: string;
       }>;
-    }
-);
+    };
 
-type BaseModalSetting = {
+export type ModalSetting = ModalSettingsType & {
   title: string;
   type: 'Modal';
 };
-export type ModalSetting =
-  | (BaseModalSetting & ModalSettingsType<'App'>)
-  | (BaseModalSetting & ModalSettingsType<'Library'>);
-
-export type SwitchSettingsType<T extends SettingOrigin> = {
-  settingOrigin: T;
-  valueKey: ValueKey<T>;
-  dependents?: Array<SettingsSubGroupSettings>;
-};
-
-type BaseSwitchSetting = {
+export type _SwitchSetting<T extends SettingOrigin | undefined = undefined> = {
   title: string;
   description?: string;
   type: 'Switch';
+  settingsOrigin?: T;
+  valueKey: T extends undefined ? FilteredSettings<boolean> : undefined;
+  dependents?: Array<SettingsSubGroupSettings>;
 };
-export type SwitchSetting = BaseSwitchSetting &
-  (
-    | SwitchSettingsType<'App'>
-    | SwitchSettingsType<'lastUpdateTime'>
-    | SwitchSettingsType<'Library'>
-    | SwitchSettingsType<'GeneralChapter'>
-    | SwitchSettingsType<'ReaderChapter'>
-  );
+export type SwitchSetting =
+  | _SwitchSetting<'lastUpdateTime'>
+  | _SwitchSetting<undefined>;
 
-export type NumberInputSettingsType<T extends SettingOrigin> = {
-  settingOrigin: T;
-  valueKey: ValueKey<T>;
-};
-
-type BaseNumberInputSetting = {
+export type NumberInputSetting = {
   title: string;
   description?: string;
   type: 'NumberInput';
-};
-export type NumberInputSetting = BaseNumberInputSetting &
-  (
-    | NumberInputSettingsType<'App'>
-    | NumberInputSettingsType<'lastUpdateTime'>
-    | NumberInputSettingsType<'Library'>
-    | NumberInputSettingsType<'GeneralChapter'>
-    | NumberInputSettingsType<'ReaderChapter'>
-  );
-
-export type TextAreaSettingsType<T extends SettingOrigin> = {
-  settingOrigin: T;
-  valueKey: ValueKey<T>;
+  valueKey: FilteredSettings<number>;
 };
 
-type BaseTextAreaSetting = {
+export type TextAreaSetting = {
   title: string;
   placeholder?: string;
   description?: string;
   openFileLabel: string;
   clearDialog: string;
   type: 'TextArea';
+  valueKey: FilteredSettings<string>;
 };
-export type TextAreaSetting = BaseTextAreaSetting &
-  (
-    | TextAreaSettingsType<'App'>
-    | TextAreaSettingsType<'lastUpdateTime'>
-    | TextAreaSettingsType<'Library'>
-    | TextAreaSettingsType<'GeneralChapter'>
-    | TextAreaSettingsType<'ReaderChapter'>
-  );
 
 export type ThemePickerSetting = {
   title: string;
@@ -153,19 +87,16 @@ export type ThemePickerSetting = {
   options: Array<ThemeColors>;
 };
 
-export type ColorPickerSettingsType<T extends SettingOrigin> = {
-  settingOrigin: T;
-  valueKey: T extends 'MMKV' ? undefined : keyof ReaderTheme;
-};
-
-type BaseColorPickerSetting = {
+type _ColorPickerSetting<T extends SettingOrigin | undefined = undefined> = {
   title: string;
   description?: (val: string) => string;
   type: 'ColorPicker';
+  settingsOrigin?: T;
+  valueKey: T extends undefined ? keyof ReaderTheme : undefined;
 };
 export type ColorPickerSetting =
-  | (BaseColorPickerSetting & ColorPickerSettingsType<'MMKV'>)
-  | (BaseColorPickerSetting & ColorPickerSettingsType<'Library'>);
+  | _ColorPickerSetting<'MMKV'>
+  | _ColorPickerSetting<undefined>;
 
 export type ReaderThemeSetting = { type: 'ReaderTheme' };
 export type ReaderTTSSetting = { type: 'TTS' };
@@ -176,19 +107,24 @@ export type TrackerSetting = {
 };
 export type InfoItem = { type: 'InfoItem'; title: string };
 
-export type SettingsSubGroupSettings = { quickSettings?: boolean } & (
-  | ModalSetting
-  | SwitchSetting
-  | ThemePickerSetting
-  | ColorPickerSetting
-  | NumberInputSetting
-  | TextAreaSetting
-  | ReaderThemeSetting
-  | ReaderTTSSetting
-  | RepoSetting
-  | TrackerSetting
-  | InfoItem
-);
+export type BaseSetting = {
+  quickSettings?: boolean;
+};
+
+export type SettingsSubGroupSettings = BaseSetting &
+  (
+    | ModalSetting
+    | SwitchSetting
+    | ThemePickerSetting
+    | ColorPickerSetting
+    | NumberInputSetting
+    | TextAreaSetting
+    | ReaderThemeSetting
+    | ReaderTTSSetting
+    | RepoSetting
+    | TrackerSetting
+    | InfoItem
+  );
 
 export interface SettingSubGroup<T extends string> {
   subGroupTitle: string;

@@ -5,15 +5,38 @@ import { Modal, overlay, Portal } from 'react-native-paper';
 import { Button, List } from '@components';
 import { ThemeColors } from '@theme/types';
 import { useBoolean } from '@hooks/index';
-import { ColorPickerSetting } from '@screens/settings/Settings.d';
+import { BaseSetting, ColorPickerSetting } from '@screens/settings/Settings.d';
 import { useMMKVString } from 'react-native-mmkv';
 import { useKeyboardHeight } from '@hooks/common/useKeyboardHeight';
-import { useChapterReaderSettings } from '@hooks/persisted';
 import TextInput from '@components/TextInput/TextInput';
 import { getString } from '@strings/translations';
+import { useSettingsContext } from '@components/Context/SettingsContext';
+
+const accentColors = [
+  '#EF5350',
+  '#EC407A',
+  '#AB47BC',
+  '#7E57C2',
+  '#5C6BC0',
+  '#42A5F5',
+  '#29B6FC',
+  '#26C6DA',
+  '#26A69A',
+  '#66BB6A',
+  '#9CCC65',
+  '#D4E157',
+  '#FFEE58',
+  '#FFCA28',
+  '#FFA726',
+  '#FF7043',
+  '#8D6E63',
+  '#BDBDBD',
+  '#78909C',
+  '#000000',
+];
 
 interface ColorPickerModalProps {
-  settings: ColorPickerSetting;
+  settings: ColorPickerSetting & BaseSetting;
   theme: ThemeColors;
   showAccentColors?: boolean;
   quickSettings?: boolean;
@@ -30,27 +53,30 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   const keyboardHeight = useKeyboardHeight();
 
   const [, setCustomAccentColor] = useMMKVString('CUSTOM_ACCENT_COLOR');
-  const {
-    setChapterReaderSettings,
-    theme: t,
-    textColor,
-  } = useChapterReaderSettings();
+  const { setSettings, ...currentSettings } = useSettingsContext();
 
   const currentValue =
-    settings.settingOrigin === 'MMKV'
+    settings.settingsOrigin === 'MMKV'
       ? rgbToHex(theme.primary)
-      : settings.valueKey === 'textColor'
-      ? textColor
-      : t;
+      : !settings.settingsOrigin
+      ? currentSettings[settings.valueKey!]
+      : (() => {
+          throw new Error(
+            `settings.settingsOrigin in setting:
+          ${JSON.stringify(settings, null, 2)}
+         is not defined`,
+          );
+        })();
+
   const [text, setText] = useState<string>(currentValue);
 
   const update = (val: string) => {
     setText(val);
-    if (settings.settingOrigin === 'MMKV') {
+    if (settings.settingsOrigin === 'MMKV') {
       setCustomAccentColor(val);
     } else {
-      setChapterReaderSettings({
-        [settings.valueKey]: val,
+      setSettings({
+        [settings.valueKey === 'backgroundColor' ? 'theme' : 'textColor']: val,
       });
     }
   };
@@ -86,29 +112,6 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
       setError('Enter a valid hex color code');
     }
   };
-
-  const accentColors = [
-    '#EF5350',
-    '#EC407A',
-    '#AB47BC',
-    '#7E57C2',
-    '#5C6BC0',
-    '#42A5F5',
-    '#29B6FC',
-    '#26C6DA',
-    '#26A69A',
-    '#66BB6A',
-    '#9CCC65',
-    '#D4E157',
-    '#FFEE58',
-    '#FFCA28',
-    '#FFA726',
-    '#FF7043',
-    '#8D6E63',
-    '#BDBDBD',
-    '#78909C',
-    '#000000',
-  ];
 
   return (
     <>
