@@ -7,7 +7,6 @@ import { useBoolean } from '@hooks/index';
 import {
   useAppSettings,
   useDownload,
-  useTheme,
   useNovelChapters,
   useNovelSettings,
   useNovelState,
@@ -34,6 +33,7 @@ import { ChapterListSkeleton } from '@components/Skeleton/Skeleton';
 import { BottomSheetModalMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { FlashList } from '@shopify/flash-list';
 import useNovelLastRead from '@hooks/persisted/novel/useNovelLastRead';
+import { useTheme } from '@providers/ThemeProvider';
 
 type NovelScreenListProps = {
   headerOpacity: SharedValue<number>;
