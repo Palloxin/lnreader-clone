@@ -10,11 +10,6 @@ export const sanitizeChapterText = (
   const text = sanitizeHtml(html, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat([
       'img',
-      'i',
-      'em',
-      'b',
-      'a',
-      'div',
       'ol',
       'li',
       'title',
