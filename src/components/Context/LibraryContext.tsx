@@ -1,10 +1,9 @@
-// src/components/Context/LibraryContext.tsx
 import React, {
   createContext,
   useContext,
   useMemo,
   useCallback,
-  useState,
+  useEffect,
 } from 'react';
 
 // Import existing settings hook
@@ -12,7 +11,7 @@ import {
   useLibrarySettings,
   LibrarySettings,
 } from '@hooks/persisted/useSettings';
-import { NovelInfo } from '@database/types';
+import { DBNovelInfo } from '@database/types';
 import {
   ExtendedCategory,
   useFetchCategories,
@@ -21,9 +20,8 @@ import { useLibraryNovels } from '@hooks/persisted/library/useLibraryNovels';
 import { useLibraryActions } from '@hooks/persisted/library/useLibraryActions';
 import ServiceManager, { QueuedBackgroundTask } from '@services/ServiceManager';
 
-// Define the shape of the context value
 type LibraryContextType = {
-  library: NovelInfo[];
+  library: DBNovelInfo[];
   categories: ExtendedCategory[];
   isLoading: boolean;
   settings: LibrarySettings;
@@ -36,8 +34,7 @@ type LibraryContextType = {
   setCategories: React.Dispatch<React.SetStateAction<ExtendedCategory[]>>;
 };
 
-const defaultValue = {} as LibraryContextType;
-const LibraryContext = createContext<LibraryContextType>(defaultValue);
+const LibraryContext = createContext<LibraryContextType | null>(null);
 
 interface LibraryContextProviderProps {
   children: React.ReactNode;
@@ -46,18 +43,23 @@ interface LibraryContextProviderProps {
 export function LibraryContextProvider({
   children,
 }: LibraryContextProviderProps) {
-  const [searchText, setSearchText] = useState('');
   const settings = useLibrarySettings();
 
   const { categories, categoriesLoading, refreshCategories, setCategories } =
     useFetchCategories();
-  const { novels, novelsLoading, refetchNovels, refetchNovel } =
-    useLibraryNovels({
-      sortOrder: settings.sortOrder,
-      filter: settings.filter,
-      searchText: searchText,
-      downloadedOnlyMode: settings.downloadedOnlyMode,
-    });
+  const {
+    novels,
+    novelsLoading,
+    refetchNovels,
+    refetchNovel,
+    searchText,
+    setSearchText,
+    clearSearchbar,
+  } = useLibraryNovels({
+    sortOrder: settings.sortOrder,
+    filter: settings.filter,
+    downloadedOnlyMode: settings.downloadedOnlyMode,
+  });
 
   const { switchNovelToLibrary } = useLibraryActions({
     refreshCategories,
@@ -89,7 +91,12 @@ export function LibraryContextProvider({
     },
     [refetchLibrary, refetchNovel],
   );
-  ServiceManager.manager.addCompletionListener(handleQueueChange);
+  useEffect(() => {
+    ServiceManager.manager.addCompletionListener(handleQueueChange);
+    return () => {
+      ServiceManager.manager.removeCompletionListener(handleQueueChange);
+    };
+  }, [handleQueueChange]);
 
   const contextValue = useMemo(
     () => ({
@@ -104,6 +111,7 @@ export function LibraryContextProvider({
       setSearchText,
       refreshCategories,
       setCategories,
+      clearSearchbar,
     }),
     [
       novels,
@@ -114,8 +122,10 @@ export function LibraryContextProvider({
       refetchLibrary,
       novelInLibrary,
       switchNovelToLibrary,
+      setSearchText,
       refreshCategories,
       setCategories,
+      clearSearchbar,
     ],
   );
 
@@ -128,7 +138,7 @@ export function LibraryContextProvider({
 
 export const useLibraryContext = (): LibraryContextType => {
   const context = useContext(LibraryContext);
-  if (context === defaultValue) {
+  if (context === null) {
     throw new Error(
       'useLibraryContext must be used within a LibraryContextProvider',
     );

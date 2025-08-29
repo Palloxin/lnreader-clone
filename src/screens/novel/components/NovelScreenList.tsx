@@ -3,7 +3,7 @@ import ChapterItem from './ChapterItem';
 import NovelInfoHeader from './Info/NovelInfoHeader';
 import { useRef, useState, useCallback, useMemo } from 'react';
 import { ChapterInfo } from '@database/types';
-import { useBoolean } from '@hooks/index';
+import { UseBooleanReturnType } from '@hooks/index';
 import {
   useAppSettings,
   useDownload,
@@ -43,6 +43,7 @@ type NovelScreenListProps = {
   selected: ChapterInfo[];
   setSelected: React.Dispatch<React.SetStateAction<ChapterInfo[]>>;
   getNextChapterBatch: () => void;
+  deleteDownloadsSnackbar: UseBooleanReturnType;
   routeBaseNovel: {
     name: string;
     path: string;
@@ -61,6 +62,7 @@ const NovelScreenList = ({
   openDrawer,
   routeBaseNovel,
   selected,
+  deleteDownloadsSnackbar,
   setSelected,
   getNextChapterBatch,
 }: NovelScreenListProps) => {
@@ -99,7 +101,6 @@ const NovelScreenList = ({
   const novelBottomSheetRef = useRef<BottomSheetModalMethods>(null);
   const trackerSheetRef = useRef<BottomSheetModalMethods>(null);
 
-  const deleteDownloadsSnackbar = useBoolean();
   // Memoize selected chapter IDs for faster lookup
   const selectedIds = useMemo(
     () => new Set(selected.map(chapter => chapter.id)),
@@ -298,9 +299,17 @@ const NovelScreenList = ({
       selectedLength: selected.length,
       novelId: novel.id,
       loading,
+      showChapterTitles,
       downloadingIds: Array.from(downloadingIds).sort().join(','), // Convert to string for stable comparison
     }),
-    [chapters, selected.length, novel.id, loading, downloadingIds],
+    [
+      chapters,
+      selected.length,
+      novel.id,
+      loading,
+      showChapterTitles,
+      downloadingIds,
+    ],
   );
 
   const keyExtractor = useCallback((item: ChapterInfo) => 'c' + item.id, []);
