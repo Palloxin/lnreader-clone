@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 
 import { Appbar as MaterialAppbar } from 'react-native-paper';
 
-import { ScreenContainer } from '@components/Common';
 import EmptyView from '@components/EmptyView';
-import { Appbar, List } from '@components';
+import { Appbar, List, SafeAreaView } from '@components';
 import {
   deleteChapter,
   deleteDownloads,
@@ -31,9 +30,9 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
   const [loading, setLoading] = useState(true);
   const [chapters, setChapters] = useState<DownloadedChapter[]>([]);
   const groupUpdatesByDate = (
-    chapters: DownloadedChapter[],
+    localChapters: DownloadedChapter[],
   ): DownloadedChapter[][] => {
-    const dateGroups = chapters.reduce((groups, item) => {
+    const dateGroups = localChapters.reduce((groups, item) => {
       const novelId = item.novelId;
       if (!groups[novelId]) {
         groups[novelId] = [];
@@ -69,23 +68,25 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
         };
       }),
     );
-    setLoading(false);
   };
 
-  const ListEmptyComponent = () =>
-    !loading ? (
-      <EmptyView
-        icon="(˘･_･˘)"
-        description={getString('downloadScreen.noDownloads')}
-      />
-    ) : null;
+  const ListEmptyComponent = useCallback(
+    () =>
+      !loading ? (
+        <EmptyView
+          icon="(˘･_･˘)"
+          description={getString('downloadScreen.noDownloads')}
+        />
+      ) : null,
+    [loading],
+  );
 
   useEffect(() => {
-    getChapters();
+    getChapters().finally(() => setLoading(false));
   }, []);
 
   return (
-    <ScreenContainer theme={theme}>
+    <SafeAreaView excludeTop>
       <Appbar
         title={getString('common.downloads')}
         handleGoBack={navigation.goBack}
@@ -99,6 +100,7 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
           />
         ) : null}
       </Appbar>
+
       <List.InfoItem title={getString('downloadScreen.dbInfo')} theme={theme} />
       {loading ? (
         <UpdatesSkeletonLoading theme={theme} />
@@ -107,22 +109,25 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
           contentContainerStyle={styles.flatList}
           data={groupUpdatesByDate(chapters)}
           keyExtractor={(item, index) => 'downloadGroup' + index}
-          renderItem={({ item }) => (
-            <UpdateNovelCard
-              chapterList={item}
-              descriptionText={getString('downloadScreen.downloadsLower')}
-              deleteChapter={chapter => {
-                deleteChapter(
-                  chapter.pluginId,
-                  chapter.novelId,
-                  chapter.id,
-                ).then(() => {
-                  showToast(`${getString('common.delete')} ${chapter.name}`);
-                  getChapters();
-                });
-              }}
-            />
-          )}
+          renderItem={({ item }) => {
+            return (
+              <UpdateNovelCard
+                onlyDownloadedChapters
+                chapterList={item}
+                descriptionText={getString('downloadScreen.downloadsLower')}
+                deleteChapter={chapter => {
+                  deleteChapter(
+                    chapter.pluginId,
+                    chapter.novelId,
+                    chapter.id,
+                  ).then(() => {
+                    showToast(`${getString('common.delete')} ${chapter.name}`);
+                    getChapters();
+                  });
+                }}
+              />
+            );
+          }}
           ListEmptyComponent={<ListEmptyComponent />}
         />
       )}
@@ -136,7 +141,7 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
         }}
         theme={theme}
       />
-    </ScreenContainer>
+    </SafeAreaView>
   );
 };
 

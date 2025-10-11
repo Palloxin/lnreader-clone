@@ -14,7 +14,7 @@ const Migration = ({ navigation }: MigrationScreenProps) => {
   const theme = useTheme();
 
   const { library } = useLibraryNovels();
-  let { filteredInstalledPlugins } = usePlugins();
+  const { filteredInstalledPlugins } = usePlugins();
 
   const novelsPerSource = (pluginId: string) =>
     library.filter(novel => novel.pluginId === pluginId).length;
@@ -39,7 +39,7 @@ const Migration = ({ navigation }: MigrationScreenProps) => {
   );
 
   return (
-    <View style={[styles.container]}>
+    <View style={styles.container}>
       <Appbar
         title={getString('browseScreen.migration.selectSource')}
         handleGoBack={navigation.goBack}
@@ -47,7 +47,7 @@ const Migration = ({ navigation }: MigrationScreenProps) => {
       />
       <FlatList
         data={plugins}
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={styles.paddingBottom}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         ListHeaderComponent={ListHeaderComponent}
@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  paddingBottom: { paddingBottom: 48 },
 
   listHeader: {
     padding: 20,

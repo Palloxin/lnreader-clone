@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, StyleSheet } from 'react-native';
 
 import { ThemePicker } from '@components/ThemePicker/ThemePicker';
 import SettingSwitch from './components/SettingSwitch';
@@ -11,7 +11,7 @@ import {
   useMMKVObject,
   useMMKVString,
 } from 'react-native-mmkv';
-import { Appbar, List } from '@components';
+import { Appbar, List, SafeAreaView } from '@components';
 import { AppearanceSettingsScreenProps } from '@navigators/types';
 import { getString } from '@strings/translations';
 import { darkThemes, lightThemes } from '@theme/md3';
@@ -40,40 +40,31 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
   const hideAccentColorModal = () => setAccentColorModal(false);
 
   return (
-    <>
+    <SafeAreaView excludeTop>
       <Appbar
         title={getString('appearance')}
         handleGoBack={navigation.goBack}
         theme={theme}
       />
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        style={styles.flex1}
+        contentContainerStyle={styles.scrollContent}
       >
         <List.Section>
           <List.SubHeader theme={theme}>
             {getString('appearanceScreen.appTheme')}
           </List.SubHeader>
-          <Text
-            style={{
-              color: theme.onSurface,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-            }}
-          >
+          <Text style={[{ color: theme.onSurface }, styles.themeSectionText]}>
             {getString('appearanceScreen.lightTheme')}
           </Text>
           <ScrollView
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              flexDirection: 'row',
-            }}
+            contentContainerStyle={styles.themePickerRow}
             horizontal={true}
             showsHorizontalScrollIndicator={false}
           >
             {lightThemes.map(item => (
               <ThemePicker
+                horizontal
                 key={item.id}
                 currentTheme={theme}
                 theme={item}
@@ -84,26 +75,17 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
               />
             ))}
           </ScrollView>
-          <Text
-            style={{
-              color: theme.onSurface,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-            }}
-          >
+          <Text style={[{ color: theme.onSurface }, styles.themeSectionText]}>
             {getString('appearanceScreen.darkTheme')}
           </Text>
           <ScrollView
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              flexDirection: 'row',
-            }}
+            contentContainerStyle={styles.themePickerRow}
             horizontal={true}
             showsHorizontalScrollIndicator={false}
           >
             {darkThemes.map(item => (
               <ThemePicker
+                horizontal
                 key={item.id}
                 currentTheme={theme}
                 theme={item}
@@ -184,8 +166,26 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
         theme={theme}
         showAccentColors={true}
       />
-    </>
+    </SafeAreaView>
   );
 };
 
 export default AppearanceSettings;
+
+const styles = StyleSheet.create({
+  flex1: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  themeSectionText: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  themePickerRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+  },
+});

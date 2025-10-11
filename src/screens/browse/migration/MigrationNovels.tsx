@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, FlatListProps } from 'react-native';
 import { ProgressBar } from 'react-native-paper';
 import { usePlugins, useTheme } from '@hooks/persisted';
@@ -6,10 +6,9 @@ import { usePlugins, useTheme } from '@hooks/persisted';
 import EmptyView from '@components/EmptyView';
 import MigrationNovelList from './MigrationNovelList';
 
-import { ScreenContainer } from '@components/Common';
 import { getPlugin } from '@plugins/pluginManager';
 import { useLibraryNovels } from '@screens/library/hooks/useLibrary';
-import { Appbar } from '@components';
+import { Appbar, SafeAreaView } from '@components';
 import GlobalSearchSkeletonLoading from '../loadingAnimation/GlobalSearchSkeletonLoading';
 import { MigrateNovelScreenProps } from '@navigators/types';
 import { NovelItem } from '@plugins/types';
@@ -36,7 +35,7 @@ const MigrationNovels = ({ navigation, route }: MigrateNovelScreenProps) => {
 
   const { filteredInstalledPlugins } = usePlugins();
 
-  const getSearchResults = async () => {
+  const getSearchResults = useCallback(async () => {
     setSearchResults(
       filteredInstalledPlugins.map(item => ({
         id: item.id,
@@ -80,12 +79,11 @@ const MigrationNovels = ({ navigation, route }: MigrateNovelScreenProps) => {
         setProgress(before => before + 1 / filteredInstalledPlugins.length);
       }
     });
-  };
+  }, [filteredInstalledPlugins, novel.name]);
 
   useEffect(() => {
     getSearchResults();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [getSearchResults]);
 
   useEffect(() => {
     return () => {
@@ -101,9 +99,9 @@ const MigrationNovels = ({ navigation, route }: MigrateNovelScreenProps) => {
     item,
   }) => (
     <>
-      <View style={{ padding: 8, paddingVertical: 16 }}>
+      <View style={styles.padding}>
         <Text style={{ color: theme.onSurface }}>{item.name}</Text>
-        <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>
+        <Text style={[{ color: theme.onSurfaceVariant }, styles.fontSize]}>
           {item.lang}
         </Text>
       </View>
@@ -124,17 +122,20 @@ const MigrationNovels = ({ navigation, route }: MigrateNovelScreenProps) => {
   );
 
   return (
-    <ScreenContainer theme={theme}>
+    <SafeAreaView excludeTop>
       <Appbar
         title={novel.name}
         handleGoBack={navigation.goBack}
         theme={theme}
       />
       {progress > 0 ? (
-        <ProgressBar color={theme.primary} progress={progress} />
+        <ProgressBar
+          color={theme.primary}
+          progress={Math.round(1000 * progress) / 1000}
+        />
       ) : null}
       <FlatList
-        contentContainerStyle={{ flexGrow: 1, padding: 4 }}
+        contentContainerStyle={styles.flexGrow}
         data={searchResults}
         keyExtractor={item => item.id}
         renderItem={renderItem}
@@ -148,7 +149,7 @@ const MigrationNovels = ({ navigation, route }: MigrateNovelScreenProps) => {
           />
         }
       />
-    </ScreenContainer>
+    </SafeAreaView>
   );
 };
 
@@ -159,4 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 16,
   },
+  flexGrow: { flexGrow: 1, padding: 4 },
+  padding: { padding: 8, paddingVertical: 16 },
+  fontSize: { fontSize: 12 },
 });

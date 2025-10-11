@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 import DisplayModeModal from './modals/DisplayModeModal';
 import GridSizeModal from './modals/GridSizeModal';
@@ -17,7 +17,7 @@ import {
   LibrarySortOrder,
 } from '@screens/library/constants/constants';
 import { useBoolean } from '@hooks';
-import { Appbar, List } from '@components';
+import { Appbar, List, SafeAreaView } from '@components';
 import NovelSortModal from './modals/NovelSortModal';
 import NovelBadgesModal from './modals/NovelBadgesModal';
 import { NavigationState } from '@react-navigation/native';
@@ -64,7 +64,7 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
   const { showLastUpdateTime, setShowLastUpdateTime } = useLastUpdate();
 
   const generateNovelBadgesDescription = () => {
-    let res = [];
+    const res = [];
     if (showDownloadBadges) {
       res.push(getString('libraryScreen.bottomSheet.display.download'));
     }
@@ -101,14 +101,14 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
    */
   const defaultChapterSortModal = useBoolean();
   return (
-    <>
+    <SafeAreaView excludeTop>
       <Appbar
         title={getString('generalSettings')}
         // @ts-ignore
         handleGoBack={navigation.goBack}
         theme={theme}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={styles.paddingBottom}>
         <List.Section>
           <List.SubHeader theme={theme}>
             {getString('common.display')}
@@ -280,8 +280,12 @@ const GenralSettings: React.FC<GenralSettingsProps> = ({ navigation }) => {
         hideNovelSortModal={novelSortModalRef.setFalse}
         theme={theme}
       />
-    </>
+    </SafeAreaView>
   );
 };
 
 export default GenralSettings;
+
+const styles = StyleSheet.create({
+  paddingBottom: { paddingBottom: 32 },
+});

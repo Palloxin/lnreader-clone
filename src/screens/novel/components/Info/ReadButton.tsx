@@ -4,6 +4,8 @@ import { Button } from '@components';
 import { getString } from '@strings/translations';
 import { ChapterInfo } from '@database/types';
 import { useAppSettings } from '@hooks/persisted';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { StyleSheet } from 'react-native';
 
 interface ReadButtonProps {
   chapters: ChapterInfo[];
@@ -27,19 +29,21 @@ const ReadButton = ({
   };
 
   if (!useFabForContinueReading) {
-    return chapters.length > 0 ? (
-      <Button
-        title={
-          lastRead
-            ? `${getString('novelScreen.continueReading')} ${lastRead.name}`
-            : getString('novelScreen.startReadingChapters', {
-                name: chapters[0].name,
-              })
-        }
-        style={{ margin: 16 }}
-        onPress={navigateToLastReadChapter}
-        mode="contained"
-      />
+    return chapters.length > 0 || lastRead ? (
+      <Animated.View entering={ZoomIn.duration(150)}>
+        <Button
+          title={
+            lastRead
+              ? `${getString('novelScreen.continueReading')} ${lastRead.name}`
+              : getString('novelScreen.startReadingChapters', {
+                  name: chapters[0].name,
+                })
+          }
+          style={styles.margin}
+          onPress={navigateToLastReadChapter}
+          mode="contained"
+        />
+      </Animated.View>
     ) : null;
   } else {
     return null;
@@ -47,3 +51,7 @@ const ReadButton = ({
 };
 
 export default ReadButton;
+
+const styles = StyleSheet.create({
+  margin: { margin: 16 },
+});

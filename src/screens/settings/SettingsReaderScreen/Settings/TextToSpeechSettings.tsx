@@ -37,7 +37,6 @@ export default function TextToSpeechSettings() {
         <List.SubHeader theme={theme}>Text to Speech</List.SubHeader>
         <View style={styles.row}>
           <Switch
-            theme={theme}
             value={TTSEnable}
             onValueChange={() => {
               setChapterGeneralSettings({
@@ -105,7 +104,7 @@ export default function TextToSpeechSettings() {
           </List.Section>
         </>
       ) : null}
-      <View style={{ height: 16 }} />
+      <View style={styles.height} />
       <Portal>
         <VoicePickerModal
           visible={voiceModalVisible}
@@ -118,17 +117,18 @@ export default function TextToSpeechSettings() {
 }
 
 const styles = StyleSheet.create({
+  label: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
   row: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    textAlign: 'center',
-    fontSize: 16,
   },
   slider: {
     flex: 1,
     height: 40,
   },
+  height: { height: 16 },
 });

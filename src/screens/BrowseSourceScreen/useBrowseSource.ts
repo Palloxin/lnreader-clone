@@ -44,8 +44,8 @@ export const useBrowseSource = (
                 setHasNextPage(false);
               }
             })
-            .catch(error => {
-              setError(error.message);
+            .catch(e => {
+              setError(e.message);
               setHasNextPage(false);
             });
           setFilterValues(plugin.filters);
@@ -56,11 +56,11 @@ export const useBrowseSource = (
         }
       }
     },
-    [pluginId],
+    [pluginId, showLatestNovels],
   );
 
   const fetchNextPage = () => {
-    hasNextPage && setCurrentPage(prevState => prevState + 1);
+    if (hasNextPage) setCurrentPage(prevState => prevState + 1);
   };
 
   /**
@@ -74,7 +74,7 @@ export const useBrowseSource = (
 
   useEffect(() => {
     fetchNovels(currentPage, selectedFilters);
-  }, [fetchNovels, currentPage]);
+  }, [fetchNovels, currentPage, selectedFilters]);
 
   const refetchNovels = () => {
     setError('');
@@ -128,14 +128,14 @@ export const useSearchSource = (pluginId: string) => {
   const isScreenMounted = useRef(true);
 
   const fetchNovels = useCallback(
-    async (searchText: string, page: number) => {
+    async (localSearchText: string, page: number) => {
       if (isScreenMounted.current === true) {
         try {
           const plugin = getPlugin(pluginId);
           if (!plugin) {
             throw new Error(`Unknown plugin: ${pluginId}`);
           }
-          const res = await plugin.searchNovels(searchText, page);
+          const res = await plugin.searchNovels(localSearchText, page);
           setSearchResults(prevState =>
             page === 1 ? res : [...prevState, ...res],
           );
@@ -154,7 +154,7 @@ export const useSearchSource = (pluginId: string) => {
   );
 
   const searchNextPage = () => {
-    hasNextSearchPage && setCurrentPage(prevState => prevState + 1);
+    if (hasNextSearchPage) setCurrentPage(prevState => prevState + 1);
   };
 
   useEffect(() => {

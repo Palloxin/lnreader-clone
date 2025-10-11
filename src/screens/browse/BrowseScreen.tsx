@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+/* eslint-disable react-native/no-inline-styles */
 import React, { useEffect, useMemo } from 'react';
 import { TabView, TabBar } from 'react-native-tab-view';
 
@@ -6,9 +6,10 @@ import { useSearch } from '@hooks';
 import { usePlugins, useTheme } from '@hooks/persisted';
 import { getString } from '@strings/translations';
 
-import { EmptyView, SearchbarV2 } from '@components';
+import { EmptyView, SafeAreaView, SearchbarV2 } from '@components';
 import { BrowseScreenProps } from '@navigators/types';
-import { AvailableTab, InstalledTab } from './components/BrowseTabs';
+import { AvailableTab } from './components/AvailableTab';
+import { InstalledTab } from './components/InstalledTab';
 
 const routes = [
   { key: 'installedRoute', title: getString('browseScreen.installed') },
@@ -21,21 +22,22 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
   const { languagesFilter } = usePlugins();
 
   const searchbarActions = useMemo(
-    () => [
-      {
-        iconName: 'book-search',
-        onPress: () => navigation.navigate('GlobalSearchScreen', {}),
-      },
-      {
-        iconName: 'swap-vertical-variant',
-        onPress: () => navigation.navigate('Migration'),
-      },
-      {
-        iconName: 'cog-outline',
-        onPress: () => navigation.navigate('BrowseSettings'),
-      },
-    ],
-    [],
+    () =>
+      [
+        {
+          iconName: 'book-search',
+          onPress: () => navigation.navigate('GlobalSearchScreen', {}),
+        },
+        {
+          iconName: 'swap-vertical-variant',
+          onPress: () => navigation.navigate('Migration'),
+        },
+        {
+          iconName: 'cog-outline',
+          onPress: () => navigation.navigate('BrowseSettings'),
+        },
+      ] as const,
+    [navigation],
   );
 
   useEffect(
@@ -52,7 +54,7 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
 
   const [index, setIndex] = React.useState(0);
   return (
-    <>
+    <SafeAreaView excludeBottom>
       <SearchbarV2
         searchText={searchText}
         placeholder={getString('browseScreen.searchbar')}
@@ -95,9 +97,6 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
             style={{
               backgroundColor: theme.surface,
             }}
-            renderLabel={({ route, color }) => (
-              <Text style={{ color, fontWeight: '600' }}>{route.title}</Text>
-            )}
             inactiveColor={theme.secondary}
             activeColor={theme.primary}
             android_ripple={{ color: theme.rippleColor }}
@@ -105,7 +104,7 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
         )}
         swipeEnabled={false}
       />
-    </>
+    </SafeAreaView>
   );
 };
 

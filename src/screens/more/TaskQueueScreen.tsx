@@ -12,7 +12,7 @@ import { useTheme } from '@hooks/persisted';
 
 import { showToast } from '../../utils/showToast';
 import { getString } from '@strings/translations';
-import { Appbar, EmptyView } from '@components';
+import { Appbar, EmptyView, SafeAreaView } from '@components';
 import { TaskQueueScreenProps } from '@navigators/types';
 import ServiceManager, { QueuedBackgroundTask } from '@services/ServiceManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ import { useMMKVObject } from 'react-native-mmkv';
 
 const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
   const theme = useTheme();
-  const { bottom } = useSafeAreaInsets();
+  const { bottom, right } = useSafeAreaInsets();
   const [taskQueue] = useMMKVObject<QueuedBackgroundTask[]>(
     ServiceManager.manager.STORE_KEY,
   );
@@ -37,7 +37,7 @@ const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
   //TODO: there should probably be a way to cancel a specific task from this screen
 
   return (
-    <>
+    <SafeAreaView excludeTop>
       <Appbar
         title={'Task Queue'}
         handleGoBack={navigation.goBack}
@@ -69,12 +69,13 @@ const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
           />
         </Menu>
       </Appbar>
+
       <FlatList
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+        contentContainerStyle={styles.paddingBottom}
         keyExtractor={(item, index) => 'task_' + index}
         data={taskQueue || []}
         renderItem={({ item }) => (
-          <View style={{ padding: 16 }}>
+          <View style={styles.padding}>
             <Text style={{ color: theme.onSurface }}>{item.meta.name}</Text>
             {item.meta.progressText ? (
               <Text style={{ color: theme.onSurfaceVariant }}>
@@ -87,7 +88,7 @@ const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
               }
               progress={item.meta.progress}
               color={theme.primary}
-              style={{ marginTop: 8, backgroundColor: theme.surface2 }}
+              style={[{ backgroundColor: theme.surface2 }, styles.marginTop]}
             />
           </View>
         )}
@@ -101,7 +102,10 @@ const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
       />
       {taskQueue && taskQueue.length > 0 ? (
         <FAB
-          style={[styles.fab, { backgroundColor: theme.primary, bottom }]}
+          style={[
+            styles.fab,
+            { backgroundColor: theme.primary, bottom, right },
+          ]}
           color={theme.onPrimary}
           label={
             isRunning ? getString('common.pause') : getString('common.resume')
@@ -119,7 +123,7 @@ const DownloadQueue = ({ navigation }: TaskQueueScreenProps) => {
           }}
         />
       ) : null}
-    </>
+    </SafeAreaView>
   );
 };
 
@@ -127,9 +131,12 @@ export default DownloadQueue;
 
 const styles = StyleSheet.create({
   fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
     bottom: 16,
+    margin: 16,
+    position: 'absolute',
+    right: 0,
   },
+  marginTop: { marginTop: 8 },
+  paddingBottom: { paddingBottom: 100, flexGrow: 1 },
+  padding: { padding: 16 },
 });

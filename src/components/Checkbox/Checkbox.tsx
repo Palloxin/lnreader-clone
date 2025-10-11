@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Checkbox as PaperCheckbox } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 
 import { ThemeColors } from '../../theme/types';
 
@@ -68,7 +68,7 @@ interface SortItemProps {
 export const SortItem = ({ label, status, onPress, theme }: SortItemProps) => (
   <Pressable
     android_ripple={{ color: theme.rippleColor }}
-    style={[styles.pressable, { paddingVertical: 16, paddingLeft: 64 }]}
+    style={[styles.pressable, styles.sortItem]}
     onPress={onPress}
   >
     {status ? (
@@ -84,18 +84,19 @@ export const SortItem = ({ label, status, onPress, theme }: SortItemProps) => (
 );
 
 const styles = StyleSheet.create({
-  pressable: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  icon: {
-    position: 'absolute',
-    left: 24,
-    alignSelf: 'center',
-  },
   defaultLabel: {
     marginLeft: 12,
   },
+  icon: {
+    alignSelf: 'center',
+    left: 24,
+    position: 'absolute',
+  },
+  pressable: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  sortItem: { paddingVertical: 16, paddingLeft: 64 },
 });

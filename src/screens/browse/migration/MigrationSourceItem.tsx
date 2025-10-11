@@ -29,18 +29,22 @@ const MigrationSourceCard = ({
         <Image source={{ uri: iconUrl }} style={styles.sourceIcon} />
         <View style={styles.sourceDetailsContainer}>
           <Text
-            style={{
-              color: theme.onSurface,
-              fontSize: 14,
-            }}
+            style={[
+              {
+                color: theme.onSurface,
+              },
+              styles.fontSize14,
+            ]}
           >
             {name} {` (${noOfNovels || 0})`}
           </Text>
           <Text
-            style={{
-              color: theme.onSurfaceVariant,
-              fontSize: 12,
-            }}
+            style={[
+              {
+                color: theme.onSurfaceVariant,
+              },
+              styles.fontSize12,
+            ]}
           >
             {lang}
           </Text>
@@ -54,27 +58,24 @@ export default MigrationSourceCard;
 
 const styles = StyleSheet.create({
   cardContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     marginVertical: 4,
-    paddingVertical: 8,
     paddingHorizontal: 20,
-  },
-  sourceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
+    paddingVertical: 8,
   },
   sourceDetailsContainer: {
+    alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginLeft: 16,
   },
-  sourceStatus: {
-    color: '#C14033',
-    fontSize: 12,
-    marginLeft: 5,
+  sourceIcon: {
+    borderRadius: 4,
+    height: 40,
+    width: 40,
   },
+  fontSize14: { fontSize: 14 },
+  fontSize12: { fontSize: 12 },
 });

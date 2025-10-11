@@ -1,6 +1,4 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { DrawerLayoutAndroid } from 'react-native';
-
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 
 import ReaderAppbar from './components/ReaderAppbar';
@@ -12,54 +10,61 @@ import ChapterDrawer from './components/ChapterDrawer';
 import ChapterLoadingScreen from './ChapterLoadingScreen/ChapterLoadingScreen';
 import { ErrorScreenV2 } from '@components';
 import { ChapterScreenProps } from '@navigators/types';
-import WebView from 'react-native-webview';
 import { getString } from '@strings/translations';
 import KeepScreenAwake from './components/KeepScreenAwake';
-import useChapter from './hooks/useChapter';
 import { ChapterContextProvider, useChapterContext } from './ChapterContext';
 import { BottomSheetModalMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { useBackHandler } from '@hooks/index';
-import { get } from 'lodash-es';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import { Drawer } from 'react-native-drawer-layout';
 
 const Chapter = ({ route, navigation }: ChapterScreenProps) => {
-  const drawerRef = useRef<DrawerLayoutAndroid>(null);
+  const [open, setOpen] = useState(false);
+
+  useBackHandler(() => {
+    if (open) {
+      setOpen(false);
+      return true;
+    }
+    return false;
+  });
+
+  const openDrawer = useCallback(() => {
+    setOpen(true);
+  }, []);
+
   return (
     <ChapterContextProvider
       novel={route.params.novel}
       initialChapter={route.params.chapter}
     >
-      <DrawerLayoutAndroid
-        ref={drawerRef}
-        onDrawerOpen={() => {
-          drawerRef.current?.setState(prev => ({ ...prev, isOpen: true }));
-        }}
-        onDrawerClose={() => {
-          drawerRef.current?.setState(prev => ({ ...prev, isOpen: false }));
-        }}
-        drawerWidth={300}
-        drawerPosition="left"
-        renderNavigationView={() => <ChapterDrawer />}
+      <Drawer
+        open={open}
+        onOpen={() => setOpen(true)}
+        onClose={() => setOpen(false)}
+        renderDrawerContent={() => <ChapterDrawer />}
       >
         <ChapterContent
           route={route}
           navigation={navigation}
-          drawerRef={drawerRef}
+          openDrawer={openDrawer}
         />
-      </DrawerLayoutAndroid>
+      </Drawer>
     </ChapterContextProvider>
   );
 };
 
 type ChapterContentProps = ChapterScreenProps & {
-  drawerRef: React.RefObject<DrawerLayoutAndroid>;
+  openDrawer: () => void;
 };
 
 export const ChapterContent = ({
   navigation,
-  drawerRef,
+  openDrawer,
 }: ChapterContentProps) => {
+  const { left, right } = useSafeAreaInsets();
   const { novel, chapter } = useChapterContext();
-  const webViewRef = useRef<WebView>(null);
   const readerSheetRef = useRef<BottomSheetModalMethods>(null);
   const theme = useTheme();
   const { pageReader = false, keepScreenOn } = useChapterGeneralSettings();
@@ -69,18 +74,8 @@ export const ChapterContent = ({
     setBookmarked(chapter.bookmark);
   }, [chapter]);
 
-  const {
-    hidden,
-    loading,
-    error,
-    prevChapter,
-    nextChapter,
-    chapterText,
-    saveProgress,
-    hideHeader,
-    navigateChapter,
-    refetch,
-  } = useChapter(webViewRef);
+  const { hidden, loading, error, webViewRef, hideHeader, refetch } =
+    useChapterContext();
 
   const scrollToStart = () =>
     requestAnimationFrame(() => {
@@ -96,18 +91,10 @@ export const ChapterContent = ({
       );
     });
 
-  const openDrawer = useCallback(() => {
-    drawerRef.current?.openDrawer();
+  const openDrawerI = useCallback(() => {
+    openDrawer();
     hideHeader();
-  }, [drawerRef, hideHeader]);
-
-  useBackHandler(() => {
-    if (get(drawerRef.current?.state, 'isOpen')) {
-      drawerRef.current?.closeDrawer();
-      return true;
-    }
-    return false;
-  });
+  }, [hideHeader, openDrawer]);
 
   if (error) {
     return (
@@ -134,19 +121,14 @@ export const ChapterContent = ({
     );
   }
   return (
-    <>
+    <View
+      style={[{ paddingLeft: left, paddingRight: right }, styles.container]}
+    >
       {keepScreenOn ? <KeepScreenAwake /> : null}
       {loading ? (
         <ChapterLoadingScreen />
       ) : (
-        <WebViewReader
-          html={chapterText}
-          nextChapter={nextChapter}
-          webViewRef={webViewRef}
-          saveProgress={saveProgress}
-          onPress={hideHeader}
-          navigateChapter={navigateChapter}
-        />
+        <WebViewReader onPress={hideHeader} />
       )}
       <ReaderBottomSheetV2 bottomSheetRef={readerSheetRef} />
       {!hidden ? (
@@ -158,19 +140,19 @@ export const ChapterContent = ({
             setBookmarked={setBookmarked}
           />
           <ReaderFooter
-            theme={theme}
-            nextChapter={nextChapter}
-            prevChapter={prevChapter}
             readerSheetRef={readerSheetRef}
             scrollToStart={scrollToStart}
-            navigateChapter={navigateChapter}
             navigation={navigation}
-            openDrawer={openDrawer}
+            openDrawer={openDrawerI}
           />
         </>
       ) : null}
-    </>
+    </View>
   );
 };
 
 export default Chapter;
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+});

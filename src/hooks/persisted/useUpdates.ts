@@ -1,10 +1,14 @@
-import { useCallback, useState } from 'react';
-import { getUpdatesFromDb } from '@database/queries/ChapterQueries';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  getDetailedUpdatesFromDb,
+  getUpdatedOverviewFromDb,
+} from '@database/queries/ChapterQueries';
 
-import { Update } from '@database/types';
+import { Update, UpdateOverview } from '@database/types';
 import { useMMKVBoolean, useMMKVString } from 'react-native-mmkv';
 import dayjs from 'dayjs';
 import { parseChapterNumber } from '@utils/parseChapterNumber';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const SHOW_LAST_UPDATE_TIME = 'SHOW_LAST_UPDATE_TIME';
 export const LAST_UPDATE_TIME = 'LAST_UPDATE_TIME';
@@ -24,67 +28,85 @@ export const useLastUpdate = () => {
 
 export const useUpdates = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [updates, setUpdates] = useState<Update[]>([]);
-  const [searchResults, setSearchResults] = useState<Update[]>([]);
+  const [updatesOverview, setUpdatesOverview] = useState<UpdateOverview[]>([]);
 
   const { lastUpdateTime, showLastUpdateTime, setLastUpdateTime } =
     useLastUpdate();
   const [error, setError] = useState('');
 
-  const getUpdates = () =>
-    getUpdatesFromDb()
+  const getDetailedUpdates = useCallback(
+    async (novelId: number, onlyDownloadedChapters: boolean = false) => {
+      setIsLoading(true);
+
+      let result: Update[] = await getDetailedUpdatesFromDb(
+        novelId,
+        onlyDownloadedChapters,
+      );
+      result = result.map(update => {
+        const parsedTime = dayjs(update.releaseTime);
+        return {
+          ...update,
+          releaseTime: parsedTime.isValid()
+            ? parsedTime.format('LL')
+            : update.releaseTime,
+          chapterNumber: update.chapterNumber
+            ? update.chapterNumber
+            : parseChapterNumber(update.novelName, update.name),
+        };
+      });
+      setIsLoading(false);
+      return result;
+    },
+    [],
+  );
+
+  const getUpdates = useCallback(async () => {
+    setIsLoading(true);
+    getUpdatedOverviewFromDb()
       .then(res => {
-        setUpdates(
-          res.map(update => {
-            const parsedTime = dayjs(update.releaseTime);
-            return {
-              ...update,
-              releaseTime: parsedTime.isValid()
-                ? parsedTime.format('LL')
-                : update.releaseTime,
-              chapterNumber: update.chapterNumber
-                ? update.chapterNumber
-                : parseChapterNumber(update.novelName, update.name),
-            };
-          }),
-        );
+        setUpdatesOverview(res);
         if (res.length) {
           if (
             !lastUpdateTime ||
-            dayjs(lastUpdateTime).isBefore(dayjs(res[0].updatedTime))
+            dayjs(lastUpdateTime).isBefore(dayjs(res[0].updateDate))
           ) {
-            setLastUpdateTime(res[0].updatedTime);
+            setLastUpdateTime(res[0].updateDate);
           }
         }
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setIsLoading(false));
+  }, [lastUpdateTime, setLastUpdateTime]);
 
-  const searchUpdates = useCallback(
-    async (searchText: string) => {
-      setSearchResults(
-        updates.filter(item =>
-          item.novelName.toLowerCase().includes(searchText.toLowerCase()),
-        ),
-      );
-    },
-    [updates],
+  useFocusEffect(
+    useCallback(() => {
+      setIsLoading(true);
+      //? Push updates to the end of the stack to avoid lag
+      setTimeout(async () => {
+        await getUpdates();
+        setIsLoading(false);
+      }, 0);
+    }, [getUpdates]),
   );
 
-  const clearSearchResults = useCallback(() => {
-    setSearchResults([]);
-    getUpdates();
-  }, []);
-
-  return {
-    isLoading,
-    updates,
-    searchResults,
-    getUpdates,
-    clearSearchResults,
-    searchUpdates,
-    lastUpdateTime,
-    showLastUpdateTime,
-    error,
-  };
+  return useMemo(
+    () => ({
+      isLoading,
+      updatesOverview,
+      getUpdates,
+      getDetailedUpdates,
+      lastUpdateTime,
+      showLastUpdateTime,
+      error,
+    }),
+    [
+      isLoading,
+      updatesOverview,
+      getUpdates,
+      getDetailedUpdates,
+      lastUpdateTime,
+      showLastUpdateTime,
+      error,
+    ],
+  );
 };
