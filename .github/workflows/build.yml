@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - patch-12
   workflow_dispatch:
 
 concurrency:
