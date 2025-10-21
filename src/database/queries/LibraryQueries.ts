@@ -1,4 +1,3 @@
-import { LibraryFilter } from '@screens/library/constants/constants';
 import { LibraryNovelInfo, NovelInfo } from '../types';
 import { getAllSync } from '../utils/helpers';
 
@@ -7,15 +6,20 @@ export const getLibraryNovelsFromDb = (
   filter?: string,
   searchText?: string,
   downloadedOnlyMode?: boolean,
+  excludeLocalNovels?: boolean,
 ): NovelInfo[] => {
   let query = 'SELECT * FROM Novel WHERE inLibrary = 1';
+
+  if (excludeLocalNovels) {
+    query += ' AND isLocal = 0';
+  }
 
   if (filter) {
     query += ` AND ${filter}`;
   }
 
   if (downloadedOnlyMode) {
-    query += ` ${LibraryFilter.DownloadedOnly}`;
+    query += ` AND (chaptersDownloaded = 1 OR isLocal = 1)`;
   }
 
   if (searchText) {
@@ -36,6 +40,7 @@ const getNovelsFromIDListQuery = 'SELECT * FROM Novel WHERE inLibrary = 1 ';
 export const getLibraryWithCategory = (
   categoryId?: number | null,
   onlyUpdateOngoingNovels?: boolean,
+  excludeLocalNovels?: boolean,
 ): LibraryNovelInfo[] => {
   let categoryQuery = getNovelOfCategoryQuery;
 
@@ -52,6 +57,10 @@ export const getLibraryWithCategory = (
   let novelQuery = getNovelsFromIDListQuery;
 
   novelQuery += ` AND id IN (${novelIds})`;
+
+  if (excludeLocalNovels) {
+    novelQuery += ' AND isLocal = 0';
+  }
 
   if (onlyUpdateOngoingNovels) {
     novelQuery += " AND status = 'Ongoing'";
