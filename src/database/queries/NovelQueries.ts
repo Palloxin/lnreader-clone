@@ -321,10 +321,12 @@ export const _restoreNovelAndChapters = async (backupNovel: BackupNovel) => {
       Object.values(novel) as string[] | number[],
     ],
   ]);
-  runAsync(
-    chapters.map(chapter => [
-      restoreObjectQuery('Chapter', chapter),
-      Object.values(chapter) as string[] | number[],
-    ]),
-  );
+  if (chapters.length > 0) {
+    await runAsync(
+      chapters.map(chapter => [
+        restoreObjectQuery('Chapter', chapter),
+        Object.values(chapter) as string[] | number[],
+      ]),
+    );
+  }
 };
