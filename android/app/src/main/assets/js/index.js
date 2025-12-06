@@ -264,9 +264,10 @@ const TTSController = () => {
     {
       id: 'TTS-Controller',
       class: () => `${reader.generalSettings.val.TTSEnable ? '' : 'hidden'}`,
-      style: () => reader.generalSettings.val.TTSEnable 
-        ? 'pointer-events: auto;' 
-        : 'pointer-events: none; display: none !important; opacity: 0; transition: none;',
+      style: () =>
+        reader.generalSettings.val.TTSEnable
+          ? 'pointer-events: auto;'
+          : 'pointer-events: none; display: none !important; opacity: 0; transition: none;',
       ontouchstart: () => {
         if (!controllerElement) {
           controllerElement = document.getElementById('TTS-Controller');
@@ -324,8 +325,11 @@ const TTSController = () => {
         if (tts.reading) {
           tts.pause();
           controllerElement.firstElementChild.innerHTML = resumeIcon;
-        } else {
+        } else if (tts.started) {
           tts.resume();
+          controllerElement.firstElementChild.innerHTML = pauseIcon;
+        } else {
+          tts.start();
           controllerElement.firstElementChild.innerHTML = pauseIcon;
         }
       },
