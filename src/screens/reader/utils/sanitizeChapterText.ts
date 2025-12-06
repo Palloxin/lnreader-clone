@@ -11,6 +11,8 @@ export const sanitizeChapterText = (
     allowedTags: sanitizeHtml.defaults.allowedTags.concat([
       'img',
       'i',
+      'video'
+      'source'
       'em',
       'b',
       'a',
@@ -30,6 +32,8 @@ export const sanitizeChapterText = (
       ol: ['reversed', 'start', 'type'],
       p: ['class', 'id'],
       span: ['class', 'id'],
+      video: ['controls', 'width'],
+      source: ['src', 'type'],
       ref: ['href', 'class', 'id'],
     },
     allowedSchemes: ['data', 'http', 'https', 'file'],
