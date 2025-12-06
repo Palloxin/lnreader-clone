@@ -11,8 +11,8 @@ export const sanitizeChapterText = (
     allowedTags: sanitizeHtml.defaults.allowedTags.concat([
       'img',
       'i',
-      'video'
-      'source'
+      'video',
+      'source',
       'em',
       'b',
       'a',
