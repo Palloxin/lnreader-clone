@@ -81,7 +81,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chapter.id],
   );
-  
+
   // Update readerSettings when chapter changes
   useEffect(() => {
     setReaderSettings(
@@ -89,7 +89,9 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
         initialChapterReaderSettings,
     );
   }, [chapter.id]);
-  const batteryLevel = useMemo(() => getBatteryLevelSync(), []);
+
+  // Update battery level when chapter changes to ensure fresh value on navigation
+  const batteryLevel = useMemo(() => getBatteryLevelSync(), [chapter.id]);
   const plugin = getPlugin(novel?.pluginId);
   const pluginCustomJS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.js`;
   const pluginCustomCSS = `file://${PLUGIN_STORAGE}/${plugin?.id}/custom.css`;
@@ -162,10 +164,10 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
             getMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS) ||
             initialChapterReaderSettings;
           setReaderSettings(newSettings);
-          
+
           // Stop any currently playing speech
           Speech.stop();
-          
+
           // Update WebView settings
           webViewRef.current?.injectJavaScript(
             `
@@ -220,6 +222,14 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       javaScriptEnabled={true}
       webviewDebuggingEnabled={__DEV__}
       onLoadEnd={() => {
+        // Update battery level when WebView finishes loading
+        const currentBatteryLevel = getBatteryLevelSync();
+        webViewRef.current?.injectJavaScript(
+          `if (window.reader && window.reader.batteryLevel) {
+            window.reader.batteryLevel.val = ${currentBatteryLevel};
+          }`,
+        );
+
         if (autoStartTTSRef.current) {
           autoStartTTSRef.current = false;
           setTimeout(() => {
