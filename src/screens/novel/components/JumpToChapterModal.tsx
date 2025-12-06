@@ -226,6 +226,7 @@ const JumpToChapterModal = ({
               data={result}
               extraData={openChapter}
               renderItem={renderItem}
+              keyExtractor={item => `chapter_${item.id}`}
               contentContainerStyle={styles.listContentCtn}
             />
           </View>
