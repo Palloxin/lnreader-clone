@@ -32,7 +32,7 @@ export const sanitizeChapterText = (
       ol: ['reversed', 'start', 'type'],
       p: ['class', 'id'],
       span: ['class', 'id'],
-      video: ['controls', 'width'],
+      video: ['controls', 'autoplay', 'src', 'width'],
       source: ['src', 'type'],
       ref: ['href', 'class', 'id'],
     },
