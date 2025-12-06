@@ -143,6 +143,7 @@ window.tts = new (function () {
   this.elementsRead = 0;
   this.totalElements = 0;
   this.allReadableElements = []; // Store all readable elements at start
+  this.textQueue = []; // Flat list of normalized text for native fallback
 
   this.readable = element => {
     const ele = element ?? this.currentElement;
@@ -199,7 +200,7 @@ window.tts = new (function () {
         return this.findNextTextNode(depth + 1);
       } else if (
         this.currentElement.parentElement &&
-                 !this.currentElement.parentElement.isSameNode(document.body) &&
+        !this.currentElement.parentElement.isSameNode(document.body) &&
         !this.currentElement.parentElement.isSameNode(document.documentElement)
       ) {
         this.currentElement = this.currentElement.parentElement;
@@ -226,7 +227,7 @@ window.tts = new (function () {
         return this.findNextTextNode(depth + 1);
       } else if (
         this.currentElement.parentElement &&
-                 !this.currentElement.parentElement.isSameNode(document.body) &&
+        !this.currentElement.parentElement.isSameNode(document.body) &&
         !this.currentElement.parentElement.isSameNode(document.documentElement)
       ) {
         this.prevElement = this.currentElement;
@@ -241,12 +242,12 @@ window.tts = new (function () {
   this.next = () => {
     try {
       this.currentElement?.classList?.remove('highlight');
-      
+
       // Use array-based approach instead of DOM traversal (no recursion!)
       while (this.elementsRead < this.totalElements) {
         const nextElement = this.allReadableElements[this.elementsRead];
         if (!nextElement) break;
-        
+
         const text = this.normalizeText(nextElement.innerText);
         if (text) {
           // Found valid text - speak it
@@ -260,12 +261,13 @@ window.tts = new (function () {
           this.elementsRead++;
         }
       }
-      
+
       // Reached the end (elementsRead >= totalElements or no more valid elements)
       this.reading = false;
-      const autoPageAdvance = reader.readerSettings.val.tts?.autoPageAdvance === true;
+      const autoPageAdvance =
+        reader.readerSettings.val.tts?.autoPageAdvance === true;
       const hasNextChapter = !!reader.nextChapter;
-      
+
       if (autoPageAdvance && hasNextChapter) {
         reader.post({ type: 'next', autoStartTTS: true });
       } else {
@@ -285,11 +287,23 @@ window.tts = new (function () {
     this.stop();
     const startElement = element ?? reader.chapterElement;
     this.currentElement = startElement;
-    
+
     // Get all readable elements from the chapter
-    this.allReadableElements = this.getAllReadableElements(reader.chapterElement);
+    this.allReadableElements = this.getAllReadableElements(
+      reader.chapterElement,
+    );
     this.totalElements = this.allReadableElements.length;
-    
+    this.textQueue = this.allReadableElements
+      .map(el => this.normalizeText(el.innerText))
+      .filter(text => !!text);
+    reader.post({
+      type: 'tts-queue',
+      data: {
+        queue: this.textQueue,
+        startIndex: this.elementsRead,
+      },
+    });
+
     // If starting from a specific element, count how many are before it
     if (element && element !== reader.chapterElement) {
       const startIndex = this.allReadableElements.indexOf(element);
@@ -297,14 +311,14 @@ window.tts = new (function () {
     } else {
       this.elementsRead = 0;
     }
-    
+
     this.next();
   };
 
   // Get all readable elements in order
-  this.getAllReadableElements = (element) => {
+  this.getAllReadableElements = element => {
     const elements = [];
-    const traverse = (el) => {
+    const traverse = el => {
       if (!el) return;
       if (this.readable(el)) {
         elements.push(el);
@@ -347,6 +361,7 @@ window.tts = new (function () {
     this.elementsRead = 0;
     this.totalElements = 0;
     this.allReadableElements = [];
+    this.textQueue = [];
     reader.post({ type: 'tts-state', data: { isReading: false } });
     // Ensure icon updates to stopped state
     const controller = document.getElementById('TTS-Controller');
@@ -388,15 +403,16 @@ window.tts = new (function () {
     if (!isPartiallyVisible || rect.top < 0 || rect.bottom > windowHeight) {
       // Check scrollToTop setting (default to true for better reading experience)
       const scrollToTop = reader.readerSettings.val.tts?.scrollToTop !== false;
-      
+
       if (scrollToTop) {
         // Scroll to top with padding for notch/camera (80px from top)
-        const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+        const elementTop =
+          element.getBoundingClientRect().top + window.pageYOffset;
         const offsetPosition = elementTop - 80; // 80px padding for notch/camera
-        
+
         window.scrollTo({
           top: offsetPosition,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       } else {
         // Center scroll (original behavior)
@@ -416,7 +432,11 @@ window.tts = new (function () {
     this.currentElement.classList.add('highlight');
     const text = this.normalizeText(this.currentElement.innerText);
     if (text) {
-      reader.post({ type: 'speak', data: text });
+      reader.post({
+        type: 'speak',
+        data: text,
+        index: this.elementsRead - 1,
+      });
       reader.post({ type: 'tts-state', data: { isReading: true } });
     } else {
       this.next();

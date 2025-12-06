@@ -1,5 +1,10 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { NativeEventEmitter, NativeModules, StatusBar } from 'react-native';
+import {
+  AppState,
+  NativeEventEmitter,
+  NativeModules,
+  StatusBar,
+} from 'react-native';
 import WebView from 'react-native-webview';
 import color from 'color';
 
@@ -30,8 +35,9 @@ import {
 
 type WebViewPostEvent = {
   type: string;
-  data?: { [key: string]: string | number };
+  data?: { [key: string]: unknown };
   autoStartTTS?: boolean;
+  index?: number;
 };
 
 type WebViewReaderProps = {
@@ -98,6 +104,14 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
   const nextChapterScreenVisible = useRef<boolean>(false);
   const autoStartTTSRef = useRef<boolean>(false);
   const isTTSReadingRef = useRef<boolean>(false);
+  const readerSettingsRef = useRef<ChapterReaderSettings>(readerSettings);
+  const appStateRef = useRef(AppState.currentState);
+  const ttsQueueRef = useRef<string[]>([]);
+  const ttsQueueIndexRef = useRef<number>(0);
+
+  useEffect(() => {
+    readerSettingsRef.current = readerSettings;
+  }, [readerSettings]);
 
   useEffect(() => {
     const checkNotificationActions = setInterval(() => {
@@ -211,6 +225,67 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
       mmkvListener.remove();
     };
   }, [webViewRef]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      appStateRef.current = nextState;
+      if (nextState === 'active' && isTTSReadingRef.current) {
+        const index = ttsQueueIndexRef.current;
+        webViewRef.current?.injectJavaScript(`
+          if (window.tts && window.tts.allReadableElements) {
+            const idx = ${index};
+            if (idx < tts.allReadableElements.length) {
+              tts.elementsRead = idx;
+              tts.currentElement = tts.allReadableElements[idx];
+              tts.prevElement = null;
+              tts.started = true;
+              tts.reading = true;
+              tts.scrollToElement(tts.currentElement);
+              tts.currentElement.classList.add('highlight');
+            }
+          }
+        `);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [webViewRef]);
+
+  const speakText = (text: string) => {
+    Speech.speak(text, {
+      onDone() {
+        const isBackground =
+          appStateRef.current === 'background' ||
+          appStateRef.current === 'inactive';
+
+        if (
+          isBackground &&
+          ttsQueueRef.current.length > 0 &&
+          ttsQueueIndexRef.current + 1 < ttsQueueRef.current.length
+        ) {
+          const nextIndex = ttsQueueIndexRef.current + 1;
+          const nextText = ttsQueueRef.current[nextIndex];
+          if (nextText) {
+            ttsQueueIndexRef.current = nextIndex;
+            speakText(nextText);
+            return;
+          }
+        }
+
+        if (isBackground) {
+          isTTSReadingRef.current = false;
+          dismissTTSNotification();
+          webViewRef.current?.injectJavaScript('tts.stop?.()');
+          return;
+        }
+
+        webViewRef.current?.injectJavaScript('tts.next?.()');
+      },
+      voice: readerSettingsRef.current.tts?.voice?.identifier,
+      pitch: readerSettingsRef.current.tts?.pitch || 1,
+      rate: readerSettingsRef.current.tts?.rate || 1,
+    });
+  };
   return (
     <WebView
       ref={webViewRef}
@@ -253,6 +328,24 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
         __DEV__ && onLogMessage(ev);
         const event: WebViewPostEvent = JSON.parse(ev.nativeEvent.data);
         switch (event.type) {
+          case 'tts-queue': {
+            const payload = event.data as
+              | { queue?: unknown; startIndex?: unknown }
+              | undefined;
+            const queue = Array.isArray(payload?.queue)
+              ? payload?.queue.filter(
+                  (item): item is string =>
+                    typeof item === 'string' && item.trim().length > 0,
+                )
+              : [];
+            ttsQueueRef.current = queue;
+            if (typeof payload?.startIndex === 'number') {
+              ttsQueueIndexRef.current = payload.startIndex;
+            } else {
+              ttsQueueIndexRef.current = 0;
+            }
+            break;
+          }
           case 'hide':
             onPress();
             break;
@@ -273,6 +366,9 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
             break;
           case 'speak':
             if (event.data && typeof event.data === 'string') {
+              if (typeof event.index === 'number') {
+                ttsQueueIndexRef.current = event.index;
+              }
               if (!isTTSReadingRef.current) {
                 isTTSReadingRef.current = true;
                 showTTSNotification({
@@ -287,14 +383,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
                   isPlaying: true,
                 });
               }
-              Speech.speak(event.data, {
-                onDone() {
-                  webViewRef.current?.injectJavaScript('tts.next?.()');
-                },
-                voice: readerSettings.tts?.voice?.identifier,
-                pitch: readerSettings.tts?.pitch || 1,
-                rate: readerSettings.tts?.rate || 1,
-              });
+              speakText(event.data);
             } else {
               webViewRef.current?.injectJavaScript('tts.next?.()');
             }
@@ -302,6 +391,8 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({ onPress }) => {
           case 'stop-speak':
             Speech.stop();
             isTTSReadingRef.current = false;
+            ttsQueueRef.current = [];
+            ttsQueueIndexRef.current = 0;
             dismissTTSNotification();
             break;
           case 'tts-state':
