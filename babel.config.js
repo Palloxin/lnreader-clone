@@ -5,7 +5,7 @@ const ReactCompilerConfig = {
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ['module:@react-native/babel-preset'],
+    presets: ['babel-preset-expo'],
     plugins: [
       'module:@babel/plugin-transform-export-namespace-from',
       ['babel-plugin-react-compiler', ReactCompilerConfig],

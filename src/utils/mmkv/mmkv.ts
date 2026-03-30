@@ -1,7 +1,7 @@
-import { MMKV } from 'react-native-mmkv';
+import { MMKV, platformContext } from 'react-native-mmkv';
 
 export const MMKVStorage = new MMKV();
-
+console.log(platformContext?.getBaseDirectory());
 export function getMMKVObject<T>(key: string) {
   const data = MMKVStorage.getString(key);
   if (data) {
