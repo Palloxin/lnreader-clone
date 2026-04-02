@@ -1,6 +1,3 @@
-ALTER TABLE IF EXITS '__drizzle_migrations'  ADD COLUMN 'applied_at' text;
-ALTER TABLE IF EXITS '__drizzle_migrations'  ADD COLUMN 'name' text;
-
 CREATE TABLE IF NOT EXISTS `Category` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,

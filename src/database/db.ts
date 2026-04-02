@@ -129,7 +129,7 @@ export const useInitDatabase = () => {
       `PRAGMA table_info(__drizzle_migrations);`,
     );
     const resolved = results.some((row: unknown[]) => row[1] === 'applied_at');
-    if (!resolved) {
+    if (!resolved && results.length > 0) {
       _db.executeRawSync(
         "ALTER TABLE '__drizzle_migrations' ADD COLUMN 'applied_at' text;",
       );
