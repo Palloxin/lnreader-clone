@@ -75,5 +75,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LNReader-r${{ env.COMMIT_COUNT }}-${{ env.COMMIT_ID }}
-          path: android/app/build/outputs/apk/prRelease/app-preRelease.apk
+          path: android/app/build/outputs/apk/preRelease/app-preRelease.apk
           retention-days: 30
