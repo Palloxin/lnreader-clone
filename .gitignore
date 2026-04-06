@@ -94,3 +94,6 @@ flake.lock
 .claude/
 .jj/
 .sisyphus/
+
+# Rock
+.rock/
