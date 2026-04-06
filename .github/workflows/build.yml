@@ -54,6 +54,7 @@ jobs:
           GIT_HASH=$(git rev-parse --short HEAD)
           RELEASE_DATE=$(date --utc +'%d/%m/%y %I:%M %p %Z')
           BUILD_TYPE=Github Action
+          TEST="This is a test"
           EOF
 
       - name: Build Android Release with Rock

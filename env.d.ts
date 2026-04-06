@@ -5,6 +5,7 @@ declare module 'react-native-config' {
     GIT_HASH: string;
     RELEASE_DATE: string;
     BUILD_TYPE: 'Debug' | 'Release' | 'Beta' | 'Github Action';
+    TEST: string;
   }
 
   export const Config: NativeConfig;

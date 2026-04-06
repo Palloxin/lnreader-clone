@@ -14,6 +14,7 @@ import ServiceManager from '@services/ServiceManager';
 import { getPlugin } from '@plugins/pluginManager';
 import { useSelectionContext } from '../SelectionContext';
 import { ImageRequestInit } from '@plugins/types';
+import Config from 'react-native-config';
 
 interface Props {
   categoryId: number;
@@ -91,7 +92,7 @@ export const LibraryView: React.FC<Props> = ({
       <EmptyView
         theme={theme}
         icon="Σ(ಠ_ಠ)"
-        description={getString('libraryScreen.empty')}
+        description={getString('libraryScreen.empty') + Config.TEST}
         actions={[
           categoryId !== 2
             ? {
