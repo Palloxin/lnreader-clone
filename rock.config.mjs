@@ -10,5 +10,5 @@ export default {
     ios: platformIOS(),
     android: platformAndroid(),
   },
-  remoteCacheProvider: null,
+  remoteCacheProvider: 'github-actions',
 };
