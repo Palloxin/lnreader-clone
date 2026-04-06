@@ -46,16 +46,12 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create Environment File
+      - name: Generate Environment Variables
         run: |
-          cat > .env << EOF
-          MYANIMELIST_CLIENT_ID=${{ vars.MYANIMELIST_CLIENT_ID }}
-          ANILIST_CLIENT_ID=${{ vars.ANILIST_CLIENT_ID }}
-          GIT_HASH=$(git rev-parse --short HEAD)
-          RELEASE_DATE=$(date --utc +'%d/%m/%y %I:%M %p %Z')
-          BUILD_TYPE=Github Action
-          TEST="This is a test"
-          EOF
+          pnpm generate:env:release \
+            --build-type "Github Action" \
+            --myanimelist-client-id "${{ vars.MYANIMELIST_CLIENT_ID }}" \
+            --anilist-client-id "${{ vars.ANILIST_CLIENT_ID }}"
 
       - name: Build Android Release with Rock
         uses: callstackincubator/android@v3

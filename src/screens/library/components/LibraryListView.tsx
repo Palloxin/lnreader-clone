@@ -14,7 +14,7 @@ import ServiceManager from '@services/ServiceManager';
 import { getPlugin } from '@plugins/pluginManager';
 import { useSelectionContext } from '../SelectionContext';
 import { ImageRequestInit } from '@plugins/types';
-import Config from 'react-native-config';
+import Config from '@env';
 
 interface Props {
   categoryId: number;

@@ -89,6 +89,8 @@ flake.lock
 # pnpm
 .pnpm-store
 
+src/generated/**/*
+
 .cursor/
 .agents/
 .claude/
