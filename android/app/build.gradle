@@ -84,7 +84,7 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     namespace "com.rajarsheechatterjee.LNReader"
     defaultConfig {
-        applicationId project.hasProperty('customAppId') ? project.getProperty('customAppId') : 'com.rajarsheechatterjee.LNReader'
+        applicationId 'com.rajarsheechatterjee.LNReader'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Generated version code. Supports versions up to 1024.1024.2048
@@ -104,6 +104,15 @@ android {
             signingConfig signingConfigs.debug
             applicationIdSuffix 'debug'
             versionNameSuffix '-debug'
+        }
+        preRelease {
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            applicationIdSuffix 'pre-release'
+            versionNameSuffix '-pre-release'
+            signingConfig signingConfigs.debug
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.

@@ -56,23 +56,8 @@ jobs:
           BUILD_TYPE=Github Action
           EOF
 
-      - name: Set Environment Variables
-        run: |
-          echo "COMMIT_COUNT=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
-          echo "COMMIT_ID=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
-
-      - name: Update App Name
-        run: |
-          sed -i \
-            "s/lnreader/lnreader-r${{ env.COMMIT_COUNT }}(${
-            { env.COMMIT_ID }})/g" \
-            android/app/src/main/res/values/strings.xml
-
       - name: Build Android Release with Rock
         uses: callstackincubator/android@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          variant: release
-          rock-build-extra-params: >-
-            -PcustomAppId=com.rajarsheechatterjee.LNReader.commit_${{
-            env.COMMIT_ID }}
+          variant: preRelease
