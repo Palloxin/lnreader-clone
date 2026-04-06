@@ -2,6 +2,7 @@
 import { platformIOS } from '@rock-js/platform-ios';
 import { platformAndroid } from '@rock-js/platform-android';
 import { pluginMetro } from '@rock-js/plugin-metro';
+import { providerGitHub } from '@rock-js/provider-github';
 
 /** @type {import('rock').Config} */
 export default {
@@ -10,5 +11,10 @@ export default {
     ios: platformIOS(),
     android: platformAndroid(),
   },
-  remoteCacheProvider: 'github-actions',
+  remoteCacheProvider: providerGitHub({
+    repository: 'lnreader',
+    owner: 'CD-Z',
+    //@ts-expect-error
+    token: process.env.GITHUB_TOKEN,
+  }),
 };

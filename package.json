@@ -134,6 +134,7 @@
     "@rock-js/platform-android": "^0.12.12",
     "@rock-js/platform-ios": "^0.12.12",
     "@rock-js/plugin-metro": "^0.12.12",
+    "@rock-js/provider-github": "^0.12.12",
     "@testing-library/react-native": "^13.3.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/color": "^4.2.1",
