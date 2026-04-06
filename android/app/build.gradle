@@ -106,9 +106,11 @@ android {
             versionNameSuffix '-debug'
         }
         preRelease {
+            initWith release
+            matchingFallbacks = ["release"]
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            applicationIdSuffix 'pre-release'
+            applicationIdSuffix 'preRelease'
             versionNameSuffix '-pre-release'
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
