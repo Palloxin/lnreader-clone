@@ -97,8 +97,6 @@ const releaseDate = args['release-date'] || formatUtcDate(new Date());
 const nodeEnv =
   args['node-env'] ||
   (buildType.toLowerCase().includes('release') ? 'production' : 'development');
-const testValue =
-  args.test || 'This is a test variable to verify .env generation';
 
 const generatedEnvContent = [
   `BUILD_TYPE=${JSON.stringify(buildType)}`,
@@ -107,7 +105,6 @@ const generatedEnvContent = [
   `NODE_ENV=${JSON.stringify(nodeEnv)}`,
   `MYANIMELIST_CLIENT_ID=${JSON.stringify(myanimelistClientId)}`,
   `ANILIST_CLIENT_ID=${JSON.stringify(anilistClientId)}`,
-  `TEST=${JSON.stringify(testValue)}`,
   '',
 ].join('\n');
 
@@ -133,7 +130,6 @@ export const RELEASE_DATE = ${JSON.stringify(releaseDate)};
 export const NODE_ENV = ${JSON.stringify(nodeEnv)};
 export const MYANIMELIST_CLIENT_ID = ${JSON.stringify(myanimelistClientId)};
 export const ANILIST_CLIENT_ID = ${JSON.stringify(anilistClientId)};
-export const TEST = ${JSON.stringify(testValue)};
 
 export default {
   BUILD_TYPE,
@@ -142,7 +138,6 @@ export default {
   NODE_ENV,
   MYANIMELIST_CLIENT_ID,
   ANILIST_CLIENT_ID,
-  TEST,
 };
 `;
 

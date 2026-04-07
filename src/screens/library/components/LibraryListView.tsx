@@ -14,7 +14,6 @@ import ServiceManager from '@services/ServiceManager';
 import { getPlugin } from '@plugins/pluginManager';
 import { useSelectionContext } from '../SelectionContext';
 import { ImageRequestInit } from '@plugins/types';
-import Config from '@env';
 
 interface Props {
   categoryId: number;
@@ -92,7 +91,7 @@ export const LibraryView: React.FC<Props> = ({
       <EmptyView
         theme={theme}
         icon="Σ(ಠ_ಠ)"
-        description={getString('libraryScreen.empty') + Config.TEST}
+        description={getString('libraryScreen.empty')}
         actions={[
           categoryId !== 2
             ? {
