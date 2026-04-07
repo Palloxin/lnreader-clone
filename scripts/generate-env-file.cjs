@@ -56,7 +56,37 @@ function getGitHash() {
   return execSync('git rev-parse --short HEAD').toString().trim();
 }
 
+function getHiddenEnvFiles(rootDir) {
+  return fs
+    .readdirSync(rootDir, { withFileTypes: true })
+    .filter(entry => {
+      return (
+        entry.isFile() &&
+        /^\..*\.env$/.test(entry.name) &&
+        entry.name !== '.env'
+      );
+    })
+    .map(entry => path.join(rootDir, entry.name))
+    .sort();
+}
+
+function readHiddenEnvFiles(rootDir) {
+  const files = getHiddenEnvFiles(rootDir);
+
+  const content = files
+    .map(filePath => {
+      const fileName = path.basename(filePath);
+      const fileContent = fs.readFileSync(filePath, 'utf8').trimEnd();
+
+      return `# Imported from ${fileName}\n${fileContent}`;
+    })
+    .join('\n\n');
+
+  return { files, content };
+}
+
 const args = parseArgs(process.argv);
+const projectRoot = path.join(__dirname, '..');
 
 const buildType = args['build-type'] || 'Beta';
 const myanimelistClientId = args['myanimelist-client-id'];
@@ -70,7 +100,7 @@ const nodeEnv =
 const testValue =
   args.test || 'This is a test variable to verify .env generation';
 
-const envContent = [
+const generatedEnvContent = [
   `BUILD_TYPE=${JSON.stringify(buildType)}`,
   `GIT_HASH=${JSON.stringify(gitHash)}`,
   `RELEASE_DATE=${JSON.stringify(releaseDate)}`,
@@ -81,10 +111,16 @@ const envContent = [
   '',
 ].join('\n');
 
-const envFilePath = path.join(__dirname, '..', '.env');
+const { files: hiddenEnvFiles, content: hiddenEnvContent } =
+  readHiddenEnvFiles(projectRoot);
+
+const envContent = hiddenEnvContent
+  ? `${generatedEnvContent}\n# Imported hidden env files\n${hiddenEnvContent}\n`
+  : generatedEnvContent;
+
+const envFilePath = path.join(projectRoot, '.env');
 const buildInfoPath = path.join(
-  __dirname,
-  '..',
+  projectRoot,
   'src',
   'generated',
   'build-info.ts',
@@ -116,6 +152,14 @@ try {
   fs.writeFileSync(envFilePath, envContent, 'utf8');
 
   console.log(`Generated .env for ${buildType} build`);
+
+  if (hiddenEnvFiles.length > 0) {
+    console.log(
+      `Imported ${hiddenEnvFiles.length} hidden env file(s):`,
+      hiddenEnvFiles.map(filePath => path.basename(filePath)),
+    );
+  }
+
   console.table({
     BUILD_TYPE: buildType,
     GIT_HASH: gitHash,
