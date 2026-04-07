@@ -50,6 +50,7 @@ jobs:
         run: |
           pnpm generate:env:release \
             --build-type "Github Action" \
+            --node-env "production" \
             --myanimelist-client-id "${{ vars.MYANIMELIST_CLIENT_ID }}" \
             --anilist-client-id "${{ vars.ANILIST_CLIENT_ID }}"
 
@@ -63,19 +64,3 @@ jobs:
           re-sign: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           variant: preRelease
-
-      - name: Set Environment Variables
-        run: |
-          set -x
-          echo "COMMIT_COUNT=$(git rev-list --count HEAD)" >> $GITHUB_ENV
-          echo "COMMIT_ID=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-      - name: Upload Release Artifact
-        env:
-          COMMIT_COUNT: ${{ env.COMMIT_COUNT }}
-          COMMIT_ID: ${{ env.COMMIT_ID }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: LNReader-r${{ env.COMMIT_COUNT }}-${{ env.COMMIT_ID }}
-          path: android/app/build/outputs/apk/**/app-*.apk
-          retention-days: 30
