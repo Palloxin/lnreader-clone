@@ -57,6 +57,7 @@ table {
   background-color: var(--theme-onPrimary);
   border-collapse: collapse;
   color: var(--theme-primary);
+  margin-bottom: 20px;
 }
 
 th {
