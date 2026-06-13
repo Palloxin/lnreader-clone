@@ -786,7 +786,7 @@ window.addEventListener('load', () => {
                 : _
             }`,
         ) //if p found, delete all double br near p
-        .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p>\s*<br>))\s*/g, '');
+        .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p\b[^>]*>(?:<[^>]+>)*\s*<br>))\s*/g, '');
     }
     reader.chapterElement.innerHTML = html;
   });
