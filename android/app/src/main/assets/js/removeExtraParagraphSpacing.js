@@ -3,12 +3,12 @@ function removeExtraParagraphSpacing(html) {
     .replace(/(?:&nbsp;\s*|[\u200b]\s*)+(?=<\/?p[> ])/g, '')
     .replace(/<br>\s*<br>\s*(?:<br>\s*)+/g, '<br><br>') //force max 2 consecutive <br>, chaining regex
     .replace(
-     /<br>\s*<br>[^]+/,
+      /<br>\s*<br>[^]+/,
       _ =>
         `${
-         /\/p>/.test(_)
+          /\/p>/.test(_)
             ? _.replace(
-                 /<br>\s*<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)<br>\s*<br>))\s*/g,
+              /<br>\s*<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)<br>\s*<br>))\s*/g,
                 '',
                )
             : _
