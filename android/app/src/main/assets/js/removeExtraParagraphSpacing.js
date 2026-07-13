@@ -10,11 +10,11 @@ function removeExtraParagraphSpacing(html) {
             ? _.replace(
                 /<br>\s*<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)<br>\s*<br>))\s*/g,
                 '',
-             )
+              )
             : _
         }`,
-   ) //if p found, delete all double br near p
-   .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)(?:<[^>]+>)*\s*<br>))\s*/g, '');
+    ) //if p found, delete all double br near p
+    .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)(?:<[^>]+>)*\s*<br>))\s*/g, '');
 }
 
 // WebView global
