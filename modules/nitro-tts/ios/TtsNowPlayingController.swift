@@ -11,13 +11,18 @@ final class TtsNowPlayingController {
       return
     }
 
-    MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+    var nowPlayingInfo: [String: Any] = [
       MPMediaItemPropertyTitle: metadata.chapterName,
       MPMediaItemPropertyArtist: metadata.novelName,
-      MPMediaItemPropertyPlaybackDuration: progress?.total ?? 0,
-      MPNowPlayingInfoPropertyElapsedPlaybackTime: progress?.index ?? 0,
       MPNowPlayingInfoPropertyPlaybackRate: state == .playing ? 1.0 : 0.0,
     ]
+    if let progress, progress.total > 0 {
+      let total = Int(progress.total)
+      let current = min(max(Int(progress.index), 0), total - 1) + 1
+      nowPlayingInfo[MPMediaItemPropertyAlbumTitle] =
+        "Paragraph \(current) of \(total)"
+    }
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
   }
 
   func clear() {

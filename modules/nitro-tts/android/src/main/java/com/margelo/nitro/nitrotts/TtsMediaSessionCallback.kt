@@ -22,8 +22,4 @@ internal class TtsMediaSessionCallback : MediaSessionCompat.Callback() {
     override fun onSkipToNext() {
         TtsPlaybackStore.skipNext()
     }
-
-    override fun onSeekTo(pos: Long) {
-        TtsPlaybackStore.seekTo((pos / 1_000L).toInt())
-    }
 }

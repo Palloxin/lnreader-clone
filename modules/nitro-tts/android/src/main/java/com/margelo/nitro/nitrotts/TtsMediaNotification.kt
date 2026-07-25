@@ -30,6 +30,7 @@ internal class TtsMediaNotification(
         updateMediaSession(snapshot)
 
         val isPlaying = snapshot.state == TtsPlaybackState.PLAYING
+        val progressLabel = paragraphProgressLabel(snapshot.progress)
         val playPauseAction = if (isPlaying) {
             action(
                 android.R.drawable.ic_media_pause,
@@ -46,7 +47,8 @@ internal class TtsMediaNotification(
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(snapshot.metadata?.chapterName ?: "Text to speech")
-            .setContentText(snapshot.metadata?.novelName ?: "LNReader")
+            .setContentText(progressLabel ?: snapshot.metadata?.novelName ?: "LNReader")
+            .setSubText(snapshot.metadata?.novelName)
             .setSmallIcon(context.applicationInfo.icon)
             .setContentIntent(contentIntent())
             .setDeleteIntent(serviceIntent(TtsPlaybackService.ACTION_STOP))
@@ -104,12 +106,11 @@ internal class TtsMediaNotification(
                         PlaybackStateCompat.ACTION_PAUSE or
                         PlaybackStateCompat.ACTION_STOP or
                         PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                        PlaybackStateCompat.ACTION_SEEK_TO,
+                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT,
                 )
                 .setState(
                     playbackState,
-                    (progress?.index ?: 0.0).toLong() * PROGRESS_UNIT_MS,
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
                     if (snapshot.state == TtsPlaybackState.PLAYING) 1f else 0f,
                 )
                 .build(),
@@ -125,12 +126,21 @@ internal class TtsMediaNotification(
                     MediaMetadataCompat.METADATA_KEY_ARTIST,
                     snapshot.metadata?.novelName ?: "",
                 )
-                .putLong(
-                    MediaMetadataCompat.METADATA_KEY_DURATION,
-                    (progress?.total ?: 0.0).toLong() * PROGRESS_UNIT_MS,
+                .putString(
+                    MediaMetadataCompat.METADATA_KEY_ALBUM,
+                    paragraphProgressLabel(progress) ?: "",
                 )
                 .build(),
         )
+    }
+
+    private fun paragraphProgressLabel(progress: TtsProgress?): String? {
+        val total = progress?.total?.toInt() ?: return null
+        if (total <= 0) {
+            return null
+        }
+        val current = progress.index.toInt().coerceIn(0, total - 1) + 1
+        return "Paragraph $current of $total"
     }
 
     private fun action(icon: Int, title: String, action: String): NotificationCompat.Action {
@@ -179,6 +189,5 @@ internal class TtsMediaNotification(
 
     companion object {
         private const val CHANNEL_ID = "tts-media-controls"
-        private const val PROGRESS_UNIT_MS = 1_000L
     }
 }

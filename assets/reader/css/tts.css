@@ -46,6 +46,25 @@
   width: 32px;
 }
 
+#TTS-Controller .tts-collapse-toggle {
+  width: 32px;
+}
+
+#TTS-Controller.collapsed {
+  border-radius: 50%;
+  gap: 0;
+}
+
+#TTS-Controller.collapsed > :not(.tts-collapse-toggle) {
+  display: none;
+}
+
+#TTS-Controller.collapsed .tts-collapse-toggle {
+  cursor: move;
+  touch-action: none;
+  width: 40px;
+}
+
 #TTS-Controller.active {
   opacity: 1;
 }

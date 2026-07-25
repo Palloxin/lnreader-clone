@@ -294,11 +294,69 @@ const TTSController = () => {
   let hoverElement = null;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
+  let dragStartX = 0;
+  let dragStartY = 0;
   let moved = false;
+  const collapsed = van.state(false);
+  let collapseButtonElement = null;
+  let lastBubbleTouchEnd = 0;
 
   const stopEvent = e => {
     e.preventDefault();
     e.stopPropagation();
+  };
+
+  const setControllerPosition = touch => {
+    const maxLeft = Math.max(
+      8,
+      window.innerWidth - controllerElement.offsetWidth - 8,
+    );
+    const maxTop = Math.max(
+      8,
+      window.innerHeight - controllerElement.offsetHeight - 8,
+    );
+    const left = Math.min(maxLeft, Math.max(8, touch.clientX - dragOffsetX));
+    const top = Math.min(maxTop, Math.max(8, touch.clientY - dragOffsetY));
+
+    controllerElement.style.left = `${left}px`;
+    controllerElement.style.top = `${top}px`;
+    controllerElement.style.right = 'auto';
+    controllerElement.style.bottom = 'auto';
+  };
+
+  const clampControllerToViewport = () => {
+    const bounds = controllerElement.getBoundingClientRect();
+    const maxLeft = Math.max(8, window.innerWidth - bounds.width - 8);
+    const maxTop = Math.max(8, window.innerHeight - bounds.height - 8);
+
+    controllerElement.style.left = `${Math.min(
+      maxLeft,
+      Math.max(8, bounds.left),
+    )}px`;
+    controllerElement.style.top = `${Math.min(
+      maxTop,
+      Math.max(8, bounds.top),
+    )}px`;
+    controllerElement.style.right = 'auto';
+    controllerElement.style.bottom = 'auto';
+  };
+
+  const setCollapsed = value => {
+    collapsed.val = value;
+    controllerElement ??= document.getElementById('TTS-Controller');
+    collapseButtonElement ??= controllerElement.querySelector(
+      '.tts-collapse-toggle',
+    );
+    collapseButtonElement.setAttribute(
+      'aria-label',
+      collapsed.val
+        ? 'Expand text-to-speech controls'
+        : 'Minimize text-to-speech controls',
+    );
+    collapseButtonElement.innerHTML = collapsed.val
+      ? textToSpeechIcon
+      : minimizeIcon;
+    requestAnimationFrame(clampControllerToViewport);
   };
 
   const startDrag = e => {
@@ -316,22 +374,9 @@ const TTSController = () => {
   const moveDrag = e => {
     stopEvent(e);
     const touch = e.changedTouches[0];
-    const maxLeft = Math.max(
-      8,
-      window.innerWidth - controllerElement.offsetWidth - 8,
-    );
-    const maxTop = Math.max(
-      8,
-      window.innerHeight - controllerElement.offsetHeight - 8,
-    );
-    const left = Math.min(maxLeft, Math.max(8, touch.clientX - dragOffsetX));
-    const top = Math.min(maxTop, Math.max(8, touch.clientY - dragOffsetY));
 
     moved = true;
-    controllerElement.style.left = `${left}px`;
-    controllerElement.style.top = `${top}px`;
-    controllerElement.style.right = 'auto';
-    controllerElement.style.bottom = 'auto';
+    setControllerPosition(touch);
 
     const newHoverElement = document
       .elementsFromPoint(touch.clientX, touch.clientY)
@@ -359,6 +404,74 @@ const TTSController = () => {
     moved = false;
   };
 
+  const startBubbleDrag = e => {
+    if (!collapsed.val) {
+      return;
+    }
+    stopEvent(e);
+    const touch = e.changedTouches[0];
+    const bounds = controllerElement.getBoundingClientRect();
+    dragOffsetX = touch.clientX - bounds.left;
+    dragOffsetY = touch.clientY - bounds.top;
+    dragStartX = touch.clientX;
+    dragStartY = touch.clientY;
+    moved = false;
+    controllerElement.classList.add('active');
+    controllerElement.style.transition = 'none';
+  };
+
+  const moveBubbleDrag = e => {
+    if (!collapsed.val) {
+      return;
+    }
+    stopEvent(e);
+    const touch = e.changedTouches[0];
+    if (
+      !moved &&
+      Math.hypot(touch.clientX - dragStartX, touch.clientY - dragStartY) < 6
+    ) {
+      return;
+    }
+    moved = true;
+    setControllerPosition(touch);
+  };
+
+  const finishBubbleDrag = () => {
+    controllerElement.classList.remove('active');
+    controllerElement.style.transition = '';
+    moved = false;
+  };
+
+  const endBubbleDrag = e => {
+    if (!collapsed.val) {
+      return;
+    }
+    stopEvent(e);
+    const shouldExpand = !moved;
+    lastBubbleTouchEnd = Date.now();
+    finishBubbleDrag();
+    if (shouldExpand) {
+      setCollapsed(false);
+    }
+  };
+
+  const cancelBubbleDrag = e => {
+    if (!collapsed.val) {
+      return;
+    }
+    stopEvent(e);
+    lastBubbleTouchEnd = Date.now();
+    finishBubbleDrag();
+  };
+
+  const toggleCollapsed = e => {
+    e.stopPropagation();
+    if (Date.now() - lastBubbleTouchEnd < 500) {
+      return;
+    }
+    setCollapsed(!collapsed.val);
+  };
+
   const runCommand = command => e => {
     e.stopPropagation();
     if (reader.generalSettings.val.TTSEnable) {
@@ -366,10 +479,28 @@ const TTSController = () => {
     }
   };
 
+  collapseButtonElement = button({
+    type: 'button',
+    class: 'tts-collapse-toggle',
+    'aria-label': 'Minimize text-to-speech controls',
+    innerHTML: minimizeIcon,
+    ontouchstart: startBubbleDrag,
+    ontouchmove: moveBubbleDrag,
+    ontouchend: endBubbleDrag,
+    ontouchcancel: cancelBubbleDrag,
+    onclick: toggleCollapsed,
+  });
+
   return div(
     {
       id: 'TTS-Controller',
-      class: () => `${reader.generalSettings.val.TTSEnable ? '' : 'hidden'}`,
+      class: () =>
+        [
+          reader.generalSettings.val.TTSEnable ? '' : 'hidden',
+          collapsed.val ? 'collapsed' : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
       style: () =>
         reader.generalSettings.val.TTSEnable
           ? 'pointer-events: auto;'
@@ -387,6 +518,7 @@ const TTSController = () => {
       ontouchcancel: endDrag,
       onclick: stopEvent,
     }),
+    collapseButtonElement,
     button({
       type: 'button',
       class: 'tts-control-button',
