@@ -314,6 +314,8 @@ export interface StringMap {
   'historyScreen.clearHistorWarning': 'string';
   'historyScreen.deleted': 'string';
   'historyScreen.nothingReadRecently': 'string';
+  'historyScreen.removeHistoryWarning': 'string';
+  'historyScreen.resetAllChapters': 'string';
   'historyScreen.searchbar': 'string';
   'library': 'string';
   'libraryScreen.bottomSheet.display.badges': 'string';

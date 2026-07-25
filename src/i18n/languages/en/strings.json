@@ -355,6 +355,8 @@
     "clearHistorWarning": "Are you sure? All history will be lost.",
     "deleted": "History deleted.",
     "nothingReadRecently": "Nothing read recently",
+    "removeHistoryWarning": "This will remove the read date of this chapter. Are you sure?",
+    "resetAllChapters": "Reset all chapters for this entry",
     "searchbar": "Search history"
   },
   "library": "Library",

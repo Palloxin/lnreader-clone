@@ -58,6 +58,19 @@ export const deleteChapterHistory = async (
 };
 
 /**
+ * Clear the reading history for every chapter belonging to a novel.
+ */
+export const deleteNovelHistory = async (novelId: number): Promise<void> => {
+  await dbManager.write(async tx => {
+    await tx
+      .update(chapterSchema)
+      .set({ readTime: null })
+      .where(eq(chapterSchema.novelId, novelId))
+      .run();
+  });
+};
+
+/**
  * Clear all reading history by setting readTime to NULL for all chapters.
  */
 export const deleteAllHistory = async (): Promise<void> => {
