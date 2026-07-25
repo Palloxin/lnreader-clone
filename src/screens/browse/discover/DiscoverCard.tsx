@@ -26,29 +26,30 @@ const DiscoverCard: React.FC<Props> = ({
   onPress,
 }) => {
   return (
-    <View style={styles.container}>
-      <Pressable
-        accessibilityLabel={`${getString('browse')} ${trackerName}`}
-        accessibilityRole="button"
-        style={[styles.flexRow, styles.mainAction]}
-        onPress={onPress}
-        android_ripple={{ color: theme.rippleColor }}
-      >
+    <Pressable
+      accessibilityLabel={`${getString('browse')} ${trackerName}`}
+      accessibilityRole="button"
+      style={styles.container}
+      onPress={onPress}
+      android_ripple={{ color: theme.rippleColor }}
+    >
+      <View style={[styles.flexRow, styles.mainAction]}>
         <Image source={icon} style={styles.icon} />
         <View style={styles.details}>
           <Text style={[styles.name, { color: theme.onSurface }]}>
             {trackerName}
           </Text>
         </View>
-      </Pressable>
+      </View>
       <View style={styles.flexRow}>
         <Button
+          accessible={false}
+          pointerEvents="none"
           title={getString('browse')}
           textColor={theme.primary}
-          onPress={onPress}
         />
       </View>
-    </View>
+    </Pressable>
   );
 };
 
