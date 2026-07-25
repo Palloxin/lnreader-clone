@@ -53,10 +53,17 @@ object TaskNotificationFactory {
         )
         val icon = if (notificationIconId != 0) notificationIconId else android.R.drawable.ic_dialog_info
 
+        val progressLines = task.progressText
+            ?.lineSequence()
+            ?.filter { it.isNotBlank() }
+            ?.toList()
+            .orEmpty()
+        val contentText = progressLines.firstOrNull() ?: task.description
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(icon)
             .setContentTitle(task.title)
-            .setContentText(task.progressText ?: task.description)
+            .setContentText(contentText)
             .setContentIntent(contentIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
@@ -77,6 +84,19 @@ object TaskNotificationFactory {
         } else {
             builder.setProgress(100, (progress.coerceIn(0.0, 1.0) * 100).toInt(), false)
         }
+
+        if (
+            task.type == "UPDATE_LIBRARY" &&
+            task.state in listOf(BackgroundTaskState.QUEUED, BackgroundTaskState.RUNNING, BackgroundTaskState.PAUSED) &&
+            progressLines.size > 1
+        ) {
+            builder.setStyle(
+                NotificationCompat.InboxStyle().also { style ->
+                    progressLines.forEach(style::addLine)
+                },
+            )
+        }
+
         return builder.build()
     }
 
