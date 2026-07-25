@@ -17,8 +17,7 @@ import {
   createBackgroundTaskMetadata,
   fromNativeTaskRecord,
 } from './taskDefinitions';
-
-export const BACKGROUND_TASKS_STORE_KEY = 'APP_SERVICE';
+import { BACKGROUND_TASKS_STORE_KEY } from './constants';
 
 const makeTemporaryId = () =>
   `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;

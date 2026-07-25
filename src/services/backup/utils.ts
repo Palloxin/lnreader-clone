@@ -16,8 +16,8 @@ import {
 import { BackupCategory, BackupNovel } from '@database/types';
 import { BackupEntryName } from './types';
 import { ROOT_STORAGE } from '@utils/Storages';
-import { BACKGROUND_TASKS_STORE_KEY } from '@services/backgroundTasks/BackgroundTaskQueue';
-import NativeFile from '@modules/native-file'
+import { BACKGROUND_TASKS_STORE_KEY } from '@services/backgroundTasks/constants';
+import NativeFile from '@modules/native-file';
 import { showToast } from '@utils/showToast';
 import { getString } from '@i18n/translations';
 

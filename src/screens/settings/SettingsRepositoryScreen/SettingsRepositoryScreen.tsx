@@ -22,7 +22,7 @@ import {
   RootStackParamList,
 } from '@navigators/types';
 import { showToast } from '@utils/showToast';
-import { useLiveQuery } from '@database/manager/manager';
+import { useLiveQuery } from '@database/manager/liveQuery';
 import { repositorySchema } from '@database/schema';
 import { dbManager } from '@database/db';
 
