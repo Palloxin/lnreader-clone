@@ -259,7 +259,6 @@ const TrackerScreen = ({ navigation }: TrackerSettingsScreenProps) => {
               getTrackerAuth('Kitsu')!.auth.expiresAt <
                 new Date(Date.now())) ? (
               <>
-                <List.Divider theme={theme} />
                 <List.SubHeader theme={theme}>
                   {getString('common.settings')}
                 </List.SubHeader>

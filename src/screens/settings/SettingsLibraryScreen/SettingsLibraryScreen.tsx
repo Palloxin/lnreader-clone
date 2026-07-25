@@ -202,7 +202,6 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
             onPress={novelSortModal.setTrue}
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>{getString('library')}</List.SubHeader>
           <List.Item
             title={getString('categories.header')}
@@ -245,7 +244,6 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
             onPress={defaultChapterSortModal.setTrue}
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('generalSettingsScreen.globalUpdate')}
           </List.SubHeader>
@@ -287,7 +285,6 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
             onPress={() => setShowLastUpdateTime(!showLastUpdateTime)}
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('generalSettingsScreen.autoDownload')}
           </List.SubHeader>

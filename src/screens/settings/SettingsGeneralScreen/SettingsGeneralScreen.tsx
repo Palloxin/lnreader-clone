@@ -65,7 +65,6 @@ const GeneralSettings = ({ navigation }: GeneralSettingsProps) => {
             onPress={inactivityTimeoutModal.setTrue}
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('generalSettings')}
           </List.SubHeader>

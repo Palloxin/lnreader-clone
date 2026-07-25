@@ -1,11 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  Appearance,
-  GestureResponderEvent,
-} from 'react-native';
+import { ScrollView, StyleSheet, View, Appearance } from 'react-native';
 
 import { ThemePicker } from '@components/ThemePicker/ThemePicker';
 import type { SegmentedControlOption } from '@components/SegmentedControl';
@@ -31,7 +25,6 @@ import {
   toDynamicThemeColors,
 } from '@theme/dynamic';
 import { ThemeColors } from '@theme/types';
-import switchTheme from 'react-native-theme-switch-animation';
 import Color from 'color';
 import { formatDate, getDateFormatLabel } from '@utils/dateFormat';
 
@@ -163,64 +156,13 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
     [],
   );
 
-  // const handleModeChange = (mode: ThemeMode) => {
-  //   setThemeMode(mode);
-
-  //   if (mode !== 'system') {
-  //     const themes = mode === 'dark' ? darkThemes : lightThemes;
-  //     const currentThemeInMode = themes.find(t => t.id === theme.id);
-
-  //     if (!currentThemeInMode) {
-  //       setThemeId(themes[0].id);
-  //     }
-  //   }
-  // };
-
-  // const handleThemeSelect = (selectedTheme: ThemeColors) => {
-  //   setThemeId(selectedTheme.id);
-  //   setCustomAccentColor(undefined);
-
-  //   if (actualThemeMode !== 'system') {
-  //     setThemeMode(selectedTheme.isDark ? 'dark' : 'light');
-  //   }
-  // };
-
-  const handleModeChange = (mode: ThemeMode, event: GestureResponderEvent) => {
-    setTimeout(() => setThemeMode(mode), 0);
-    event.currentTarget.measure((_x1, _y1, width, height, px, py) => {
-      switchTheme({
-        switchThemeFunction: () => {},
-        animationConfig: {
-          type: 'circular',
-          duration: 400,
-          startingPoint: {
-            cy: py + height / 2,
-            cx: px + width / 2,
-          },
-        },
-      });
-    });
+  const handleModeChange = (mode: ThemeMode) => {
+    setThemeMode(mode);
   };
 
-  const handleThemeSelect = (
-    selectedTheme: ThemeColors,
-    event: GestureResponderEvent,
-  ) => {
+  const handleThemeSelect = (selectedTheme: ThemeColors) => {
     setThemeId(selectedTheme.id);
     setCustomAccentColor(undefined);
-    event.currentTarget.measure((_x1, _y1, width, height, px, py) => {
-      switchTheme({
-        switchThemeFunction: () => {},
-        animationConfig: {
-          type: 'circular',
-          duration: 400,
-          startingPoint: {
-            cy: py + height / 2,
-            cx: px + width / 2,
-          },
-        },
-      });
-    });
   };
 
   return (
@@ -251,10 +193,7 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
 
           <View style={styles.scrollViewContainer}>
             <ScrollView
-              contentContainerStyle={[
-                styles.themePickerRow,
-                { backgroundColor: theme.surfaceVariant },
-              ]}
+              contentContainerStyle={styles.themePickerRow}
               horizontal={true}
               showsHorizontalScrollIndicator={false}
             >
@@ -264,7 +203,7 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
                   key={item.id}
                   currentTheme={theme}
                   theme={item}
-                  onPress={e => handleThemeSelect(item, e)}
+                  onPress={() => handleThemeSelect(item)}
                 />
               ))}
             </ScrollView>
@@ -285,7 +224,6 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
               theme={theme}
             />
           )}
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('common.display')}
           </List.SubHeader>
@@ -317,7 +255,6 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
             }
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('appearanceScreen.novelInfo')}
           </List.SubHeader>
@@ -337,7 +274,6 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
             }
             theme={theme}
           />
-          <List.Divider theme={theme} />
           <List.SubHeader theme={theme}>
             {getString('appearanceScreen.navbar')}
           </List.SubHeader>
@@ -394,24 +330,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  themeSectionText: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
   themePickerRow: {
-    borderRadius: 24,
-    //marginHorizontal: 8,
-    paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: 2,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   scrollViewContainer: {
-    paddingHorizontal: 8,
+    marginVertical: 24,
+    paddingHorizontal: 16,
   },
   segmentedControlContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
   },
 });
