@@ -298,7 +298,6 @@
     "sortOrder": "Sort Order",
     "updateLibrary": "Bibliothek beim Starten aktualisieren",
     "updateLibraryDesc": "Not recommended for low devices",
-    "updateOngoing": "Nur laufende Bücher aktualisieren",
     "updateTime": "Zeige den Zeitpunkt der letzten Aktualisierung",
     "useFAB": "FAB in der Bibliothek verwenden"
   },

@@ -3,6 +3,7 @@ import {
   getLibraryWithCategory,
 } from '@database/queries/LibraryQueries';
 import type { BackgroundTaskMetadata } from '@services/backgroundTasks/contracts';
+import { getMMKVObject } from '@utils/mmkv/mmkv';
 import { updateNovel } from '../LibraryUpdateQueries';
 import { updateLibrary } from '../index';
 
@@ -37,6 +38,7 @@ jest.mock('@hooks/persisted/useSettings', () => ({
 const mockedGetLibraryNovels = jest.mocked(getLibraryNovelsForGlobalUpdate);
 const mockedGetLibraryWithCategory = jest.mocked(getLibraryWithCategory);
 const mockedUpdateNovel = jest.mocked(updateNovel);
+const mockedGetMMKVObject = jest.mocked(getMMKVObject);
 
 type LibraryNovel = Awaited<
   ReturnType<typeof getLibraryNovelsForGlobalUpdate>
@@ -55,6 +57,7 @@ const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 describe('updateLibrary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetMMKVObject.mockReturnValue({});
   });
 
   it('updates at most three different sources while keeping each source sequential', async () => {
@@ -126,11 +129,30 @@ describe('updateLibrary', () => {
 
     await updateLibrary({ categoryId: 4 }, jest.fn(), jest.fn());
 
-    expect(mockedGetLibraryWithCategory).toHaveBeenCalledWith(
-      4,
-      undefined,
-      true,
-    );
+    expect(mockedGetLibraryWithCategory).toHaveBeenCalledWith(4, true);
     expect(mockedGetLibraryNovels).not.toHaveBeenCalled();
+  });
+
+  it('passes smart update preferences to the global update query', async () => {
+    mockedGetMMKVObject.mockReturnValue({
+      smartUpdateSkipCompleted: true,
+      smartUpdateSkipUnstarted: true,
+      smartUpdateSkipWithUnread: true,
+    });
+    mockedGetLibraryNovels.mockResolvedValue([]);
+
+    await updateLibrary({}, jest.fn(), jest.fn());
+
+    expect(mockedGetLibraryNovels).toHaveBeenCalledWith(
+      {
+        excludedCategoryIds: [],
+        includedCategoryIds: [],
+      },
+      {
+        skipCompleted: true,
+        skipUnstarted: true,
+        skipWithUnread: true,
+      },
+    );
   });
 });

@@ -8,11 +8,28 @@ import {
   inArray,
   exists,
   notExists,
+  isNotNull,
+  ne,
 } from 'drizzle-orm';
 import { dbManager } from '@database/db';
 import { novelSchema, novelCategorySchema } from '@database/schema';
 import { castInt } from '@database/manager/manager';
-import type { GlobalUpdateCategoryFilters } from '@hooks/persisted/useSettings';
+import type {
+  GlobalUpdateCategoryFilters,
+  SmartUpdateFilters,
+} from '@hooks/persisted/useSettings';
+
+const smartUpdateConditions = ({
+  skipCompleted,
+  skipUnstarted,
+  skipWithUnread,
+}: SmartUpdateFilters) => [
+  skipWithUnread
+    ? sql`COALESCE(${novelSchema.chaptersUnread}, 0) = 0`
+    : undefined,
+  skipUnstarted ? isNotNull(novelSchema.lastReadAt) : undefined,
+  skipCompleted ? ne(novelSchema.status, 'Completed') : undefined,
+];
 
 /**
  * Get library novels with optional filtering and sorting using Drizzle ORM
@@ -55,8 +72,12 @@ export const getLibraryNovelsFromDb = (
  * An empty include list means all categories, while exclusions always win.
  */
 export const getLibraryNovelsForGlobalUpdate = (
-  onlyUpdateOngoingNovels: boolean,
   { includedCategoryIds, excludedCategoryIds }: GlobalUpdateCategoryFilters,
+  smartUpdateFilters: SmartUpdateFilters = {
+    skipCompleted: false,
+    skipUnstarted: false,
+    skipWithUnread: false,
+  },
 ) => {
   const includedNovel = includedCategoryIds.length
     ? dbManager
@@ -88,9 +109,9 @@ export const getLibraryNovelsForGlobalUpdate = (
       and(
         eq(novelSchema.inLibrary, true),
         eq(novelSchema.isLocal, false),
-        onlyUpdateOngoingNovels ? eq(novelSchema.status, 'Ongoing') : undefined,
         includedNovel ? exists(includedNovel) : undefined,
         excludedNovel ? notExists(excludedNovel) : undefined,
+        ...smartUpdateConditions(smartUpdateFilters),
       ),
     )
     .all();
@@ -101,7 +122,6 @@ export const getLibraryNovelsForGlobalUpdate = (
  */
 export const getLibraryWithCategory = async (
   categoryId?: number | null,
-  onlyUpdateOngoingNovels?: boolean,
   excludeLocalNovels?: boolean,
 ) => {
   // First, get novel IDs associated with the specified category
@@ -131,7 +151,6 @@ export const getLibraryWithCategory = async (
         eq(novelSchema.inLibrary, true),
         inArray(novelSchema.id, novelIds),
         excludeLocalNovels ? eq(novelSchema.isLocal, false) : undefined,
-        onlyUpdateOngoingNovels ? eq(novelSchema.status, 'Ongoing') : undefined,
       ),
     )
     .all();

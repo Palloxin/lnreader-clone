@@ -52,8 +52,18 @@ const updateLibrary = async (
     progress: 0,
   }));
 
-  const { downloadNewChapters, refreshNovelMetadata, onlyUpdateOngoingNovels } =
-    getMMKVObject<AppSettings>(APP_SETTINGS) || {};
+  const {
+    downloadNewChapters,
+    refreshNovelMetadata,
+    smartUpdateSkipCompleted,
+    smartUpdateSkipUnstarted,
+    smartUpdateSkipWithUnread,
+  } = getMMKVObject<AppSettings>(APP_SETTINGS) || {};
+  const smartUpdateFilters = {
+    skipCompleted: Boolean(smartUpdateSkipCompleted),
+    skipUnstarted: Boolean(smartUpdateSkipUnstarted),
+    skipWithUnread: Boolean(smartUpdateSkipWithUnread),
+  };
   const options: UpdateNovelOptions = {
     downloadNewChapters: downloadNewChapters || false,
     refreshNovelMetadata: refreshNovelMetadata || false,
@@ -62,15 +72,11 @@ const updateLibrary = async (
 
   let libraryNovels: DBNovelInfo[] = [];
   if (categoryId) {
-    libraryNovels = await getLibraryWithCategory(
-      categoryId,
-      onlyUpdateOngoingNovels,
-      true,
-    );
+    libraryNovels = await getLibraryWithCategory(categoryId, true);
   } else {
     libraryNovels = await getLibraryNovelsForGlobalUpdate(
-      Boolean(onlyUpdateOngoingNovels),
       getGlobalUpdateCategoryFilters(),
+      smartUpdateFilters,
     );
   }
 

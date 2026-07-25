@@ -24,6 +24,7 @@ import DefaultChapterSortModal from '../components/DefaultChapterSortModal';
 import SettingSwitch from '../components/SettingSwitch';
 import DefaultCategoryDialog from './DefaultCategoryDialog';
 import GlobalUpdateCategoriesDialog from './GlobalUpdateCategoriesDialog';
+import SmartUpdateDialog from './SmartUpdateDialog';
 import DisplayModeModal from './modals/DisplayModeModal';
 import GridSizeModal from './modals/GridSizeModal';
 import NovelBadgesModal from './modals/NovelBadgesModal';
@@ -60,9 +61,11 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
   const {
     defaultChapterSort,
     downloadNewChapters,
-    onlyUpdateOngoingNovels,
     refreshNovelMetadata,
     setAppSettings,
+    smartUpdateSkipCompleted = false,
+    smartUpdateSkipUnstarted = false,
+    smartUpdateSkipWithUnread = false,
     updateLibraryOnLaunch,
     useLibraryFAB,
   } = useAppSettings();
@@ -75,6 +78,7 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
   const gridSizeModal = useBoolean();
   const novelBadgesModal = useBoolean();
   const novelSortModal = useBoolean();
+  const smartUpdateDialog = useBoolean();
   const defaultChapterSortModal = useBoolean();
   const appDefaultCategory = categories.find(category => category.id === 1);
   const selectedDefaultCategory = categories.find(
@@ -92,6 +96,11 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
   const [draftExcludedCategoryIds, setDraftExcludedCategoryIds] = useState<
     number[]
   >([]);
+  const [draftSmartUpdateFilters, setDraftSmartUpdateFilters] = useState({
+    skipCompleted: false,
+    skipUnstarted: false,
+    skipWithUnread: false,
+  });
 
   const setDefaultCategory = (categoryId: number) => {
     setLibrarySettings({
@@ -122,6 +131,24 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
     globalUpdateCategoriesDialog.setFalse();
   };
 
+  const showSmartUpdateDialog = () => {
+    setDraftSmartUpdateFilters({
+      skipCompleted: smartUpdateSkipCompleted,
+      skipUnstarted: smartUpdateSkipUnstarted,
+      skipWithUnread: smartUpdateSkipWithUnread,
+    });
+    smartUpdateDialog.setTrue();
+  };
+
+  const saveSmartUpdateFilters = () => {
+    setAppSettings({
+      smartUpdateSkipCompleted: draftSmartUpdateFilters.skipCompleted,
+      smartUpdateSkipUnstarted: draftSmartUpdateFilters.skipUnstarted,
+      smartUpdateSkipWithUnread: draftSmartUpdateFilters.skipWithUnread,
+    });
+    smartUpdateDialog.setFalse();
+  };
+
   const getCategoryFilterDescription = (
     categoryIds: number[],
     emptyLabel: string,
@@ -144,6 +171,19 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
     globalUpdateExcludeCategoryIds,
     getString('common.none'),
   );
+  const smartUpdateDescription = [
+    smartUpdateSkipWithUnread
+      ? getString('generalSettingsScreen.smartUpdateSkipWithUnread')
+      : null,
+    smartUpdateSkipUnstarted
+      ? getString('generalSettingsScreen.smartUpdateSkipUnstarted')
+      : null,
+    smartUpdateSkipCompleted
+      ? getString('generalSettingsScreen.smartUpdateSkipCompleted')
+      : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   const sortOrderParts = sortOrder.split(' ');
   const sortOrderLabel =
@@ -247,16 +287,6 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
           <List.SubHeader theme={theme}>
             {getString('generalSettingsScreen.globalUpdate')}
           </List.SubHeader>
-          <SettingSwitch
-            label={getString('generalSettingsScreen.updateOngoing')}
-            value={onlyUpdateOngoingNovels}
-            onPress={() =>
-              setAppSettings({
-                onlyUpdateOngoingNovels: !onlyUpdateOngoingNovels,
-              })
-            }
-            theme={theme}
-          />
           <List.Item
             title={getString('generalSettingsScreen.globalUpdateCategories')}
             description={`${getString(
@@ -266,6 +296,12 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
               categories: excludedCategoriesDescription,
             })}`}
             onPress={showGlobalUpdateCategoriesDialog}
+            theme={theme}
+          />
+          <List.Item
+            title={getString('generalSettingsScreen.smartUpdate')}
+            description={smartUpdateDescription || getString('common.none')}
+            onPress={showSmartUpdateDialog}
             theme={theme}
           />
           <SettingSwitch
@@ -343,6 +379,13 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
           onCancel={globalUpdateCategoriesDialog.setFalse}
           onChange={updateDraftCategoryFilters}
           onSave={saveGlobalUpdateCategories}
+        />
+        <SmartUpdateDialog
+          filters={draftSmartUpdateFilters}
+          visible={smartUpdateDialog.value}
+          onCancel={smartUpdateDialog.setFalse}
+          onChange={setDraftSmartUpdateFilters}
+          onSave={saveSmartUpdateFilters}
         />
       </Portal>
     </SafeAreaView>

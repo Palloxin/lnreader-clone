@@ -298,7 +298,6 @@
     "sortOrder": "Sort Order",
     "updateLibrary": "Update library on launch",
     "updateLibraryDesc": "Not recommended for low devices",
-    "updateOngoing": "Only update ongoing novels",
     "updateTime": "Show last update time",
     "useFAB": "Use FAB in Library"
   },

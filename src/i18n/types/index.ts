@@ -295,10 +295,13 @@ export interface StringMap {
   'generalSettingsScreen.novelSort': 'string';
   'generalSettingsScreen.refreshMetadata': 'string';
   'generalSettingsScreen.refreshMetadataDescription': 'string';
+  'generalSettingsScreen.smartUpdate': 'string';
+  'generalSettingsScreen.smartUpdateSkipCompleted': 'string';
+  'generalSettingsScreen.smartUpdateSkipUnstarted': 'string';
+  'generalSettingsScreen.smartUpdateSkipWithUnread': 'string';
   'generalSettingsScreen.sortOrder': 'string';
   'generalSettingsScreen.updateLibrary': 'string';
   'generalSettingsScreen.updateLibraryDesc': 'string';
-  'generalSettingsScreen.updateOngoing': 'string';
   'generalSettingsScreen.updateTime': 'string';
   'generalSettingsScreen.useFAB': 'string';
   'generalSettingsScreen.timeTracking': 'string';

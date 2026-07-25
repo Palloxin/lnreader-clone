@@ -158,7 +158,7 @@ describe('LibraryQueries', () => {
       await insertTestNovelCategory(testDb, novelId1, categoryId1);
       await insertTestNovelCategory(testDb, novelId2, categoryId1);
 
-      const novels = await getLibraryWithCategory(categoryId1, undefined, true);
+      const novels = await getLibraryWithCategory(categoryId1, true);
       expect(novels).toHaveLength(1);
       expect(novels[0].name).toBe('Novel 2');
     });
@@ -180,11 +180,7 @@ describe('LibraryQueries', () => {
       await insertTestNovelCategory(testDb, novelId1, categoryId1);
       await insertTestNovelCategory(testDb, novelId2, categoryId1);
 
-      const novels = await getLibraryWithCategory(
-        categoryId1,
-        undefined,
-        false,
-      );
+      const novels = await getLibraryWithCategory(categoryId1, false);
       expect(novels).toHaveLength(2);
       expect(novels.map(n => n.name).sort()).toEqual(['Novel 1', 'Novel 2']);
     });
@@ -309,7 +305,7 @@ describe('LibraryQueries', () => {
       );
       await insertTestNovelCategory(testDb, otherNovelId, otherCategoryId);
 
-      const novels = await getLibraryNovelsForGlobalUpdate(false, {
+      const novels = await getLibraryNovelsForGlobalUpdate({
         includedCategoryIds: [includedCategoryId],
         excludedCategoryIds: [],
       });
@@ -348,7 +344,7 @@ describe('LibraryQueries', () => {
         includedCategoryId,
       );
 
-      const novels = await getLibraryNovelsForGlobalUpdate(false, {
+      const novels = await getLibraryNovelsForGlobalUpdate({
         includedCategoryIds: [includedCategoryId],
         excludedCategoryIds: [excludedCategoryId],
       });
@@ -356,7 +352,7 @@ describe('LibraryQueries', () => {
       expect(novels.map(novel => novel.name)).toEqual(['Included Novel']);
     });
 
-    it('applies the ongoing and local novel filters', async () => {
+    it('excludes local novels without filtering by status', async () => {
       await insertTestNovel(testDb, {
         inLibrary: true,
         isLocal: false,
@@ -376,12 +372,64 @@ describe('LibraryQueries', () => {
         status: 'Ongoing',
       });
 
-      const novels = await getLibraryNovelsForGlobalUpdate(true, {
+      const novels = await getLibraryNovelsForGlobalUpdate({
         includedCategoryIds: [],
         excludedCategoryIds: [],
       });
 
-      expect(novels.map(novel => novel.name)).toEqual(['Ongoing Novel']);
+      expect(novels.map(novel => novel.name)).toEqual([
+        'Ongoing Novel',
+        'Completed Novel',
+      ]);
+    });
+
+    it('applies all smart update skip filters', async () => {
+      await insertTestNovel(testDb, {
+        chaptersUnread: 0,
+        inLibrary: true,
+        isLocal: false,
+        lastReadAt: '2026-07-25',
+        name: 'Eligible Novel',
+        status: 'Ongoing',
+      });
+      await insertTestNovel(testDb, {
+        chaptersUnread: 2,
+        inLibrary: true,
+        isLocal: false,
+        lastReadAt: '2026-07-25',
+        name: 'Unread Chapters',
+        status: 'Ongoing',
+      });
+      await insertTestNovel(testDb, {
+        chaptersUnread: 0,
+        inLibrary: true,
+        isLocal: false,
+        lastReadAt: null,
+        name: 'Unstarted Novel',
+        status: 'Ongoing',
+      });
+      await insertTestNovel(testDb, {
+        chaptersUnread: 0,
+        inLibrary: true,
+        isLocal: false,
+        lastReadAt: '2026-07-25',
+        name: 'Completed Novel',
+        status: 'Completed',
+      });
+
+      const novels = await getLibraryNovelsForGlobalUpdate(
+        {
+          includedCategoryIds: [],
+          excludedCategoryIds: [],
+        },
+        {
+          skipCompleted: true,
+          skipUnstarted: true,
+          skipWithUnread: true,
+        },
+      );
+
+      expect(novels.map(novel => novel.name)).toEqual(['Eligible Novel']);
     });
   });
 
@@ -477,50 +525,6 @@ describe('LibraryQueries', () => {
       expect(novels).toHaveLength(0);
     });
 
-    it('should filter by onlyUpdateOngoingNovels = true', async () => {
-      const novelId1 = await insertTestNovel(testDb, {
-        inLibrary: true,
-        name: 'Novel 1',
-        status: 'Ongoing',
-      });
-      const novelId2 = await insertTestNovel(testDb, {
-        inLibrary: true,
-        name: 'Novel 2',
-        status: 'Completed',
-      });
-      const categoryId1 = await insertTestCategory(testDb, {
-        name: 'Category A',
-      });
-      await insertTestNovelCategory(testDb, novelId1, categoryId1);
-      await insertTestNovelCategory(testDb, novelId2, categoryId1);
-
-      const novels = await getLibraryWithCategory(categoryId1, true);
-      expect(novels).toHaveLength(1);
-      expect(novels[0].name).toBe('Novel 1');
-    });
-
-    it('should not filter by onlyUpdateOngoingNovels = false', async () => {
-      const novelId1 = await insertTestNovel(testDb, {
-        inLibrary: true,
-        name: 'Novel 1',
-        status: 'Ongoing',
-      });
-      const novelId2 = await insertTestNovel(testDb, {
-        inLibrary: true,
-        name: 'Novel 2',
-        status: 'Completed',
-      });
-      const categoryId1 = await insertTestCategory(testDb, {
-        name: 'Category A',
-      });
-      await insertTestNovelCategory(testDb, novelId1, categoryId1);
-      await insertTestNovelCategory(testDb, novelId2, categoryId1);
-
-      const novels = await getLibraryWithCategory(categoryId1, false);
-      expect(novels).toHaveLength(2);
-      expect(novels.map(n => n.name).sort()).toEqual(['Novel 1', 'Novel 2']);
-    });
-
     it('should filter by excludeLocalNovels = true', async () => {
       const novelId1 = await insertTestNovel(testDb, {
         inLibrary: true,
@@ -538,7 +542,7 @@ describe('LibraryQueries', () => {
       await insertTestNovelCategory(testDb, novelId1, categoryId1);
       await insertTestNovelCategory(testDb, novelId2, categoryId1);
 
-      const novels = await getLibraryWithCategory(categoryId1, undefined, true);
+      const novels = await getLibraryWithCategory(categoryId1, true);
       expect(novels).toHaveLength(1);
       expect(novels[0].name).toBe('Novel 2');
     });
@@ -560,11 +564,7 @@ describe('LibraryQueries', () => {
       await insertTestNovelCategory(testDb, novelId1, categoryId1);
       await insertTestNovelCategory(testDb, novelId2, categoryId1);
 
-      const novels = await getLibraryWithCategory(
-        categoryId1,
-        undefined,
-        false,
-      );
+      const novels = await getLibraryWithCategory(categoryId1, false);
       expect(novels).toHaveLength(2);
       expect(novels.map(n => n.name).sort()).toEqual(['Novel 1', 'Novel 2']);
     });

@@ -66,7 +66,9 @@ export interface AppSettings {
    * Update settings
    */
 
-  onlyUpdateOngoingNovels: boolean;
+  smartUpdateSkipCompleted: boolean;
+  smartUpdateSkipUnstarted: boolean;
+  smartUpdateSkipWithUnread: boolean;
   updateLibraryOnLaunch: boolean;
   downloadNewChapters: boolean;
   refreshNovelMetadata: boolean;
@@ -121,6 +123,12 @@ export interface LibrarySettings {
 export interface GlobalUpdateCategoryFilters {
   excludedCategoryIds: number[];
   includedCategoryIds: number[];
+}
+
+export interface SmartUpdateFilters {
+  skipCompleted: boolean;
+  skipUnstarted: boolean;
+  skipWithUnread: boolean;
 }
 
 const normalizeCategoryIds = (categoryIds?: number[]): number[] =>
@@ -238,7 +246,9 @@ const initialAppSettings: AppSettings = {
    * Update settings
    */
 
-  onlyUpdateOngoingNovels: false,
+  smartUpdateSkipCompleted: false,
+  smartUpdateSkipUnstarted: false,
+  smartUpdateSkipWithUnread: false,
   updateLibraryOnLaunch: false,
   downloadNewChapters: false,
   refreshNovelMetadata: false,
