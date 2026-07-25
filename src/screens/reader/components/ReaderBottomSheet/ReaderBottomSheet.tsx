@@ -15,7 +15,7 @@ import React, {
 } from 'react';
 import Color from 'color';
 
-import { BottomSheetFlashList, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import { TopTabBar } from '@components';
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
@@ -79,7 +79,7 @@ const GeneralTab: React.FC = React.memo(() => {
     [setChapterGeneralSettings, settings],
   );
 
-  const preferences = useMemo(
+  const preferences: { key: string; label: string }[] = useMemo(
     () => [
       { key: 'fullScreenMode', label: 'fullscreen' },
       { key: 'autoScroll', label: 'autoscroll' },
@@ -97,29 +97,22 @@ const GeneralTab: React.FC = React.memo(() => {
     [],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: { key: string; label: string } }) => (
-      <ReaderSheetPreferenceItem
-        key={item.key}
-        label={getString(
-          `readerScreen.bottomSheet.${item.label}` as keyof StringMap,
-        )}
-        onPress={() => toggleSetting(item.key as keyof typeof settings)} // @ts-ignore
-        value={settings[item.key]}
-        theme={theme}
-      />
-    ),
-    [settings, theme, toggleSetting],
-  );
-
+  // A fixed dozen rows: virtualising them costs more to mount and measure than
+  // simply drawing them, and this runs while the sheet is opening.
   return (
-    <BottomSheetFlashList
-      data={preferences}
-      extraData={[settings]}
-      keyExtractor={(item: { key: string; label: string }) => item.key}
-      renderItem={renderItem}
-      estimatedItemSize={60}
-    />
+    <BottomSheetScrollView>
+      {preferences.map(item => (
+        <ReaderSheetPreferenceItem
+          key={item.key}
+          label={getString(
+            `readerScreen.bottomSheet.${item.label}` as keyof StringMap,
+          )}
+          onPress={() => toggleSetting(item.key as keyof typeof settings)} // @ts-ignore
+          value={settings[item.key]}
+          theme={theme}
+        />
+      ))}
+    </BottomSheetScrollView>
   );
 });
 
@@ -132,6 +125,8 @@ const routes = [
   { key: 'generalTab', title: getString('generalSettings') },
   { key: 'ttsTab', title: 'TTS' },
 ];
+
+const renderLazyPlaceholder = () => <View style={styles.flex} />;
 
 const ReaderBottomSheetV2: React.FC<ReaderBottomSheetV2Props> = ({
   bottomSheetRef,
@@ -184,6 +179,10 @@ const ReaderBottomSheetV2: React.FC<ReaderBottomSheetV2Props> = ({
           onIndexChange={setIndex}
           initialLayout={{ width: layout.width }}
           style={styles.tabView}
+          // Without this every tab is mounted at once – the TTS tab alone
+          // enumerates the device's engines and voices over the bridge.
+          lazy
+          renderLazyPlaceholder={renderLazyPlaceholder}
         />
       </BottomSheetView>
     </BottomSheet>

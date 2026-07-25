@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import useChapter from '../useChapter';
-import NativeFile from '@modules/native-file'
+import NativeFile from '@modules/native-file';
 
 const mockUseNovelActions = jest.fn();
 const mockUseChapterGeneralSettings = jest.fn();
@@ -127,7 +127,7 @@ const createStore = (
     updateChapterProgress: jest.fn(),
     chapterTextCache,
     setLastRead: jest.fn(),
-	increaseTimeSpent: jest.fn()
+    increaseTimeSpent: jest.fn(),
   };
 
   return {
@@ -143,10 +143,28 @@ describe('useChapter', () => {
   const nextChapter = makeChapter(2, '1');
   const novel = makeNovel();
 
+  /**
+   * The hook keeps `hidden` separate from the rest so the reader chrome can
+   * toggle without invalidating the chapter context; flattening both keeps the
+   * assertions below focused on behaviour.
+   */
+  const useFlatChapter = (chapter: ReturnType<typeof makeChapter>) => {
+    const { hidden, chapterContext } = useChapter(
+      { current: null },
+      chapter,
+      novel,
+    );
+
+    return { hidden, ...chapterContext };
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     (NativeFile.exists as jest.Mock).mockReturnValue(false);
-    (NativeFile.readFile as jest.Mock).mockReturnValue('');
+    // The native module rejects when the chapter is not downloaded.
+    (NativeFile.readFile as jest.Mock).mockRejectedValue(
+      new Error('File not found'),
+    );
 
     mockUseChapterGeneralSettings.mockReturnValue({
       autoScroll: false,
@@ -156,7 +174,10 @@ describe('useChapter', () => {
       volumeButtonsOffset: 100,
     });
     mockUseLibrarySettings.mockReturnValue({ incognitoMode: false });
-    mockUseAppSettings.mockReturnValue({ timeTrackingEnabled: true, inactivityTimeoutMs: 60000 });
+    mockUseAppSettings.mockReturnValue({
+      timeTrackingEnabled: true,
+      inactivityTimeoutMs: 60000,
+    });
     mockUseTracker.mockReturnValue({ tracker: { id: 'tracker' } });
     mockUseTrackedNovel.mockReturnValue({
       trackedNovel: { progress: 1 },
@@ -190,17 +211,58 @@ describe('useChapter', () => {
     const store = createStore({ [initialChapter.id]: 'cached chapter body' });
     mockUseNovelActions.mockReturnValue(store.state);
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, initialChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(mockFetchChapter).not.toHaveBeenCalled();
-    expect(result.current.chapterText).toBe('SANITIZED:cached chapter body');
+    // Cached entries are already sanitized, so they are rendered as they are.
+    expect(result.current.chapterText).toBe('cached chapter body');
+    expect(mockSanitizeChapterText).not.toHaveBeenCalled();
     expect(store.chapterTextCache.write).not.toHaveBeenCalledWith(
       initialChapter.id,
       expect.anything(),
+    );
+  });
+
+  it('renders a downloaded chapter from storage without touching the network', async () => {
+    const store = createStore();
+    mockUseNovelActions.mockReturnValue(store.state);
+    (NativeFile.readFile as jest.Mock).mockResolvedValue('downloaded body');
+
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.chapterText).toBe('SANITIZED:downloaded body');
+    expect(mockFetchChapter).not.toHaveBeenCalled();
+    // A single native call doubles as the existence check.
+    expect(NativeFile.readFile).toHaveBeenCalledTimes(1);
+    expect(NativeFile.exists).not.toHaveBeenCalled();
+  });
+
+  it('renders the chapter before its adjacent chapters are resolved', async () => {
+    const store = createStore();
+    mockUseNovelActions.mockReturnValue(store.state);
+    (NativeFile.readFile as jest.Mock).mockResolvedValue('downloaded body');
+
+    const deferredNextChapter = createDeferred<unknown>();
+    mockGetNextChapter.mockReturnValue(deferredNextChapter.promise);
+
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
+
+    // The neighbouring chapter lookups must not gate the first render.
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.chapterText).toBe('SANITIZED:downloaded body');
+    expect(result.current.nextChapter).toBeUndefined();
+
+    await act(async () => {
+      deferredNextChapter.resolve(nextChapter);
+      await deferredNextChapter.promise;
+    });
+
+    await waitFor(() =>
+      expect(result.current.nextChapter).toEqual(nextChapter),
     );
   });
 
@@ -210,9 +272,7 @@ describe('useChapter', () => {
     mockUseNovelActions.mockReturnValue(store.state);
     mockGetDbChapter.mockResolvedValue(hydratedChapter);
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, initialChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -226,9 +286,7 @@ describe('useChapter', () => {
     mockUseNovelActions.mockReturnValue(store.state);
     mockGetDbChapter.mockResolvedValue(dbChapter);
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, routeChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(routeChapter));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -244,9 +302,7 @@ describe('useChapter', () => {
     });
     mockUseNovelActions.mockReturnValue(store.state);
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, initialChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -274,18 +330,26 @@ describe('useChapter', () => {
     expect(updateAllTrackedNovels).toHaveBeenCalledWith({ progress: 5 });
   });
 
-  it('sets error and remains stable when chapter fetch fails', async () => {
+  it('sets error and drops the failed load from the cache so a retry refetches', async () => {
     const store = createStore();
     mockUseNovelActions.mockReturnValue(store.state);
     mockFetchChapter.mockRejectedValueOnce(new Error('network failed'));
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, initialChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
 
     await waitFor(() => expect(result.current.error).toBe('network failed'));
     expect(result.current.loading).toBe(false);
-    expect(result.current.chapterText).toBe('SANITIZED:');
+    expect(result.current.chapterText).toBe('');
+    expect(store.chapterTextCache.read(initialChapter.id)).toBeUndefined();
+
+    mockFetchChapter.mockResolvedValue('recovered body');
+    await act(async () => {
+      result.current.refetch();
+    });
+
+    await waitFor(() =>
+      expect(result.current.chapterText).toBe('SANITIZED:recovered body'),
+    );
   });
 
   it('reuses prefetched promise cache to avoid duplicate concurrent fetches for same chapter', async () => {
@@ -308,11 +372,18 @@ describe('useChapter', () => {
       },
     );
 
-    const { result } = renderHook(() =>
-      useChapter({ current: null }, initialChapter, novel),
-    );
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // The next chapter is prefetched once the current one is on screen.
+    await waitFor(() =>
+      expect(
+        mockFetchChapter.mock.calls.filter(
+          ([, path]) => path === nextChapter.path,
+        ),
+      ).toHaveLength(1),
+    );
 
     const navPromise = result.current.getChapter(nextChapter);
 

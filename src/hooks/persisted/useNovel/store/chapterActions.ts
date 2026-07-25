@@ -141,8 +141,13 @@ export const markChapterReadAction = (
 ) => {
   runAsyncAction(deps.markChapterRead(chapterId), deps);
 
-  mutateChapters(chs =>
-    chs.map(c => {
+  mutateChapters(chs => {
+    // Reaching the end of a chapter marks it read on every progress report.
+    if (!chs.some(c => c.id === chapterId && c.unread)) {
+      return chs;
+    }
+
+    return chs.map(c => {
       if (c.id !== chapterId) {
         return c;
       }
@@ -151,8 +156,8 @@ export const markChapterReadAction = (
         ...c,
         unread: false,
       };
-    }),
-  );
+    });
+  });
 };
 
 export const markChaptersReadAction = (
@@ -254,8 +259,17 @@ export const updateChapterProgressAction = (
     deps,
   );
 
-  mutateChapters(chs =>
-    chs.map(c => {
+  mutateChapters(chs => {
+    // The reader reports progress continuously while scrolling. Keeping the
+    // same array when nothing changed spares every chapter list subscribed to
+    // the store a re-render.
+    if (
+      !chs.some(c => c.id === chapterId && c.progress !== normalizedProgress)
+    ) {
+      return chs;
+    }
+
+    return chs.map(c => {
       if (c.id !== chapterId) {
         return c;
       }
@@ -264,8 +278,8 @@ export const updateChapterProgressAction = (
         ...c,
         progress: normalizedProgress,
       };
-    }),
-  );
+    });
+  });
 };
 
 export const deleteChapterAction = (
@@ -367,22 +381,17 @@ export const refreshChaptersAction = ({
   }
 };
 
+/**
+ * Persists reading time only. The reader reports it every few seconds for as
+ * long as a chapter is open, and mirroring it into the in-memory chapter list
+ * would rebuild that list (and re-render every screen showing it) on each
+ * report - for a field no screen renders: the statistics screen aggregates
+ * `timeSpent` straight from the database.
+ */
 export function increaseTimeSpentAction(
   chapterId: number,
   timeSpent: number,
-  mutateChapters: MutateChapters,
   deps: ChapterActionsDependencies = defaultChapterActionsDependencies,
 ) {
   runAsyncAction(deps.increaseTimeSpent(chapterId, timeSpent), deps);
-
-  mutateChapters(chapters =>
-    chapters.map(ch =>
-      ch.id === chapterId
-        ? {
-            ...ch,
-            timeSpent: (ch.timeSpent ?? 0) + timeSpent,
-          }
-        : ch,
-    ),
-  );
 }

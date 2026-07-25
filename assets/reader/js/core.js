@@ -21,8 +21,6 @@ window.reader = new (function () {
     chapterGeneralSettings,
     novel,
     chapter,
-    nextChapter,
-    prevChapter,
     batteryLevel,
     autoSaveInterval,
     DEBUG,
@@ -34,6 +32,12 @@ window.reader = new (function () {
   this.batteryLevel = van.state(batteryLevel);
   this.readerSettings = van.state(readerSettings);
   this.generalSettings = van.state(chapterGeneralSettings);
+  /**
+   * Bumped whenever the app pushes new adjacent chapters. The chapter is
+   * rendered before its neighbours are known, so any UI that depends on them
+   * has to read this state to re-render when they arrive.
+   */
+  this.adjacentVersion = van.state(0);
 
   this.chapterElement = document.querySelector('#LNReader-chapter');
   this.selection = window.getSelection();
@@ -41,9 +45,17 @@ window.reader = new (function () {
 
   this.novel = novel;
   this.chapter = chapter;
-  this.nextChapter = nextChapter;
-  this.prevChapter = prevChapter;
+  this.nextChapter = undefined;
+  this.prevChapter = undefined;
   this.strings = strings;
+
+  /** Called by the app once the neighbouring chapters have been resolved. */
+  this.setAdjacentChapters = ({ nextChapter, prevChapter, strings: texts }) => {
+    this.nextChapter = nextChapter ?? undefined;
+    this.prevChapter = prevChapter ?? undefined;
+    Object.assign(this.strings, texts);
+    this.adjacentVersion.val++;
+  };
   this.autoSaveInterval = autoSaveInterval;
   this.rawHTML = this.chapterElement.innerHTML;
 
@@ -517,6 +529,7 @@ window.pageReader = new (function () {
     }
     destPage = parseInt(destPage, 10);
     if (destPage < 0) {
+      if (!reader.prevChapter) return;
       document.getElementsByClassName('transition-chapter')[0].innerText =
         reader.prevChapter.name;
       this.showChapterEnding(true, false, true);
@@ -526,6 +539,7 @@ window.pageReader = new (function () {
       return;
     }
     if (destPage >= this.totalPages.val) {
+      if (!reader.nextChapter) return;
       document.getElementsByClassName('transition-chapter')[0].innerText =
         reader.nextChapter.name;
       this.showChapterEnding(true);
@@ -599,7 +613,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function calculatePages() {
+/** Scroll offset the reading position was restored to, in scroll mode. */
+let restoredScrollTop = null;
+let positionRestored = false;
+
+function calculatePages(behavior = 'instant') {
   reader.refresh();
 
   if (reader.generalSettings.val.pageReader) {
@@ -620,12 +638,10 @@ function calculatePages() {
       ),
     );
   } else {
-    window.scrollTo({
-      top:
-        (reader.chapterHeight * reader.chapter.progress) / 100 -
-        reader.layoutHeight,
-      behavior: 'smooth',
-    });
+    restoredScrollTop =
+      (reader.chapterHeight * reader.chapter.progress) / 100 -
+      reader.layoutHeight;
+    window.scrollTo({ top: restoredScrollTop, behavior });
   }
 }
 
@@ -636,11 +652,58 @@ const ro = new ResizeObserver(() => {
 });
 ro.observe(reader.chapterElement);
 
-// Also call once on load
-window.addEventListener('load', () => {
-  document.fonts.ready.then(() => {
-    requestAnimationFrame(() => setTimeout(calculatePages, 0));
+/**
+ * Fonts and images can still change the chapter height after the position was
+ * restored. Correct it when that happens - but only while the reader is sitting
+ * exactly where it was put, otherwise this would yank the page from under
+ * someone who has already started reading.
+ */
+const correctReadingPosition = () => {
+  if (reader.generalSettings.val.pageReader || restoredScrollTop === null) {
+    return;
+  }
+
+  const previousHeight = reader.chapterHeight;
+  reader.refresh();
+  if (
+    reader.chapterHeight !== previousHeight &&
+    Math.abs(window.scrollY - Math.max(0, restoredScrollTop)) < 4
+  ) {
+    calculatePages();
+  }
+};
+
+const restoreReadingPosition = () => {
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      positionRestored = true;
+      calculatePages();
+      // Deliberately not awaited before restoring: `document.fonts.ready` does
+      // not resolve until the document has finished loading, which is what this
+      // is trying to avoid waiting for.
+      document.fonts.ready.then(correctReadingPosition);
+    }, 0),
+  );
+};
+
+// Restore as soon as the chapter itself is parsed and styled. Waiting for
+// `load` means waiting for every image in the chapter, which can take seconds -
+// the reader would sit at the top of the chapter until then.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', restoreReadingPosition, {
+    once: true,
   });
+} else {
+  restoreReadingPosition();
+}
+
+window.addEventListener('load', () => {
+  if (!positionRestored) {
+    restoreReadingPosition();
+    return;
+  }
+
+  correctReadingPosition();
 });
 
 // click handler
@@ -762,6 +825,12 @@ window.addEventListener('load', () => {
 
 // text options
 (function () {
+  // What the chapter element currently holds. The document is delivered with
+  // the untransformed chapter already parsed, so writing the same markup back
+  // would re-parse and re-layout the whole chapter (and restart image loads)
+  // for nothing - which is exactly what happens when neither transform is on.
+  let appliedHTML = reader.rawHTML;
+
   van.derive(() => {
     let html = reader.rawHTML;
     if (reader.generalSettings.val.bionicReading) {
@@ -786,7 +855,15 @@ window.addEventListener('load', () => {
         ) //if p found, delete all double br near p
         .replace(/<br>(?:(?=\s*<\/?p[> ])|(?<=<\/?p(?:>| [^>]+>)(?:<[^>]+>)*\s*<br>))\s*/g, '');
     }
+    if (html === appliedHTML) {
+      return;
+    }
+
     reader.chapterElement.innerHTML = html;
+    appliedHTML = html;
+    reader.refresh();
+
+    // Replacing the markup dropped the highlights, so restore the search.
     const searchQuery = window.readerSearch?.query;
     const searchIndex = window.readerSearch?.index;
     if (searchQuery) {

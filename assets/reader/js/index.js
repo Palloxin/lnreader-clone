@@ -1,11 +1,47 @@
 const { div, p, img, button, span } = van.tags;
 
+/**
+ * Registers a callback for the scrolled-through ratio, coalesced to one call
+ * per frame. Every scroll-driven indicator shares this: separate `scroll`
+ * listeners all re-run the same work on the same frames, and that shows up
+ * directly as scrolling smoothness.
+ */
+const onScrollRatio = (() => {
+  const callbacks = [];
+  let queued = false;
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (queued) {
+        return;
+      }
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        const ratio = Math.min(
+          1,
+          (window.scrollY + reader.layoutHeight) / reader.chapterHeight,
+        );
+        for (const callback of callbacks) {
+          callback(ratio);
+        }
+      });
+    },
+    { passive: true },
+  );
+
+  return callback => callbacks.push(callback);
+})();
+
 const ChapterEnding = () => {
   return () =>
     reader.generalSettings.val.pageReader
       ? div()
       : div(div({ class: 'info-text' }, reader.strings.finished), () =>
-          reader.nextChapter
+          // Reading `adjacentVersion` subscribes this binding to the adjacent
+          // chapters being pushed in after the chapter itself was rendered.
+          reader.adjacentVersion.val >= 0 && reader.nextChapter
             ? button(
                 {
                   class: 'next-button',
@@ -47,9 +83,8 @@ const Scrollbar = () => {
       });
     }
   };
-  window.addEventListener(
-    'scroll',
-    () => !lock && !reader.generalSettings.val.pageReader && update(),
+  onScrollRatio(
+    ratio => !lock && !reader.generalSettings.val.pageReader && update(ratio),
   );
   return div(
     { id: 'ScrollBar' },
@@ -192,14 +227,13 @@ const Footer = () => {
       hour12: false,
     }),
   );
-  window.addEventListener('scroll', () => {
-    let ratio = (window.scrollY + reader.layoutHeight) / reader.chapterHeight;
-    if (ratio > 1) {
-      ratio = 1;
-    }
+  onScrollRatio(ratio => {
     percentage.val = parseInt(ratio * 100);
   });
   setInterval(() => {
+    if (!reader.generalSettings.val.showBatteryAndTime) {
+      return;
+    }
     time.val = new Date().toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
