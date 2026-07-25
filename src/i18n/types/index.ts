@@ -265,6 +265,14 @@ export interface StringMap {
   'generalSettings': 'string';
   'generalSettingsScreen.asc': 'string';
   'generalSettingsScreen.autoDownload': 'string';
+  'generalSettingsScreen.automaticUpdates': 'string';
+  'generalSettingsScreen.automaticUpdatesDaily': 'string';
+  'generalSettingsScreen.automaticUpdatesDescription': 'string';
+  'generalSettingsScreen.automaticUpdatesEvery12Hours': 'string';
+  'generalSettingsScreen.automaticUpdatesEvery2Days': 'string';
+  'generalSettingsScreen.automaticUpdatesEvery3Days': 'string';
+  'generalSettingsScreen.automaticUpdatesOff': 'string';
+  'generalSettingsScreen.automaticUpdatesWeekly': 'string';
   'generalSettingsScreen.bySource': 'string';
   'generalSettingsScreen.chapterSort': 'string';
   'generalSettingsScreen.desc': 'string';

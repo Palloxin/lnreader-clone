@@ -35,6 +35,12 @@ type NativeBackgroundTasksModule = {
   updateCheckpoint(taskId: string, checkpoint: string): Promise<void>;
   complete(taskId: string): Promise<void>;
   fail(taskId: string, error: string, shouldRetry: boolean): Promise<void>;
+  scheduleLibraryUpdates(
+    intervalHours: number,
+    title: string,
+    description: string,
+  ): Promise<void>;
+  cancelLibraryUpdates(): Promise<void>;
 };
 
 export default requireNativeModule<NativeBackgroundTasksModule>(

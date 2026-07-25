@@ -35,8 +35,38 @@ object BackgroundTaskScheduler {
         return request.id
     }
 
+    suspend fun enqueueLibraryUpdate(
+        context: Context,
+        title: String,
+        description: String,
+    ): UUID? {
+        val dao = BackgroundTaskDatabase.get(context).tasks()
+        if (dao.getActiveByType(LIBRARY_UPDATE_TASK_TYPE) != null) {
+            return null
+        }
+
+        val now = System.currentTimeMillis()
+        val task = BackgroundTaskEntity(
+            id = UUID.randomUUID().toString(),
+            type = LIBRARY_UPDATE_TASK_TYPE,
+            payload = """{"name":"$LIBRARY_UPDATE_TASK_TYPE"}""",
+            title = title,
+            description = description,
+            state = BackgroundTaskState.QUEUED,
+            progress = null,
+            progressText = null,
+            checkpoint = null,
+            attempt = 0,
+            workId = null,
+            createdAt = now,
+            updatedAt = now,
+        )
+        dao.insert(task)
+        return enqueue(context, task.id)
+    }
+
     private val NETWORK_TASKS = setOf(
-        "UPDATE_LIBRARY",
+        LIBRARY_UPDATE_TASK_TYPE,
         "DRIVE_BACKUP",
         "DRIVE_RESTORE",
         "SELF_HOST_BACKUP",
@@ -44,4 +74,6 @@ object BackgroundTaskScheduler {
         "MIGRATE_NOVEL",
         "DOWNLOAD_CHAPTER",
     )
+
+    private const val LIBRARY_UPDATE_TASK_TYPE = "UPDATE_LIBRARY"
 }

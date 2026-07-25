@@ -19,7 +19,13 @@ import {
   LibrarySortOrder,
 } from '@screens/library/constants/constants';
 import { Portal } from 'react-native-paper';
+import {
+  configureAutomaticLibraryUpdates,
+  type AutomaticLibraryUpdateInterval,
+} from '@services/backgroundTasks';
+import { showToast } from '@utils/showToast';
 
+import AutomaticUpdatesDialog from './AutomaticUpdatesDialog';
 import DefaultChapterSortModal from '../components/DefaultChapterSortModal';
 import SettingSwitch from '../components/SettingSwitch';
 import DefaultCategoryDialog from './DefaultCategoryDialog';
@@ -44,6 +50,18 @@ const SORT_ORDER_LABELS: Record<string, LibrarySortLabel> = {
   lastUpdatedAt: 'libraryScreen.bottomSheet.sortOrders.lastUpdated',
 };
 
+const AUTOMATIC_UPDATE_LABELS: Record<
+  AutomaticLibraryUpdateInterval,
+  keyof StringMap
+> = {
+  0: 'generalSettingsScreen.automaticUpdatesOff',
+  12: 'generalSettingsScreen.automaticUpdatesEvery12Hours',
+  24: 'generalSettingsScreen.automaticUpdatesDaily',
+  48: 'generalSettingsScreen.automaticUpdatesEvery2Days',
+  72: 'generalSettingsScreen.automaticUpdatesEvery3Days',
+  168: 'generalSettingsScreen.automaticUpdatesWeekly',
+};
+
 const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
   const theme = useTheme();
   const {
@@ -59,6 +77,7 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
     setLibrarySettings,
   } = useLibrarySettings();
   const {
+    automaticLibraryUpdateIntervalHours = 0,
     defaultChapterSort,
     downloadNewChapters,
     refreshNovelMetadata,
@@ -73,6 +92,7 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
   const { categories } = useCategories();
 
   const displayModal = useBoolean();
+  const automaticUpdatesDialog = useBoolean();
   const defaultCategoryDialog = useBoolean();
   const globalUpdateCategoriesDialog = useBoolean();
   const gridSizeModal = useBoolean();
@@ -185,6 +205,18 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
     .filter(Boolean)
     .join(', ');
 
+  const setAutomaticUpdateInterval = async (
+    intervalHours: AutomaticLibraryUpdateInterval,
+  ) => {
+    try {
+      await configureAutomaticLibraryUpdates(intervalHours);
+      setAppSettings({ automaticLibraryUpdateIntervalHours: intervalHours });
+      automaticUpdatesDialog.setFalse();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   const sortOrderParts = sortOrder.split(' ');
   const sortOrderLabel =
     SORT_ORDER_LABELS[sortOrderParts[0]] ??
@@ -288,6 +320,14 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
             {getString('generalSettingsScreen.globalUpdate')}
           </List.SubHeader>
           <List.Item
+            title={getString('generalSettingsScreen.automaticUpdates')}
+            description={getString(
+              AUTOMATIC_UPDATE_LABELS[automaticLibraryUpdateIntervalHours],
+            )}
+            onPress={automaticUpdatesDialog.setTrue}
+            theme={theme}
+          />
+          <List.Item
             title={getString('generalSettingsScreen.globalUpdateCategories')}
             description={`${getString(
               'generalSettingsScreen.globalUpdateInclude',
@@ -364,6 +404,12 @@ const SettingsLibraryScreen = ({ navigation }: LibrarySettingsScreenProps) => {
         theme={theme}
       />
       <Portal>
+        <AutomaticUpdatesDialog
+          intervalHours={automaticLibraryUpdateIntervalHours}
+          visible={automaticUpdatesDialog.value}
+          onCancel={automaticUpdatesDialog.setFalse}
+          onSelect={setAutomaticUpdateInterval}
+        />
         <DefaultCategoryDialog
           categories={selectableCategories}
           defaultCategoryId={selectedDefaultCategory?.id ?? 1}

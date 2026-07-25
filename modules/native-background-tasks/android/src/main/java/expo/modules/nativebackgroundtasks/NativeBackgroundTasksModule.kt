@@ -149,6 +149,19 @@ class NativeBackgroundTasksModule : Module() {
                 TaskExecutionRegistry.complete(taskId, TaskExecutionResult.Failure(error, shouldRetry))
             }
         }
+
+        AsyncFunction("scheduleLibraryUpdates") { intervalHours: Long, title: String, description: String ->
+            LibraryUpdateScheduler.schedule(
+                appContext.reactContext!!,
+                intervalHours,
+                title,
+                description,
+            )
+        }
+
+        AsyncFunction("cancelLibraryUpdates") {
+            LibraryUpdateScheduler.cancel(appContext.reactContext!!)
+        }
     }
 
     private suspend fun requireTask(taskId: String): BackgroundTaskEntity =
