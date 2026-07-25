@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { TextInput } from 'react-native-paper';
+import { Platform, ScrollView, StyleSheet } from 'react-native';
 
 import { deleteCachedNovels, useTheme, useUserAgent } from '@hooks/persisted';
 import { showToast } from '@utils/showToast';
@@ -15,10 +16,11 @@ import {
 
 import { Appbar, Dialog, List, SafeAreaView } from '@components';
 import { AdvancedSettingsScreenProps } from '@navigators/types';
-import { ScrollView, StyleSheet } from 'react-native';
 import { getUserAgentSync } from 'react-native-device-info';
 import CookieManager from '@preeternal/react-native-cookie-manager';
 import { store } from '@plugins/helpers/storage';
+import NativeDoh, { DohProviderId } from '@modules/native-doh';
+import DohProviderDialog, { DOH_PROVIDERS } from './DohProviderDialog';
 
 const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
   const theme = useTheme();
@@ -30,6 +32,9 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
 
   const { userAgent, setUserAgent } = useUserAgent();
   const [userAgentInput, setUserAgentInput] = useState(userAgent);
+  const [dohProvider, setDohProvider] = useState<DohProviderId>(
+    NativeDoh?.getProvider() ?? 0,
+  );
   /**
    * Confirm Clear Database Dialog
    */
@@ -52,6 +57,16 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
     setTrue: showUserAgentModal,
     setFalse: hideUserAgentModal,
   } = useBoolean();
+
+  const {
+    value: dohProviderDialogVisible,
+    setTrue: showDohProviderDialog,
+    setFalse: hideDohProviderDialog,
+  } = useBoolean();
+
+  const dohProviderLabel =
+    DOH_PROVIDERS.find(provider => provider.id === dohProvider)?.label ??
+    DOH_PROVIDERS[0].label;
 
   return (
     <SafeAreaView excludeTop>
@@ -86,11 +101,24 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
             onPress={showDeleteReadChaptersDialog}
             theme={theme}
           />
+        </List.Section>
+        <List.Section>
+          <List.SubHeader theme={theme}>
+            {getString('advancedSettingsScreen.networking')}
+          </List.SubHeader>
           <List.Item
             title={getString('webview.clearCookies')}
             onPress={clearCookies}
             theme={theme}
           />
+          {Platform.OS === 'android' && NativeDoh ? (
+            <List.Item
+              title={getString('advancedSettingsScreen.dnsOverHttps')}
+              description={dohProviderLabel}
+              onPress={showDohProviderDialog}
+              theme={theme}
+            />
+          ) : null}
           <List.Item
             title={getString('advancedSettingsScreen.userAgent')}
             description={userAgent}
@@ -128,6 +156,13 @@ const AdvancedSettings = ({ navigation }: AdvancedSettingsScreenProps) => {
           hideClearUpdatesDialog();
         }}
         onDismiss={hideClearUpdatesDialog}
+      />
+
+      <DohProviderDialog
+        provider={dohProvider}
+        visible={dohProviderDialogVisible}
+        onDismiss={hideDohProviderDialog}
+        onSelect={setDohProvider}
       />
 
       <Dialog.Root

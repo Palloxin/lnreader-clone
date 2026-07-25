@@ -22,17 +22,22 @@
     "dataManagement": "Data Management",
     "deleteReadChapters": "Delete read chapters",
     "deleteReadChaptersDialogTitle": "All chapters marked as read will be deleted.",
+    "disabled": "Disabled",
+    "dnsOverHttps": "DNS over HTTPS (DoH)",
+    "dnsOverHttpsDescription": "Uses the selected resolver for app requests and downloads. WebView traffic is not affected.",
     "importEpub": "Import EPUB",
     "importFailed": "Error importing EPUB:",
     "importNovel": "Import Novel",
     "importStaticFiles": "Import Static Files",
     "novelInsertFailed": "novel insert failed",
+    "networking": "Networking",
     "useFAB": "Use FAB instead of button",
     "userAgent": "User Agent",
     "recreateDBIndexes": "Recreate DB indexes",
     "recreateDBIndexesToast": "Recreated DB indexes",
     "recreateDBIndexesDialogTitle": "All DB indexes will be recreated.\nThis may take a while.",
-    "recreateDBIndexesDesc": "Recreates DB indexes. This may improve performance on slower devices."
+    "recreateDBIndexesDesc": "Recreates DB indexes. This may improve performance on slower devices.",
+    "restartRequired": "Restart LNReader to apply this change."
   },
   "appearance": "Appearance",
   "appearanceScreen": {
