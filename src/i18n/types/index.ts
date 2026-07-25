@@ -43,12 +43,16 @@ export interface StringMap {
   'appearanceScreen.appLanguageDefault': 'string';
   'appearanceScreen.appTheme': 'string';
   'appearanceScreen.darkTheme': 'string';
+  'appearanceScreen.dateFormat': 'string';
+  'appearanceScreen.dateFormatDefault': 'string';
   'appearanceScreen.dynamicColors': 'string';
   'appearanceScreen.hideBackdrop': 'string';
   'appearanceScreen.lightTheme': 'string';
   'appearanceScreen.navbar': 'string';
   'appearanceScreen.novelInfo': 'string';
   'appearanceScreen.pureBlackDarkMode': 'string';
+  'appearanceScreen.relativeTimestamps': 'string';
+  'appearanceScreen.relativeTimestampsDescription': 'string';
   'appearanceScreen.showHistoryInTheNav': 'string';
   'appearanceScreen.showUpdatesInTheNav': 'string';
   'appearanceScreen.themeMode': 'string';

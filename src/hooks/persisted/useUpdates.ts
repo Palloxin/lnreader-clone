@@ -25,12 +25,8 @@ export const fetchDetailedUpdates = async (
   );
 
   return result.map(update => {
-    const parsedTime = dayjs(update.releaseTime);
     return {
       ...update,
-      releaseTime: parsedTime.isValid()
-        ? parsedTime.format('LL')
-        : update.releaseTime,
       chapterNumber: update.chapterNumber
         ? update.chapterNumber
         : parseChapterNumber(update.novelName, update.name),

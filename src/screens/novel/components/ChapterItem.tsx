@@ -8,7 +8,7 @@ import { ThemeColors } from '@theme/types';
 import { ChapterInfo } from '@database/types';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 import { getString } from '@i18n/translations';
-import dayjs from 'dayjs';
+import { DateFormat, formatDate } from '@utils/dateFormat';
 
 interface ChapterItemProps {
   chapter: ChapterInfo;
@@ -25,6 +25,8 @@ interface ChapterItemProps {
   onDownloadChapter: (chapter: ChapterInfo) => void;
   onSelectPress: (chapter: ChapterInfo) => void;
   onSelectLongPress?: (chapter: ChapterInfo) => void;
+  dateFormat?: DateFormat;
+  relativeTimestamps?: boolean;
 }
 
 const ChapterItem: React.FC<ChapterItemProps> = ({
@@ -42,6 +44,8 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
   onDownloadChapter,
   onSelectPress,
   onSelectLongPress,
+  dateFormat = 'default',
+  relativeTimestamps = true,
 }) => {
   const { id, name, unread, releaseTime, bookmark, chapterNumber, progress } =
     chapter;
@@ -101,8 +105,7 @@ const ChapterItem: React.FC<ChapterItemProps> = ({
   } as const;
   function parseTime(time?: string | Date | null) {
     if (!time) return undefined;
-    const parsedTime = dayjs(time);
-    return parsedTime.isValid() ? parsedTime.format('LL') : (time as string);
+    return formatDate(time, dateFormat, relativeTimestamps);
   }
   const parsedTime = parseTime(releaseTime);
 

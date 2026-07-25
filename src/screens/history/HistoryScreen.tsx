@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, SectionList, Text } from 'react-native';
-import dayjs from 'dayjs';
 
 import {
   EmptyView,
@@ -11,7 +10,7 @@ import {
 import HistoryCard from './components/HistoryCard/HistoryCard';
 
 import { useSearch, useBoolean } from '@hooks';
-import { useTheme, useHistory } from '@hooks/persisted';
+import { useAppSettings, useTheme, useHistory } from '@hooks/persisted';
 
 import { convertDateToISOString } from '@database/utils/convertDateToISOString';
 
@@ -20,9 +19,12 @@ import { getString } from '@i18n/translations';
 import ClearHistoryDialog from './components/ClearHistoryDialog';
 import HistorySkeletonLoading from './components/HistorySkeletonLoading';
 import { HistoryScreenProps } from '@navigators/types';
+import { formatDate } from '@utils/dateFormat';
 
 const HistoryScreen = ({ navigation }: HistoryScreenProps) => {
   const theme = useTheme();
+  const { dateFormat = 'default', relativeTimestamps = true } =
+    useAppSettings();
   const {
     isLoading,
     history,
@@ -125,7 +127,7 @@ const HistoryScreen = ({ navigation }: HistoryScreenProps) => {
             keyExtractor={(item, index) => 'history' + index}
             renderSectionHeader={({ section: { date } }) => (
               <Text style={[styles.dateHeader, { color: theme.onSurface }]}>
-                {dayjs(date).calendar()}
+                {formatDate(date, dateFormat, relativeTimestamps)}
               </Text>
             )}
             renderItem={({ item }) => (

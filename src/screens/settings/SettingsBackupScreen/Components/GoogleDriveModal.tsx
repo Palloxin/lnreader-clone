@@ -10,8 +10,9 @@ import { showToast } from '@utils/showToast';
 import { getString } from '@i18n/translations';
 import { exists, getBackups, makeDir } from '@api/drive';
 import { DriveFile } from '@api/drive/types';
-import dayjs from 'dayjs';
 import { backgroundTasks } from '@services/backgroundTasks';
+import { useAppSettings } from '@hooks/persisted';
+import { formatDate } from '@utils/dateFormat';
 
 enum BackupModal {
   UNAUTHORIZED,
@@ -158,6 +159,8 @@ function RestoreBackup({
   closeModal: () => void;
 }) {
   const [backupList, setBackupList] = useState<DriveFile[]>([]);
+  const { dateFormat = 'default', relativeTimestamps = true } =
+    useAppSettings();
   useEffect(() => {
     exists('LNReader', true, undefined, true).then(rootFolder => {
       if (rootFolder) {
@@ -198,7 +201,9 @@ function RestoreBackup({
                 {item.name?.replace(/\.backup$/, ' ')}
               </Text>
               <Text style={[{ color: theme.secondary }, styles.fontSize]}>
-                {'(' + dayjs(item.createdTime).format('LL') + ')'}
+                {'(' +
+                  formatDate(item.createdTime, dateFormat, relativeTimestamps) +
+                  ')'}
               </Text>
             </Button>
           )}

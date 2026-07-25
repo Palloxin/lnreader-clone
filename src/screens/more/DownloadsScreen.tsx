@@ -20,7 +20,6 @@ import { getString } from '@i18n/translations';
 import { DownloadsScreenProps } from '@navigators/types';
 import { DownloadedChapter } from '@database/types';
 import { showToast } from '@utils/showToast';
-import dayjs from 'dayjs';
 import { parseChapterNumber } from '@utils/parseChapterNumber';
 
 type DownloadGroup = Record<number, DownloadedChapter[]>;
@@ -56,12 +55,8 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
     const res = await getDownloadedChapters();
     setChapters(
       res.map(download => {
-        const parsedTime = dayjs(download.releaseTime);
         return {
           ...download,
-          releaseTime: parsedTime.isValid()
-            ? parsedTime.format('LL')
-            : download.releaseTime,
           chapterNumber: download.chapterNumber
             ? download.chapterNumber
             : parseChapterNumber(download.novelName, download.name),

@@ -8,7 +8,6 @@ import {
   deleteChapterHistory,
   getHistoryFromDb,
 } from '@database/queries/HistoryQueries';
-import dayjs from 'dayjs';
 import { parseChapterNumber } from '@utils/parseChapterNumber';
 
 const useHistory = () => {
@@ -21,12 +20,8 @@ const useHistory = () => {
       .then(res =>
         setHistory(
           res.map(localHistory => {
-            const parsedTime = dayjs(localHistory.releaseTime);
             return {
               ...localHistory,
-              releaseTime: parsedTime.isValid()
-                ? parsedTime.format('LL')
-                : localHistory.releaseTime,
               chapterNumber: localHistory.chapterNumber
                 ? localHistory.chapterNumber
                 : parseChapterNumber(localHistory.novelName, localHistory.name),

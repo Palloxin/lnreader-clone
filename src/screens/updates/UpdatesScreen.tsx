@@ -10,7 +10,7 @@ import {
 } from '@components';
 
 import { useSearch } from '@hooks';
-import { useTheme } from '@hooks/persisted';
+import { useAppSettings, useTheme } from '@hooks/persisted';
 import { getString } from '@i18n/translations';
 import { ThemeColors } from '@theme/types';
 import UpdateNovelChapterGroup from './components/UpdateNovelChapterGroup';
@@ -20,9 +20,12 @@ import { backgroundTasks } from '@services/backgroundTasks';
 import { UpdateScreenProps } from '@navigators/types';
 import { UpdateOverview } from '@database/types';
 import { useUpdateContext } from '@components/Context/UpdateContext';
+import { formatDate } from '@utils/dateFormat';
 
 const UpdatesScreen = ({ navigation }: UpdateScreenProps) => {
   const theme = useTheme();
+  const { dateFormat = 'default', relativeTimestamps = true } =
+    useAppSettings();
   const {
     updatesOverview,
     getUpdates,
@@ -104,7 +107,7 @@ const UpdatesScreen = ({ navigation }: UpdateScreenProps) => {
           contentContainerStyle={styles.listContainer}
           renderSectionHeader={({ section: { date } }) => (
             <Text style={[styles.dateHeader, { color: theme.onSurface }]}>
-              {dayjs(date).calendar()}
+              {formatDate(date, dateFormat, relativeTimestamps)}
             </Text>
           )}
           sections={sections}

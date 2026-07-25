@@ -10,7 +10,7 @@ import {
   NovelInfo,
   Update,
 } from '@database/types';
-import { useDownload, useTheme } from '@hooks/persisted';
+import { useAppSettings, useDownload, useTheme } from '@hooks/persisted';
 import { RootStackParamList } from '@navigators/types';
 import { ThemeColors } from '@theme/types';
 import ChapterItem from './ChapterItem';
@@ -39,6 +39,8 @@ const NovelChapterGroup: React.FC<NovelChapterGroupProps> = ({
   const { navigate } = useNavigation<NavigationProp<RootStackParamList>>();
   const { downloadChapter, downloadingChapterIds } = useDownload();
   const theme = useTheme();
+  const { dateFormat = 'default', relativeTimestamps = true } =
+    useAppSettings();
   const [isExpanded, setIsExpanded] = useState(false);
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -128,6 +130,8 @@ const NovelChapterGroup: React.FC<NovelChapterGroupProps> = ({
         onDeleteChapter={handleDeleteChapter}
         onSelectPress={navigateToChapter}
         left={coverElement}
+        dateFormat={dateFormat}
+        relativeTimestamps={relativeTimestamps}
       />
     ),
     [
@@ -138,6 +142,8 @@ const NovelChapterGroup: React.FC<NovelChapterGroupProps> = ({
       navigateToChapter,
       novel.name,
       theme,
+      dateFormat,
+      relativeTimestamps,
     ],
   );
 

@@ -8,6 +8,7 @@ import { TtsEngine, TtsVoice } from '@modules/nitro-tts';
 import { useMMKVObject } from 'react-native-mmkv';
 import { useMemo } from 'react';
 import { getMMKVObject } from '@utils/mmkv/mmkv';
+import type { DateFormat } from '@utils/dateFormat';
 
 export const APP_SETTINGS = 'APP_SETTINGS';
 
@@ -51,6 +52,8 @@ export interface AppSettings {
   showLabelsInNav: boolean;
   useFabForContinueReading: boolean;
   disableLoadingAnimations: boolean;
+  dateFormat?: DateFormat;
+  relativeTimestamps?: boolean;
 
   /**
    * Library settings
@@ -219,6 +222,8 @@ const initialAppSettings: AppSettings = {
   showLabelsInNav: true,
   useFabForContinueReading: false,
   disableLoadingAnimations: false,
+  dateFormat: 'default',
+  relativeTimestamps: true,
 
   /**
    * Library settings

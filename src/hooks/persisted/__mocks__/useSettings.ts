@@ -12,6 +12,8 @@ export const initialAppSettings = {
   showLabelsInNav: true,
   useFabForContinueReading: false,
   disableLoadingAnimations: false,
+  dateFormat: 'default',
+  relativeTimestamps: true,
   downloadedOnlyMode: false,
   useLibraryFAB: false,
   onlyUpdateOngoingNovels: false,

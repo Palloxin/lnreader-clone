@@ -94,6 +94,8 @@ const NovelScreenList = ({
     disableHapticFeedback,
     downloadNewChapters,
     refreshNovelMetadata,
+    dateFormat = 'default',
+    relativeTimestamps = true,
   } = useAppSettings();
 
   const { filter, showChapterTitles = false } = novelSettings;
@@ -380,6 +382,8 @@ const NovelScreenList = ({
           onDownloadChapter={handleDownloadChapter}
           onSelectPress={onSelectPress}
           onSelectLongPress={onSelectLongPress}
+          dateFormat={dateFormat}
+          relativeTimestamps={relativeTimestamps}
         />
       );
     },
@@ -393,6 +397,8 @@ const NovelScreenList = ({
       selectedIds,
       showChapterTitles,
       theme,
+      dateFormat,
+      relativeTimestamps,
     ],
   );
   const listExtraData = useMemo(
