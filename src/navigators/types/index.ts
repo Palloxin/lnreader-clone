@@ -178,6 +178,10 @@ export type AdvancedSettingsScreenProps = StackScreenProps<
   SettingsStackParamList,
   'AdvancedSettings'
 >;
+export type LibrarySettingsScreenProps = CompositeScreenProps<
+  StackScreenProps<SettingsStackParamList, 'LibrarySettings'>,
+  StackScreenProps<MoreStackParamList, 'SettingsStack'>
+>;
 
 export type RespositorySettingsScreenProps = CompositeScreenProps<
   StackScreenProps<SettingsStackParamList, 'RespositorySettings'>,

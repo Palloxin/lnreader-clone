@@ -98,6 +98,10 @@ export interface BrowseSettings {
 }
 
 export interface LibrarySettings {
+  /** User-selected category for newly added novels. */
+  defaultCategoryId?: number;
+  globalUpdateExcludeCategoryIds?: number[];
+  globalUpdateIncludeCategoryIds?: number[];
   sortOrder?: LibrarySortOrder;
   filter?: LibraryFilter;
   showDownloadBadges?: boolean;
@@ -108,6 +112,45 @@ export interface LibrarySettings {
   incognitoMode?: boolean;
   downloadedOnlyMode?: boolean;
 }
+
+export interface GlobalUpdateCategoryFilters {
+  excludedCategoryIds: number[];
+  includedCategoryIds: number[];
+}
+
+const normalizeCategoryIds = (categoryIds?: number[]): number[] =>
+  Array.from(
+    new Set(
+      (categoryIds ?? []).filter(
+        categoryId => Number.isInteger(categoryId) && categoryId > 0,
+      ),
+    ),
+  );
+
+export const getGlobalUpdateCategoryFilters =
+  (): GlobalUpdateCategoryFilters => {
+    const settings = getMMKVObject<LibrarySettings>(LIBRARY_SETTINGS);
+
+    return {
+      excludedCategoryIds: normalizeCategoryIds(
+        settings?.globalUpdateExcludeCategoryIds,
+      ),
+      includedCategoryIds: normalizeCategoryIds(
+        settings?.globalUpdateIncludeCategoryIds,
+      ),
+    };
+  };
+
+export const getLibraryDefaultCategoryId = (): number | undefined => {
+  const settings = getMMKVObject<LibrarySettings>(LIBRARY_SETTINGS);
+  const categoryId = settings?.defaultCategoryId;
+
+  return typeof categoryId === 'number' &&
+    Number.isInteger(categoryId) &&
+    categoryId > 2
+    ? categoryId
+    : undefined;
+};
 
 export interface ChapterGeneralSettings {
   keepScreenOn: boolean;

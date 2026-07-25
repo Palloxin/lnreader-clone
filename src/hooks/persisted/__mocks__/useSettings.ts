@@ -29,6 +29,9 @@ export const initialBrowseSettings = {
 };
 
 export const defaultLibrarySettings = {
+  defaultCategoryId: undefined,
+  globalUpdateExcludeCategoryIds: [],
+  globalUpdateIncludeCategoryIds: [],
   showNumberOfNovels: false,
   downloadedOnlyMode: false,
   incognitoMode: false,

@@ -15,6 +15,12 @@ import {
 import { categorySchema, novelCategorySchema } from '@database/schema';
 import { eq, sql } from 'drizzle-orm';
 
+const mockGetLibraryDefaultCategoryId = jest.fn<number | undefined, []>();
+
+jest.mock('@hooks/persisted/useSettings', () => ({
+  getLibraryDefaultCategoryId: () => mockGetLibraryDefaultCategoryId(),
+}));
+
 import {
   getAllNovels,
   getNovelById,
@@ -35,6 +41,7 @@ describe('NovelQueries', () => {
   beforeEach(() => {
     const testDb = setupTestDatabase();
     clearAllTables(testDb);
+    mockGetLibraryDefaultCategoryId.mockReturnValue(undefined);
   });
 
   afterAll(() => {
@@ -199,6 +206,59 @@ describe('NovelQueries', () => {
       expect(
         associations.some(a => a.categoryId === (defaultCategory?.id ?? -1)),
       ).toBe(!!defaultCategory);
+    });
+
+    it('should assign the user-selected default category', async () => {
+      const testDb = getTestDb();
+      const categoryId = await insertTestCategory(testDb, {
+        name: 'Preferred Category',
+      });
+      const novelId = await insertTestNovel(testDb, {
+        inLibrary: false,
+        path: '/test/preferred-category',
+        pluginId: 'test-plugin',
+      });
+      mockGetLibraryDefaultCategoryId.mockReturnValue(categoryId);
+
+      await switchNovelToLibraryQuery(
+        '/test/preferred-category',
+        'test-plugin',
+      );
+
+      const associations = await testDb.drizzleDb
+        .select()
+        .from(novelCategorySchema)
+        .where(eq(novelCategorySchema.novelId, novelId))
+        .all();
+
+      expect(
+        associations.some(association => association.categoryId === categoryId),
+      ).toBe(true);
+    });
+
+    it('should fall back when the selected category no longer exists', async () => {
+      const testDb = getTestDb();
+      const novelId = await insertTestNovel(testDb, {
+        inLibrary: false,
+        path: '/test/missing-preferred-category',
+        pluginId: 'test-plugin',
+      });
+      mockGetLibraryDefaultCategoryId.mockReturnValue(999);
+
+      await switchNovelToLibraryQuery(
+        '/test/missing-preferred-category',
+        'test-plugin',
+      );
+
+      const associations = await testDb.drizzleDb
+        .select()
+        .from(novelCategorySchema)
+        .where(eq(novelCategorySchema.novelId, novelId))
+        .all();
+
+      expect(
+        associations.some(association => association.categoryId === 1),
+      ).toBe(true);
     });
   });
 

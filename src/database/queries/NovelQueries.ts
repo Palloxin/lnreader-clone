@@ -18,7 +18,31 @@ import {
   categorySchema,
   chapterSchema,
 } from '@database/schema';
-import NativeFile from '@modules/native-file'
+import type { TransactionParameter } from '@database/manager/manager.d';
+import { getLibraryDefaultCategoryId } from '@hooks/persisted/useSettings';
+import NativeFile from '@modules/native-file';
+
+const getCategoryForNewNovel = async (tx: TransactionParameter) => {
+  const preferredCategoryId = getLibraryDefaultCategoryId();
+
+  if (preferredCategoryId) {
+    const preferredCategory = await tx
+      .select({ id: categorySchema.id })
+      .from(categorySchema)
+      .where(eq(categorySchema.id, preferredCategoryId))
+      .get();
+
+    if (preferredCategory) {
+      return preferredCategory;
+    }
+  }
+
+  return tx
+    .select({ id: categorySchema.id })
+    .from(categorySchema)
+    .where(eq(categorySchema.sort, 1))
+    .get();
+};
 
 /**
  * Inserts a novel and its chapters into the database using Drizzle ORM.
@@ -133,11 +157,7 @@ export const switchNovelToLibraryQuery = async (
         showToast(getString('browseScreen.removeFromLibrary'));
       } else {
         // Add to library: add to default category
-        const defaultCategory = await tx
-          .select({ id: categorySchema.id })
-          .from(categorySchema)
-          .where(eq(categorySchema.sort, 1))
-          .get();
+        const defaultCategory = await getCategoryForNewNovel(tx);
 
         if (defaultCategory) {
           await tx
@@ -174,11 +194,7 @@ export const switchNovelToLibraryQuery = async (
           .where(eq(novelSchema.id, novelId))
           .run();
 
-        const defaultCategory = await tx
-          .select({ id: categorySchema.id })
-          .from(categorySchema)
-          .where(eq(categorySchema.sort, 1))
-          .get();
+        const defaultCategory = await getCategoryForNewNovel(tx);
 
         if (defaultCategory) {
           await tx
@@ -274,11 +290,7 @@ export const restoreLibrary = async (novel: NovelInfo) => {
       .get();
 
     if (row) {
-      const defaultCategory = await tx
-        .select({ id: categorySchema.id })
-        .from(categorySchema)
-        .where(eq(categorySchema.sort, 1))
-        .get();
+      const defaultCategory = await getCategoryForNewNovel(tx);
 
       if (defaultCategory) {
         await tx
@@ -390,12 +402,9 @@ export const updateNovelCategories = async (
         }
       }
     } else {
-      // If no category is selected, set to the default category (sort = 1)
-      const defaultCategory = await tx
-        .select({ id: categorySchema.id })
-        .from(categorySchema)
-        .where(eq(categorySchema.sort, 1))
-        .get();
+      // If no category is selected, use the preferred category and fall back
+      // to the app's built-in default.
+      const defaultCategory = await getCategoryForNewNovel(tx);
 
       if (defaultCategory) {
         for (const novelId of novelIds) {

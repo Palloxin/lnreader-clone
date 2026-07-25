@@ -1,7 +1,18 @@
-import { eq, gt, sql, and, like, or, inArray } from 'drizzle-orm';
+import {
+  eq,
+  gt,
+  sql,
+  and,
+  like,
+  or,
+  inArray,
+  exists,
+  notExists,
+} from 'drizzle-orm';
 import { dbManager } from '@database/db';
 import { novelSchema, novelCategorySchema } from '@database/schema';
 import { castInt } from '@database/manager/manager';
+import type { GlobalUpdateCategoryFilters } from '@hooks/persisted/useSettings';
 
 /**
  * Get library novels with optional filtering and sorting using Drizzle ORM
@@ -37,6 +48,52 @@ export const getLibraryNovelsFromDb = (
   }
 
   return query.all();
+};
+
+/**
+ * Get the novels eligible for a global update in one query.
+ * An empty include list means all categories, while exclusions always win.
+ */
+export const getLibraryNovelsForGlobalUpdate = (
+  onlyUpdateOngoingNovels: boolean,
+  { includedCategoryIds, excludedCategoryIds }: GlobalUpdateCategoryFilters,
+) => {
+  const includedNovel = includedCategoryIds.length
+    ? dbManager
+        .select({ novelId: novelCategorySchema.novelId })
+        .from(novelCategorySchema)
+        .where(
+          and(
+            eq(novelCategorySchema.novelId, novelSchema.id),
+            inArray(novelCategorySchema.categoryId, includedCategoryIds),
+          ),
+        )
+    : undefined;
+  const excludedNovel = excludedCategoryIds.length
+    ? dbManager
+        .select({ novelId: novelCategorySchema.novelId })
+        .from(novelCategorySchema)
+        .where(
+          and(
+            eq(novelCategorySchema.novelId, novelSchema.id),
+            inArray(novelCategorySchema.categoryId, excludedCategoryIds),
+          ),
+        )
+    : undefined;
+
+  return dbManager
+    .select()
+    .from(novelSchema)
+    .where(
+      and(
+        eq(novelSchema.inLibrary, true),
+        eq(novelSchema.isLocal, false),
+        onlyUpdateOngoingNovels ? eq(novelSchema.status, 'Ongoing') : undefined,
+        includedNovel ? exists(includedNovel) : undefined,
+        excludedNovel ? notExists(excludedNovel) : undefined,
+      ),
+    )
+    .all();
 };
 
 /**

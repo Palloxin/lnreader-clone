@@ -8,6 +8,7 @@ import {
 } from './testData';
 import {
   getLibraryNovelsFromDb,
+  getLibraryNovelsForGlobalUpdate,
   getLibraryWithCategory,
 } from '../LibraryQueries';
 import { TestDb } from './testDb';
@@ -282,6 +283,105 @@ describe('LibraryQueries', () => {
 
       const novels = await getLibraryNovelsFromDb();
       expect(novels).toHaveLength(0);
+    });
+  });
+
+  describe('getLibraryNovelsForGlobalUpdate', () => {
+    it('includes only novels in selected categories', async () => {
+      const includedNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+        name: 'Included Novel',
+      });
+      const otherNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+        name: 'Other Novel',
+      });
+      const includedCategoryId = await insertTestCategory(testDb, {
+        name: 'Included',
+      });
+      const otherCategoryId = await insertTestCategory(testDb, {
+        name: 'Other',
+      });
+      await insertTestNovelCategory(
+        testDb,
+        includedNovelId,
+        includedCategoryId,
+      );
+      await insertTestNovelCategory(testDb, otherNovelId, otherCategoryId);
+
+      const novels = await getLibraryNovelsForGlobalUpdate(false, {
+        includedCategoryIds: [includedCategoryId],
+        excludedCategoryIds: [],
+      });
+
+      expect(novels.map(novel => novel.name)).toEqual(['Included Novel']);
+    });
+
+    it('gives excluded categories precedence over included categories', async () => {
+      const excludedNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+        name: 'Excluded Novel',
+      });
+      const includedNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+        name: 'Included Novel',
+      });
+      const includedCategoryId = await insertTestCategory(testDb, {
+        name: 'Included',
+      });
+      const excludedCategoryId = await insertTestCategory(testDb, {
+        name: 'Excluded',
+      });
+      await insertTestNovelCategory(
+        testDb,
+        excludedNovelId,
+        includedCategoryId,
+      );
+      await insertTestNovelCategory(
+        testDb,
+        excludedNovelId,
+        excludedCategoryId,
+      );
+      await insertTestNovelCategory(
+        testDb,
+        includedNovelId,
+        includedCategoryId,
+      );
+
+      const novels = await getLibraryNovelsForGlobalUpdate(false, {
+        includedCategoryIds: [includedCategoryId],
+        excludedCategoryIds: [excludedCategoryId],
+      });
+
+      expect(novels.map(novel => novel.name)).toEqual(['Included Novel']);
+    });
+
+    it('applies the ongoing and local novel filters', async () => {
+      await insertTestNovel(testDb, {
+        inLibrary: true,
+        isLocal: false,
+        name: 'Ongoing Novel',
+        status: 'Ongoing',
+      });
+      await insertTestNovel(testDb, {
+        inLibrary: true,
+        isLocal: false,
+        name: 'Completed Novel',
+        status: 'Completed',
+      });
+      await insertTestNovel(testDb, {
+        inLibrary: true,
+        isLocal: true,
+        name: 'Local Novel',
+        status: 'Ongoing',
+      });
+
+      const novels = await getLibraryNovelsForGlobalUpdate(true, {
+        includedCategoryIds: [],
+        excludedCategoryIds: [],
+      });
+
+      expect(novels.map(novel => novel.name)).toEqual(['Ongoing Novel']);
     });
   });
 

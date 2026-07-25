@@ -1,6 +1,6 @@
 import {
+  getLibraryNovelsForGlobalUpdate,
   getLibraryWithCategory,
-  getLibraryNovelsFromDb,
 } from '../../database/queries/LibraryQueries';
 
 import { showToast } from '../../utils/showToast';
@@ -10,7 +10,11 @@ import { sleep } from '@utils/sleep';
 import { MMKVStorage, getMMKVObject } from '@utils/mmkv/mmkv';
 import { LAST_UPDATE_TIME } from '@hooks/persisted/useUpdates';
 import dayjs from 'dayjs';
-import { APP_SETTINGS, AppSettings } from '@hooks/persisted/useSettings';
+import {
+  APP_SETTINGS,
+  AppSettings,
+  getGlobalUpdateCategoryFilters,
+} from '@hooks/persisted/useSettings';
 import type {
   BackgroundTaskEnqueuer,
   TaskProgressUpdater,
@@ -47,12 +51,9 @@ const updateLibrary = async (
       true,
     );
   } else {
-    libraryNovels = await getLibraryNovelsFromDb(
-      '',
-      onlyUpdateOngoingNovels ? "status = 'Ongoing'" : '',
-      '',
-      false,
-      true,
+    libraryNovels = await getLibraryNovelsForGlobalUpdate(
+      Boolean(onlyUpdateOngoingNovels),
+      getGlobalUpdateCategoryFilters(),
     );
   }
 

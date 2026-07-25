@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { Appbar, List, SafeAreaView } from '@components';
@@ -34,6 +33,16 @@ const SettingsScreen = ({ navigation }: SettingsScreenProps) => {
           onPress={() =>
             navigation.navigate('SettingsStack', {
               screen: 'AppearanceSettings',
+            })
+          }
+          theme={theme}
+        />
+        <List.Item
+          title={getString('library')}
+          icon="bookshelf"
+          onPress={() =>
+            navigation.navigate('SettingsStack', {
+              screen: 'LibrarySettings',
             })
           }
           theme={theme}

@@ -12,8 +12,8 @@ interface DefaultCategoryDialogProps {
   visible: boolean;
   hideDialog: () => void;
   categories: Category[];
-  defaultCategoryId: number;
-  setDefaultCategory: (categoryId: number) => void;
+  defaultCategoryId?: number;
+  setDefaultCategory: (categoryId: number) => void | Promise<void>;
 }
 
 const DefaultCategoryDialog: React.FC<DefaultCategoryDialogProps> = ({
@@ -33,6 +33,7 @@ const DefaultCategoryDialog: React.FC<DefaultCategoryDialogProps> = ({
           style={styles.scrollArea}
           initialNumToRender={10}
           data={categories}
+          keyExtractor={category => category.id.toString()}
           renderItem={({ item }) => (
             <RadioButton
               status={item.id === defaultCategoryId}

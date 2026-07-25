@@ -212,6 +212,7 @@ export interface StringMap {
   'common.logout': 'string';
   'common.name': 'string';
   'common.newUpdateAvailable': 'string';
+  'common.none': 'string';
   'common.ok': 'string';
   'common.pause': 'string';
   'common.preparing': 'string';
@@ -276,6 +277,10 @@ export interface StringMap {
   'generalSettingsScreen.epubLocation': 'string';
   'generalSettingsScreen.epubLocationDescription': 'string';
   'generalSettingsScreen.globalUpdate': 'string';
+  'generalSettingsScreen.globalUpdateCategories': 'string';
+  'generalSettingsScreen.globalUpdateCategoriesDescription': 'string';
+  'generalSettingsScreen.globalUpdateExclude': 'string';
+  'generalSettingsScreen.globalUpdateInclude': 'string';
   'generalSettingsScreen.gridSize': 'string';
   'generalSettingsScreen.gridSizeDesc': 'string';
   'generalSettingsScreen.itemsPerRow': 'string';
