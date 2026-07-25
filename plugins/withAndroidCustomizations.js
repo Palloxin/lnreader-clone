@@ -17,6 +17,7 @@ apply from: new File(
 const ANDROID_ASSET_VARIANTS = [
   { source: 'release', target: 'main' },
   { source: 'preview', target: 'preRelease' },
+  { source: 'debug', target: 'debug' },
 ];
 
 const LAUNCHER_RESOURCE_NAMES = [
