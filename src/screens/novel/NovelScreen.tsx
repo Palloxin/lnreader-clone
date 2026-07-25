@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Portal, Appbar, Snackbar } from 'react-native-paper';
-import { useTheme } from '@hooks/persisted';
+import { useAppSettings, useTheme } from '@hooks/persisted';
 import JumpToChapterModal from './components/JumpToChapterModal';
 import { Actionbar } from '../../components/Actionbar/Actionbar';
 import EditInfoModal from './components/EditInfoModal';
@@ -25,13 +25,17 @@ import { LegendListRef } from '@legendapp/list/react-native';
 import { useCustomNovelCover } from './hooks/useCustomNovelCover';
 import { useChapterSelection } from './hooks/useChapterSelection';
 import { useNovelScreenActions } from './hooks/useNovelScreenActions';
+import { useNovelRefresh } from './hooks/useNovelRefresh';
+import SetCategoryModal from './components/SetCategoriesModal';
+import { backgroundTasks } from '@services/backgroundTasks';
 
 const Novel = ({ route, navigation }: NovelScreenProps) => {
   const novel = useNovelValue('novel');
   const chapters = useNovelValue('chapters');
-  const { setNovel, deleteChapters } = useNovelActions();
+  const { setNovel, deleteChapters, refreshNovel } = useNovelActions();
 
   const theme = useTheme();
+  const { downloadNewChapters, refreshNovelMetadata } = useAppSettings();
 
   const {
     selectedIds: selected,
@@ -45,6 +49,11 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
   const chapterListRef = useRef<LegendListRef | null>(null);
 
   const deleteDownloadsSnackbar = useBoolean();
+  const {
+    value: setCategoriesModalVisible,
+    setTrue: showSetCategoriesModal,
+    setFalse: closeSetCategoriesModal,
+  } = useBoolean();
 
   const headerOpacity = useSharedValue(0);
 
@@ -69,6 +78,13 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
   });
 
   const setCustomNovelCover = useCustomNovelCover(novel, setNovel);
+  const { updating, refresh: onRefresh } = useNovelRefresh({
+    novel,
+    downloadNewChapters,
+    refreshNovelMetadata,
+    reloadNovel: refreshNovel,
+    enqueue: backgroundTasks.enqueue,
+  });
 
   const hideJumpToChapterModal = useCallback(
     () => showJumpToChapterModal(false),
@@ -114,6 +130,8 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
               downloadCustomChapterModal={openDlChapterModal}
               showJumpToChapterModal={showJumpToChapterModal}
               shareNovel={shareNovel}
+              refreshNovel={onRefresh}
+              editCategories={showSetCategoriesModal}
               theme={theme}
               isLocal={novel?.isLocal ?? route.params?.isLocal ?? false}
               goBack={navigation.goBack}
@@ -152,9 +170,19 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
               selected={selected}
               setSelected={setSelected}
               deleteDownloadSnackbar={deleteDownloadsSnackbar}
+              onRefresh={onRefresh}
+              updating={updating}
             />
           </Suspense>
         </SafeAreaView>
+
+        {novel && setCategoriesModalVisible ? (
+          <SetCategoryModal
+            novelIds={[novel.id]}
+            closeModal={closeSetCategoriesModal}
+            visible
+          />
+        ) : null}
 
         <Portal>
           <Actionbar active={selected.length > 0} actions={selectionActions} />

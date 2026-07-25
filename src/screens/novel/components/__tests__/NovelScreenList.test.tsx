@@ -258,6 +258,7 @@ const wireStoreSelectors = (store: ReturnType<typeof createStore>) => {
 const navigation = { navigate: jest.fn() };
 const listRef = { current: { scrollToOffset: jest.fn() } };
 const headerOpacity = { set: jest.fn() };
+const onRefresh = jest.fn();
 
 const renderList = () =>
   render(
@@ -272,6 +273,8 @@ const renderList = () =>
       }}
       selected={[]}
       setSelected={jest.fn()}
+      onRefresh={onRefresh}
+      updating={false}
     />,
   );
 
@@ -315,6 +318,8 @@ describe('NovelScreenList (task 12 context boundary cutover)', () => {
         }}
         selected={[]}
         setSelected={jest.fn()}
+        onRefresh={onRefresh}
+        updating={false}
       />,
     );
 
@@ -334,6 +339,8 @@ describe('NovelScreenList (task 12 context boundary cutover)', () => {
         }}
         selected={[]}
         setSelected={jest.fn()}
+        onRefresh={onRefresh}
+        updating={false}
       />,
     );
 

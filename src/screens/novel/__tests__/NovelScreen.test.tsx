@@ -7,6 +7,10 @@ const mockUseNovelValue = jest.fn();
 const mockUseNovelActions = jest.fn();
 
 jest.mock('@hooks/persisted', () => ({
+  useAppSettings: () => ({
+    downloadNewChapters: false,
+    refreshNovelMetadata: false,
+  }),
   useTheme: () => ({
     primary: '#111',
     onSurface: '#222',
@@ -18,6 +22,19 @@ jest.mock('@hooks/persisted', () => ({
   useDownload: () => ({
     downloadChapters: mockDownloadChapters,
   }),
+}));
+
+jest.mock('../hooks/useNovelRefresh', () => ({
+  useNovelRefresh: () => ({
+    refresh: jest.fn(),
+    updating: false,
+  }),
+}));
+
+jest.mock('@services/backgroundTasks', () => ({
+  backgroundTasks: {
+    enqueue: jest.fn(),
+  },
 }));
 
 jest.mock('@hooks', () => ({

@@ -33,7 +33,6 @@ import { useCustomNovelCover } from '../hooks/useCustomNovelCover';
 import { useSaveNovelCover } from '../hooks/useSaveNovelCover';
 import { NovelScreenProps } from '@navigators/types';
 import { useDownloadReconciliation } from '../hooks/useDownloadReconciliation';
-import { useNovelRefresh } from '../hooks/useNovelRefresh';
 import NovelFloatingActions from './NovelFloatingActions';
 
 type NovelScreenListProps = {
@@ -49,6 +48,8 @@ type NovelScreenListProps = {
     cover?: string | null;
   };
   deleteDownloadSnackbar?: UseBooleanReturnType;
+  onRefresh: () => void;
+  updating: boolean;
 };
 
 const chapterKeyExtractor = (item: ChapterInfo) => 'c' + item.id;
@@ -61,6 +62,8 @@ const NovelScreenList = ({
   selected,
   setSelected,
   deleteDownloadSnackbar,
+  onRefresh,
+  updating,
 }: NovelScreenListProps) => {
   const chapters = useNovelValue('chapters');
   const fetching = useNovelValue('fetching');
@@ -78,7 +81,6 @@ const NovelScreenList = ({
     getNextChapterBatch,
     getChapters,
     openPage,
-    refreshNovel,
   } = useNovelActions();
 
   const routeNovel: Omit<NovelInfo, 'id'> & { id: 'NO_ID' } = {
@@ -92,8 +94,6 @@ const NovelScreenList = ({
   const {
     useFabForContinueReading,
     disableHapticFeedback,
-    downloadNewChapters,
-    refreshNovelMetadata,
     dateFormat = 'default',
     relativeTimestamps = true,
   } = useAppSettings();
@@ -103,12 +103,8 @@ const NovelScreenList = ({
   const theme = useTheme();
   const { top: topInset, bottom: bottomInset } = useSafeAreaInsets();
 
-  const {
-    downloadingChapterIds,
-    downloadingNovelIds,
-    downloadChapter,
-    enqueueTasks,
-  } = useDownload();
+  const { downloadingChapterIds, downloadingNovelIds, downloadChapter } =
+    useDownload();
 
   // Queue removal can mean success, failure, or cancellation. Reconcile once
   // after this novel's queue settles instead of reloading for every task.
@@ -239,14 +235,6 @@ const NovelScreenList = ({
     },
     [novel, downloadChapter],
   );
-
-  const { updating, refresh: onRefresh } = useNovelRefresh({
-    novel: novel.id === 'NO_ID' ? undefined : novel,
-    downloadNewChapters,
-    refreshNovelMetadata,
-    reloadNovel: refreshNovel,
-    enqueue: enqueueTasks,
-  });
 
   const refreshControlElement = useMemo(
     () => (

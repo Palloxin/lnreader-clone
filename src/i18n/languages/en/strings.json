@@ -438,10 +438,13 @@
     "exportEpubModal": {
       "applyReaderTheme": "Apply reader theme to EPUB",
       "customJSWarning": "Custom JS may not be supported by all EPUB readers",
-      "downloadedChaptersOnly": "Only downloaded chapters will be included in the EPUB file",
+      "description": "Choose a destination and which downloaded chapters to include in the EPUB.",
+      "directory": "Directory",
       "endChapter": "End Chapter",
+      "export": "Export",
       "exportAll": "Export All Chapters",
       "fileName": "File name",
+      "fileNameRequired": "Enter a file name",
       "includeCustomCSS": "Include Custom CSS",
       "includeCustomJS": "Include Custom JS",
       "invalidRange": "Please enter valid chapter numbers",
@@ -483,12 +486,16 @@
     "jumpToChapterModal": {
       "chapterName": "Chapter Name",
       "chapterNumber": "Chapter Number",
+      "description": "Search by chapter number or name, then choose whether to open it or scroll to it in the chapter list.",
       "error": {
         "validChapterName": "Enter a valid chapter name",
         "validChapterNumber": "Enter a valid chapter number"
       },
       "jumpToChapter": "Jump to Chapter",
-      "openChapter": "Open Chapter"
+      "openChapter": "Open Chapter",
+      "openChapterDescription": "Turn off to scroll to it in the chapter list.",
+      "searchByName": "Search by Chapter Name",
+      "searchByNameDescription": "Turn off to search by chapter number."
     },
     "migrate": "Migrate",
     "noSummary": "No summary",
