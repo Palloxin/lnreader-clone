@@ -54,6 +54,7 @@ import { ThemeColors } from '@theme/types';
 import { useLibraryContext } from '@components/Context/LibraryContext';
 import { xor } from 'lodash-es';
 import { SelectionContext } from './SelectionContext';
+import { getLibraryCategoryIndex } from './constants/constants';
 
 type State = NavigationState<{
   key: string;
@@ -86,7 +87,13 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
     categories,
     refetchLibrary,
     isLoading,
-    settings: { showNumberOfNovels, downloadedOnlyMode, incognitoMode },
+    settings: {
+      showNumberOfNovels,
+      downloadedOnlyMode,
+      incognitoMode,
+      lastUsedCategoryId,
+      setLibrarySettings,
+    },
   } = useLibraryContext();
 
   const { importNovel } = useImport();
@@ -98,7 +105,19 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
 
   const bottomSheetRef = useRef<BottomSheetModalMethods | null>(null);
 
-  const [index, setIndex] = useState(0);
+  const [selectedCategoryId, setSelectedCategoryId] =
+    useState(lastUsedCategoryId);
+  const index = getLibraryCategoryIndex(categories, selectedCategoryId);
+  const setIndex = useCallback(
+    (nextIndex: number) => {
+      const categoryId = categories[nextIndex]?.id;
+      if (categoryId !== undefined) {
+        setSelectedCategoryId(categoryId);
+        setLibrarySettings({ lastUsedCategoryId: categoryId });
+      }
+    },
+    [categories, setLibrarySettings],
+  );
 
   const {
     value: setCategoryModalVisible,
@@ -483,17 +502,21 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       ) : null}
 
       <SelectionContext.Provider value={selectionContextValue}>
-        <TabView
-          commonOptions={{
-            label: renderLabel,
-          }}
-          lazy
-          navigationState={navigationState}
-          renderTabBar={renderTabBar}
-          renderScene={renderScene}
-          onIndexChange={setIndex}
-          initialLayout={{ width: layout.width }}
-        />
+        {categories.length ? (
+          <TabView
+            commonOptions={{
+              label: renderLabel,
+            }}
+            lazy
+            navigationState={navigationState}
+            renderTabBar={renderTabBar}
+            renderScene={renderScene}
+            onIndexChange={setIndex}
+            initialLayout={{ width: layout.width }}
+          />
+        ) : (
+          <SourceScreenSkeletonLoading theme={theme} />
+        )}
       </SelectionContext.Provider>
 
       {useLibraryFAB &&

@@ -103,6 +103,8 @@ export interface BrowseSettings {
 export interface LibrarySettings {
   /** User-selected category for newly added novels. */
   defaultCategoryId?: number;
+  /** Last category viewed in the library. */
+  lastUsedCategoryId?: number;
   globalUpdateExcludeCategoryIds?: number[];
   globalUpdateIncludeCategoryIds?: number[];
   sortOrder?: LibrarySortOrder;
