@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { IconButtonV2 } from '@components';
@@ -132,19 +132,13 @@ const ReaderSearchbar = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.searchbar,
-          { backgroundColor: theme.surface2 || theme.surface },
-        ]}
-      >
+      <View style={styles.searchbar}>
         <IconButtonV2
           name="magnify"
           color={theme.onSurfaceVariant}
           onPress={() => inputRef.current?.focus()}
-          padding={6}
+          padding={12}
           theme={theme}
-          style={styles.searchIcon}
         />
         <TextInput
           ref={inputRef}
@@ -170,7 +164,7 @@ const ReaderSearchbar = ({
           color={theme.onSurface}
           disabled={!hasMatches}
           onPress={() => navigateChapterSearch('PREV', searchText)}
-          padding={6}
+          padding={12}
           theme={theme}
         />
         <IconButtonV2
@@ -178,8 +172,7 @@ const ReaderSearchbar = ({
           color={theme.onSurface}
           disabled={!hasMatches}
           onPress={() => navigateChapterSearch('NEXT', searchText)}
-          padding={6}
-          style={styles.trailingButton}
+          padding={12}
           theme={theme}
         />
         {hasSearchText ? (
@@ -187,8 +180,7 @@ const ReaderSearchbar = ({
             name="close"
             color={theme.onSurface}
             onPress={handleClearSearch}
-            padding={6}
-            style={styles.trailingButton}
+            padding={12}
             theme={theme}
           />
         ) : null}
@@ -210,37 +202,33 @@ const ReaderSearchbar = ({
 export default ReaderSearchbar;
 
 const styles = StyleSheet.create({
-  trailingButton: {
-    marginRight: 4,
-  },
   container: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 4,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    minHeight: 44,
+    height: 56,
+    includeFontPadding: false,
+    lineHeight: 20,
     paddingVertical: 0,
+    textAlignVertical: 'center',
   },
   resultText: {
-    fontSize: 13,
-    minWidth: 40,
+    fontSize: 12,
+    includeFontPadding: false,
+    lineHeight: 16,
+    minWidth: 44,
     textAlign: 'center',
   },
   helperText: {
     fontSize: 12,
     marginTop: 4,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginLeft: 8,
+    paddingHorizontal: 16,
   },
   searchbar: {
     alignItems: 'center',
-    borderRadius: 24,
     flexDirection: 'row',
-    minHeight: 48,
-    overflow: 'hidden',
+    minHeight: 56,
   },
 });

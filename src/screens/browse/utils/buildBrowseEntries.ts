@@ -91,6 +91,28 @@ export const buildSourceEntries = ({
       !pinnedIds.has(plugin.id) && plugin.id !== visibleLastUsedPluginId,
   );
 
+  if (showAniList || showMyAnimeList) {
+    result.push({
+      key: 'discover-header',
+      type: 'header',
+      title: getString('browseScreen.discover'),
+    });
+    if (showAniList) {
+      result.push({
+        key: 'discover-anilist',
+        tracker: 'AniList',
+        type: 'discover',
+      });
+    }
+    if (showMyAnimeList) {
+      result.push({
+        key: 'discover-mal',
+        tracker: 'MyAnimeList',
+        type: 'discover',
+      });
+    }
+  }
+
   if (lastUsedPlugin) {
     result.push(
       {
@@ -121,28 +143,6 @@ export const buildSourceEntries = ({
         type: 'source',
       }),
     );
-  }
-
-  if (showAniList || showMyAnimeList) {
-    result.push({
-      key: 'discover-header',
-      type: 'header',
-      title: getString('browseScreen.discover'),
-    });
-    if (showAniList) {
-      result.push({
-        key: 'discover-anilist',
-        tracker: 'AniList',
-        type: 'discover',
-      });
-    }
-    if (showMyAnimeList) {
-      result.push({
-        key: 'discover-mal',
-        tracker: 'MyAnimeList',
-        type: 'discover',
-      });
-    }
   }
 
   let previousLanguage: string | undefined;

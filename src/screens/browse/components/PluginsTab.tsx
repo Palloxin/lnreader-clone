@@ -370,8 +370,8 @@ export const PluginsTab = memo(
 
 const styles = StyleSheet.create({
   description: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
   },
   emptyList: {
     flexGrow: 1,
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     width: 44,
   },
   name: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
   pluginRow: {
     alignItems: 'center',

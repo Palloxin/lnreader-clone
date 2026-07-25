@@ -43,6 +43,7 @@ const ReaderThemeSelector: React.FC<ReaderThemeSelectorProps> = ({
             }
             backgroundColor={item.backgroundColor}
             textColor={item.textColor}
+            theme={theme}
             onPress={() =>
               setChapterReaderSettings({
                 theme: item.backgroundColor,
@@ -63,17 +64,10 @@ export default ReaderThemeSelector;
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 8,
     paddingHorizontal: 16,
-  },
-  scrollView: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
+    paddingVertical: 8,
   },
   title: {
-    marginRight: 16,
+    marginBottom: 8,
   },
 });

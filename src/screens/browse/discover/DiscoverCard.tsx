@@ -36,7 +36,9 @@ const DiscoverCard: React.FC<Props> = ({
       >
         <Image source={icon} style={styles.icon} />
         <View style={styles.details}>
-          <Text style={{ color: theme.onSurface }}>{trackerName}</Text>
+          <Text style={[styles.name, { color: theme.onSurface }]}>
+            {trackerName}
+          </Text>
         </View>
       </Pressable>
       <View style={styles.flexRow}>
@@ -74,5 +76,9 @@ const styles = StyleSheet.create({
   },
   mainAction: {
     flex: 1,
+  },
+  name: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

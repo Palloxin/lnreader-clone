@@ -22,7 +22,7 @@
     "dataManagement": "Gestion de données",
     "deleteReadChapters": "Supprimer les chapitres lus",
     "deleteReadChaptersDialogTitle": "Tous les chapitres marqués comme lus seront supprimés.",
-    "importEpub": "Importer Epub",
+    "importEpub": "Importer EPUB",
     "importNovel": "Importer un roman",
     "importStaticFiles": "Importer les fichiers statiques",
     "novelInsertFailed": "Insertion du roman échouée",
@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Either chapter is empty or the app couldn't scrape it",
     "chapterName": "Chapitre : %{name}",
     "completed": "Téléchargement terminé",
-    "dbInfo": "Les téléchargements sont enregistrés dans une base de données SQLite.",
     "downloading": "Téléchargement",
     "downloadingNovel": "Téléchargement : %{name}",
     "downloadsLower": "télécharger",
@@ -348,7 +347,7 @@
     },
     "empty": "Votre bibliothèque est vide. Ajouter des séries à votre bibliothèque à partir de Parcourir",
     "extraMenu": {
-      "importEpub": "Importer un Epub",
+      "importEpub": "Importer un EPUB",
       "openRandom": "Ouvrir une série au hasard",
       "updateCategory": "Mettre à jour la catégorie",
       "updateLibrary": "Mettre à jour la bibliothèque"

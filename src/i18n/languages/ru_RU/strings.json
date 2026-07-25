@@ -22,7 +22,7 @@
     "dataManagement": "Управление данными",
     "deleteReadChapters": "Удалять прочитанные главы",
     "deleteReadChaptersDialogTitle": "Вы уверены? Все главы, помеченные как прочитанные, будут удалены.",
-    "importEpub": "Импорт Epub",
+    "importEpub": "Импорт EPUB",
     "importNovel": "Импорт новеллы",
     "importStaticFiles": "Импорт файлов статики",
     "novelInsertFailed": "ошибка вставки главы",
@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Либо глава пуста, либо приложению не удалось ее обработать",
     "chapterName": "Глава: %{name}",
     "completed": "Загрузка завершена",
-    "dbInfo": "Загрузки сохраняются в базе данных SQLite.",
     "downloading": "Загрузка",
     "downloadingNovel": "Загружается %{name}",
     "downloadsLower": "Загруженное",
@@ -348,7 +347,7 @@
     },
     "empty": "Библиотека пуста. Добавьте новеллы из меню «Источники».",
     "extraMenu": {
-      "importEpub": "Импорт Epub",
+      "importEpub": "Импорт EPUB",
       "openRandom": "Открыть случайную серию",
       "updateCategory": "Обновить категорию",
       "updateLibrary": "Обновить библиотеку"

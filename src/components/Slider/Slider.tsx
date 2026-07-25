@@ -19,8 +19,6 @@ const TOUCH_TARGET_HEIGHT = 48;
 const MAX_RENDERED_STOPS = 100;
 const HANDLE_WIDTH = 4;
 const PRESSED_HANDLE_WIDTH = 2;
-const HANDLE_TRACK_GAP = 6;
-const INSIDE_CORNER_RADIUS = 2;
 const STOP_SIZE = 4;
 
 export type SliderSize = 'xs' | 's' | 'm' | 'l' | 'xl';
@@ -128,13 +126,10 @@ const Slider: React.FC<SliderProps> = ({
     HANDLE_WIDTH / 2,
     Math.max(width - HANDLE_WIDTH / 2, HANDLE_WIDTH / 2),
   );
-  const gapFromHandleCenter = HANDLE_WIDTH / 2 + HANDLE_TRACK_GAP;
-  const beforeHandleWidth = Math.max(handlePosition - gapFromHandleCenter, 0);
-  const afterHandleStart = Math.min(
-    handlePosition + gapFromHandleCenter,
-    width,
-  );
-  const afterHandleWidth = Math.max(width - afterHandleStart, 0);
+  const activeTrackLeft = I18nManager.isRTL ? handlePosition : 0;
+  const activeTrackWidth = I18nManager.isRTL
+    ? width - handlePosition
+    : handlePosition;
   const resolvedActiveColor = activeTrackColor ?? theme.primary;
   const resolvedInactiveColor = inactiveTrackColor ?? theme.secondaryContainer;
   const resolvedHandleColor = handleColor ?? theme.primary;
@@ -287,34 +282,6 @@ const Slider: React.FC<SliderProps> = ({
       <>
         <View
           pointerEvents="none"
-          testID={`${testID}-active-track`}
-          style={[
-            styles.trackSegment,
-            {
-              backgroundColor: disabled
-                ? disabledActiveColor
-                : resolvedActiveColor,
-              borderTopLeftRadius: I18nManager.isRTL
-                ? INSIDE_CORNER_RADIUS
-                : sizeTokens.trackRadius,
-              borderBottomLeftRadius: I18nManager.isRTL
-                ? INSIDE_CORNER_RADIUS
-                : sizeTokens.trackRadius,
-              borderTopRightRadius: I18nManager.isRTL
-                ? sizeTokens.trackRadius
-                : INSIDE_CORNER_RADIUS,
-              borderBottomRightRadius: I18nManager.isRTL
-                ? sizeTokens.trackRadius
-                : INSIDE_CORNER_RADIUS,
-              height: sizeTokens.trackHeight,
-              left: I18nManager.isRTL ? afterHandleStart : 0,
-              top: trackTop,
-              width: I18nManager.isRTL ? afterHandleWidth : beforeHandleWidth,
-            },
-          ]}
-        />
-        <View
-          pointerEvents="none"
           testID={`${testID}-inactive-track`}
           style={[
             styles.trackSegment,
@@ -322,22 +289,28 @@ const Slider: React.FC<SliderProps> = ({
               backgroundColor: disabled
                 ? disabledInactiveColor
                 : resolvedInactiveColor,
-              borderTopLeftRadius: I18nManager.isRTL
-                ? sizeTokens.trackRadius
-                : INSIDE_CORNER_RADIUS,
-              borderBottomLeftRadius: I18nManager.isRTL
-                ? sizeTokens.trackRadius
-                : INSIDE_CORNER_RADIUS,
-              borderTopRightRadius: I18nManager.isRTL
-                ? INSIDE_CORNER_RADIUS
-                : sizeTokens.trackRadius,
-              borderBottomRightRadius: I18nManager.isRTL
-                ? INSIDE_CORNER_RADIUS
-                : sizeTokens.trackRadius,
+              borderRadius: sizeTokens.trackRadius,
               height: sizeTokens.trackHeight,
-              left: I18nManager.isRTL ? 0 : afterHandleStart,
+              left: 0,
               top: trackTop,
-              width: I18nManager.isRTL ? beforeHandleWidth : afterHandleWidth,
+              width,
+            },
+          ]}
+        />
+        <View
+          pointerEvents="none"
+          testID={`${testID}-active-track`}
+          style={[
+            styles.trackSegment,
+            {
+              backgroundColor: disabled
+                ? disabledActiveColor
+                : resolvedActiveColor,
+              borderRadius: sizeTokens.trackRadius,
+              height: sizeTokens.trackHeight,
+              left: activeTrackLeft,
+              top: trackTop,
+              width: activeTrackWidth,
             },
           ]}
         />
@@ -347,7 +320,7 @@ const Slider: React.FC<SliderProps> = ({
             (width - sizeTokens.trackRadius * 2) *
               (I18nManager.isRTL ? 1 - stop : stop);
           const isInHandleGap =
-            Math.abs(stopPosition - handlePosition) <= gapFromHandleCenter;
+            Math.abs(stopPosition - handlePosition) <= HANDLE_WIDTH / 2;
           if (isInHandleGap) return null;
 
           const isActiveStop = stop <= fraction;

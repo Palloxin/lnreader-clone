@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Bölüm boş veya uygulama veriyi alamadı",
     "chapterName": "Bölüm: %{name}",
     "completed": "İndirme tamamlandı",
-    "dbInfo": "İndirilenler bir SQLite Veritabanında kaydedilmektedir.",
     "downloading": "İndiriliyor",
     "downloadingNovel": "İndiriliyor: %{name}",
     "downloadsLower": "İndirilenler",

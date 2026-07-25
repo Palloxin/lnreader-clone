@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   title: {
     marginEnd: 16,

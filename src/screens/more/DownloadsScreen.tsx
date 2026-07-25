@@ -90,7 +90,10 @@ const Downloads = ({ navigation }: DownloadsScreenProps) => {
         ) : null}
       </Appbar>
 
-      <List.InfoItem title={getString('downloadScreen.dbInfo')} theme={theme} />
+      <List.InfoItem
+        title={getString('downloadScreen.storageInfo')}
+        theme={theme}
+      />
       {loading ? (
         <UpdatesSkeletonLoading theme={theme} />
       ) : (

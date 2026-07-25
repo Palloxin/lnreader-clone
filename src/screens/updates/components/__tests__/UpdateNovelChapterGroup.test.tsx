@@ -77,6 +77,7 @@ describe('UpdateNovelChapterGroup', () => {
         overview.novelId,
         false,
         overview.updateDate,
+        5,
       ),
     );
 

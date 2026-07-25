@@ -91,7 +91,7 @@ export const LibraryView: React.FC<Props> = ({
       <EmptyView
         theme={theme}
         icon="Σ(ಠ_ಠ)"
-        description={getString('libraryScreen.empty')}
+        description={getString('libraryScreen.emptyCategory')}
         actions={[
           categoryId !== 2
             ? {

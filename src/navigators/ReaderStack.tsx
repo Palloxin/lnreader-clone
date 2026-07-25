@@ -12,14 +12,14 @@ import {
   ReaderStackParamList,
 } from './types';
 import { NovelContextProvider } from '@screens/novel/NovelContext';
+import { useTheme } from '@hooks/persisted';
 
 const Stack = createNativeStackNavigator<ReaderStackParamList>();
-
-const stackNavigatorConfig = { headerShown: false };
 
 // @ts-ignore
 const ReaderStack = ({ route }) => {
   const params = useRef(route?.params);
+  const theme = useTheme();
 
   return (
     <NovelContextProvider
@@ -29,7 +29,12 @@ const ReaderStack = ({ route }) => {
           | ChapterScreenProps['route']
       }
     >
-      <Stack.Navigator screenOptions={stackNavigatorConfig}>
+      <Stack.Navigator
+        screenOptions={{
+          contentStyle: { backgroundColor: theme.background },
+          headerShown: false,
+        }}
+      >
         <Stack.Screen name="Novel" component={Novel} />
         <Stack.Screen name="Chapter" component={Reader} />
       </Stack.Navigator>

@@ -297,7 +297,7 @@ const TTSController = () => {
   let dragStartX = 0;
   let dragStartY = 0;
   let moved = false;
-  const collapsed = van.state(false);
+  const collapsed = van.state(true);
   let collapseButtonElement = null;
   let lastBubbleTouchEnd = 0;
 
@@ -482,8 +482,8 @@ const TTSController = () => {
   collapseButtonElement = button({
     type: 'button',
     class: 'tts-collapse-toggle',
-    'aria-label': 'Minimize text-to-speech controls',
-    innerHTML: minimizeIcon,
+    'aria-label': 'Expand text-to-speech controls',
+    innerHTML: textToSpeechIcon,
     ontouchstart: startBubbleDrag,
     ontouchmove: moveBubbleDrag,
     ontouchend: endBubbleDrag,

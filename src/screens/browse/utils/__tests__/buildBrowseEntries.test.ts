@@ -23,7 +23,7 @@ describe('buildSourceEntries', () => {
   const pinned = plugin('pinned', 'Pinned');
   const remaining = plugin('remaining', 'Remaining');
 
-  it('orders last used, pinned, discover, then language groups without duplicates', () => {
+  it('orders discover, last used, pinned, then language groups without duplicates', () => {
     const entries = buildSourceEntries({
       installedPlugins: [remaining, pinned, last],
       lastUsedPluginId: last.id,
@@ -34,12 +34,12 @@ describe('buildSourceEntries', () => {
     });
 
     expect(entries.map(entry => entry.key)).toEqual([
+      'discover-header',
+      'discover-anilist',
       'last-used-header',
       'last-used-last',
       'pinned-header',
       'pinned-pinned',
-      'discover-header',
-      'discover-anilist',
       'language-English',
       'source-remaining',
     ]);

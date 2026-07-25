@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Розділ порожній або додаток не зміг його отримати",
     "chapterName": "Розділ: %{name}",
     "completed": "Завантаження завершено",
-    "dbInfo": "Завантаження зберігаються в базі даних SQLite.",
     "downloading": "Завантаження",
     "downloadingNovel": "Завантаження: %{name}",
     "downloadsLower": "завантаження",
@@ -348,7 +347,7 @@
     },
     "empty": "Ваша бібліотека порожня. Додайте новели з Огляду.",
     "extraMenu": {
-      "importEpub": "Імпортувати Epub",
+      "importEpub": "Імпортувати EPUB",
       "openRandom": "Відкрити випадковий запис",
       "updateCategory": "Оновити категорію",
       "updateLibrary": "Оновити бібліотеку"

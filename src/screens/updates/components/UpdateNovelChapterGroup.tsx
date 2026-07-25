@@ -21,6 +21,8 @@ interface UpdateNovelChapterGroupProps {
   overview: UpdateOverview;
 }
 
+const MAX_VISIBLE_CHAPTERS = 5;
+
 const UpdateNovelChapterGroup: React.FC<UpdateNovelChapterGroupProps> = ({
   chapterCountLabel,
   onDeleteChapter,
@@ -56,6 +58,7 @@ const UpdateNovelChapterGroup: React.FC<UpdateNovelChapterGroupProps> = ({
         overview.novelId,
         false,
         overview.updateDate,
+        MAX_VISIBLE_CHAPTERS,
       );
 
       if (requestId === latestRequestId.current) {

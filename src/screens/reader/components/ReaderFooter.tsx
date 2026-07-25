@@ -7,7 +7,6 @@ import Animated, {
   ReduceMotion,
   withTiming,
 } from 'react-native-reanimated';
-import { ChapterScreenProps } from '@navigators/types';
 import { useChapterContext } from '../ChapterContext';
 import { useTheme } from '@hooks/persisted';
 import { useNovelLayout } from '@screens/novel/NovelContext';
@@ -15,7 +14,6 @@ import { useNovelLayout } from '@screens/novel/NovelContext';
 interface ChapterFooterProps {
   openReaderSheet: () => void;
   scrollToStart: () => void;
-  navigation: ChapterScreenProps['navigation'];
   openDrawer: () => void;
 }
 
@@ -66,11 +64,9 @@ const createExiting = (navigationBarHeight: number) => () => {
 const ChapterFooter = ({
   openReaderSheet,
   scrollToStart,
-  navigation,
   openDrawer,
 }: ChapterFooterProps) => {
-  const { novel, chapter, nextChapter, prevChapter, navigateChapter } =
-    useChapterContext();
+  const { nextChapter, prevChapter, navigateChapter } = useChapterContext();
   const theme = useTheme();
   const rippleConfig = {
     color: theme.rippleColor,
@@ -117,28 +113,13 @@ const ChapterFooter = ({
             iconColor={theme.onSurface}
           />
         </Pressable>
-        {!novel.isLocal ? (
-          <Pressable
-            android_ripple={rippleConfig}
-            style={styles.buttonStyles}
-            onPress={() =>
-              navigation.navigate('WebviewScreen', {
-                name: novel.name,
-                url: chapter.path,
-                pluginId: novel.pluginId,
-              })
-            }
-          >
-            <IconButton icon="earth" size={26} iconColor={theme.onSurface} />
-          </Pressable>
-        ) : null}
         <Pressable
           android_ripple={rippleConfig}
           style={styles.buttonStyles}
           onPress={() => scrollToStart()}
         >
           <IconButton
-            icon="format-vertical-align-top"
+            icon="arrow-collapse-up"
             size={26}
             iconColor={theme.onSurface}
           />
@@ -149,7 +130,7 @@ const ChapterFooter = ({
           onPress={() => openDrawer()}
         >
           <IconButton
-            icon="format-horizontal-align-right"
+            icon="format-list-bulleted"
             size={26}
             iconColor={theme.onSurface}
           />

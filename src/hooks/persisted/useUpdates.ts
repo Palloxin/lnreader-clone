@@ -17,11 +17,13 @@ export const fetchDetailedUpdates = async (
   novelId: number,
   onlyDownloadedChapters = false,
   updateDate?: string,
+  limit?: number,
 ) => {
   const result = await getDetailedUpdatesFromDb(
     novelId,
     onlyDownloadedChapters,
     updateDate,
+    limit,
   );
 
   return result.map(update => {

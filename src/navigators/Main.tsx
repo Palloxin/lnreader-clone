@@ -104,7 +104,13 @@ const MainNavigator = () => {
       <LibraryContextProvider>
         <UpdateContextProvider>
           {isNewVersion && <NewUpdateDialog newVersion={latestRelease} />}
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Navigator
+            screenOptions={{
+              animation: 'none',
+              contentStyle: { backgroundColor: theme.background },
+              headerShown: false,
+            }}
+          >
             <Stack.Screen name="BottomNavigator" component={BottomNavigator} />
             <Stack.Screen name="ReaderStack" component={ReaderStack} />
             <Stack.Screen name="MoreStack" component={MoreStack} />

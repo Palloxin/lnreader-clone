@@ -784,6 +784,7 @@ export const getDetailedUpdatesFromDb = async (
   novelId: number,
   onlyDownloadableChapters?: boolean,
   updateDate?: string,
+  limit?: number,
 ): Promise<Update[]> => {
   return dbManager
     .select({
@@ -808,6 +809,7 @@ export const getDetailedUpdatesFromDb = async (
       ),
     )
     .orderBy(desc(chapterSchema.updatedTime))
+    .limit(limit ?? -1)
     .all();
 };
 

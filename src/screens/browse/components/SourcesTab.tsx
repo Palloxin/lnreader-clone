@@ -244,8 +244,8 @@ export const SourcesTab = memo(
 
 const styles = StyleSheet.create({
   description: {
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 18,
   },
   details: {
     flex: 1,
@@ -272,8 +272,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   name: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionHeader: {
     fontSize: 14,

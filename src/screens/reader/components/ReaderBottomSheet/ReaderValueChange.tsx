@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   container: {
-    marginVertical: 6,
     paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   value: {
     fontVariant: ['tabular-nums'],

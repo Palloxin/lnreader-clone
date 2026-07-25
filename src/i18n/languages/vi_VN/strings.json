@@ -22,7 +22,7 @@
     "dataManagement": "Quản lý dữ liệu",
     "deleteReadChapters": "Xóa chương đã đọc",
     "deleteReadChaptersDialogTitle": "All chapters marked as read will be deleted.",
-    "importEpub": "Nhập file Epub",
+    "importEpub": "Nhập file EPUB",
     "importNovel": "Nhập truyện",
     "importStaticFiles": "Nhập tệp tin tĩnh",
     "novelInsertFailed": "lỗi khi thêm truyện",
@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Chương truyện trống hoặc ứng dụng không thể cào nó",
     "chapterName": "Chapter: %{name}",
     "completed": "Tải xuống hoàn thành",
-    "dbInfo": "Các chương tải về sẽ được lưu trong cơ sở dữ liệu SQLite.",
     "downloading": "Đang tải xuống",
     "downloadingNovel": "Đang tải: %{name}",
     "downloadsLower": "tải xuống",
@@ -348,7 +347,7 @@
     },
     "empty": "Không có gì cả. Hãy thêm truyện vào thư viện từ mục Tìm kiếm.",
     "extraMenu": {
-      "importEpub": "Nhập file Epub",
+      "importEpub": "Nhập file EPUB",
       "openRandom": "Mở truyện ngẫu nhiên",
       "updateCategory": "Cập nhật danh mục",
       "updateLibrary": "Cập nhật thư viện"

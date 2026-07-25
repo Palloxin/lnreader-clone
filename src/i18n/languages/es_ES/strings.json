@@ -22,7 +22,7 @@
     "dataManagement": "Administración de datos",
     "deleteReadChapters": "Eliminar capítulos leídos",
     "deleteReadChaptersDialogTitle": "Todos los capítulos marcados como leídos serán borrados.",
-    "importEpub": "Importar Epub",
+    "importEpub": "Importar EPUB",
     "importNovel": "Importar novela",
     "importStaticFiles": "Importar archivos estáticos",
     "novelInsertFailed": "inserción de novela fallida",
@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Either chapter is empty or the app couldn't scrape it",
     "chapterName": "Chapter: %{name}",
     "completed": "Download completed",
-    "dbInfo": "Las descargas se guardan en una base de datos SQLite.",
     "downloading": "Downloading",
     "downloadingNovel": "Downloading: %{name}",
     "downloadsLower": "descargas",
@@ -348,7 +347,7 @@
     },
     "empty": "Tu biblioteca está vacía. Añade series a tu biblioteca desde el navegador.",
     "extraMenu": {
-      "importEpub": "Import Epub",
+      "importEpub": "Import EPUB",
       "openRandom": "Open Random Entry",
       "updateCategory": "Update Category",
       "updateLibrary": "Actualizar biblioteca"

@@ -73,7 +73,7 @@ describe('Slider', () => {
     expect(onValueChange).toHaveBeenLastCalledWith(8);
   });
 
-  it('uses the MD3 XS track, gap, and handle measurements by default', () => {
+  it('uses a continuous MD3 XS track and handle by default', () => {
     render(<Slider value={5} min={0} max={10} />);
     layoutSlider();
 
@@ -85,18 +85,16 @@ describe('Slider', () => {
       width: 4,
     });
     expect(screen.getByTestId('slider-active-track')).toHaveStyle({
-      borderTopLeftRadius: 8,
-      borderTopRightRadius: 2,
+      borderRadius: 8,
       height: 16,
       top: 16,
-      width: 92,
+      width: 100,
     });
     expect(screen.getByTestId('slider-inactive-track')).toHaveStyle({
-      borderTopLeftRadius: 2,
-      borderTopRightRadius: 8,
+      borderRadius: 8,
       height: 16,
       top: 16,
-      width: 92,
+      width: 200,
     });
   });
 

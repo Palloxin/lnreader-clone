@@ -250,6 +250,10 @@ const TrackerScreen = ({ navigation }: TrackerSettingsScreenProps) => {
               rippleColor={theme.rippleColor}
               style={styles.listItem}
             />
+            <List.InfoItem
+              title={getString('trackingScreen.info')}
+              theme={theme}
+            />
             {(isTrackerAuthenticated('MyAnimeList') &&
               getTrackerAuth('MyAnimeList')?.auth?.expiresAt &&
               getTrackerAuth('MyAnimeList')!.auth.expiresAt <

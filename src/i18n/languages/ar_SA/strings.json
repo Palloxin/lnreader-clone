@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "إما أن الفصل فارغ أو لم يتمكن التطبيق من كشطه",
     "chapterName": "الفصل: %{name}",
     "completed": "اكتمل التنزيل",
-    "dbInfo": "يتم حفظ التنزيلات في قاعدة بيانات SQLite.",
     "downloading": "جارٍ التنزيل",
     "downloadingNovel": "جارٍ تنزيل: %{name}",
     "downloadsLower": "التنزيلات",
@@ -348,7 +347,7 @@
     },
     "empty": "مكتبتك فارغة. أضف سلاسل إلى مكتبتك من التصفح.",
     "extraMenu": {
-      "importEpub": "استيراد Epub",
+      "importEpub": "استيراد EPUB",
       "openRandom": "فتح مدخل عشوائي",
       "updateCategory": "تحديث التصنيف",
       "updateLibrary": "تحديث المكتبة"

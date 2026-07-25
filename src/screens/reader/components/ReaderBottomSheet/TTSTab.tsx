@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Pressable, View, StyleSheet, Text, ScrollView } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Button, Dialog, List, Slider } from '@components';
+import { Dialog, List, Slider } from '@components';
 import { getLocales } from 'expo-localization';
 import { Tts, TtsEngine, TtsVoice } from '@modules/nitro-tts';
 import {
@@ -353,39 +353,28 @@ const TTSTab: React.FC = () => {
           {TTSEnable ? (
             <>
               {engines.length > 0 ? (
-                <Pressable
-                  style={styles.settingItem}
+                <List.Item
+                  title="Engine"
+                  description={tts?.engine?.label || 'System default'}
                   onPress={() => setEngineModalVisible(true)}
-                >
-                  <Text style={[styles.label, { color: theme.onSurface }]}>
-                    Engine
-                  </Text>
-                  <Text
-                    style={[styles.value, { color: theme.onSurfaceVariant }]}
-                  >
-                    {tts?.engine?.label || 'System default'}
-                  </Text>
-                </Pressable>
+                  right="chevron-right"
+                  theme={theme}
+                />
               ) : null}
 
-              <Pressable
-                style={styles.settingItem}
+              <List.Item
+                title="Voice"
+                description={tts?.voice?.name || 'System default'}
                 onPress={() => setVoiceModalVisible(true)}
-              >
-                <Text style={[styles.label, { color: theme.onSurface }]}>
-                  Voice
-                </Text>
-                <Text style={[styles.value, { color: theme.onSurfaceVariant }]}>
-                  {tts?.voice?.name || 'System default'}
-                </Text>
-              </Pressable>
+                right="chevron-right"
+                theme={theme}
+              />
 
               <View style={styles.sliderSection}>
                 <Text style={[styles.sliderLabel, { color: theme.onSurface }]}>
                   Speed: {tts?.rate?.toFixed(1) || '1.0'}x
                 </Text>
                 <Slider
-                  style={styles.slider}
                   value={tts?.rate || 1}
                   min={0.1}
                   max={5}
@@ -404,7 +393,6 @@ const TTSTab: React.FC = () => {
                   Pitch: {tts?.pitch?.toFixed(1) || '1.0'}
                 </Text>
                 <Slider
-                  style={styles.slider}
                   value={tts?.pitch || 1}
                   min={0.1}
                   max={5}
@@ -419,6 +407,9 @@ const TTSTab: React.FC = () => {
               </View>
 
               <ReaderSheetPreferenceItem
+                description={getString(
+                  'readerScreen.bottomSheet.ttsAutoPageAdvanceDescription',
+                )}
                 label="Auto Page Advance"
                 value={tts?.autoPageAdvance === true}
                 onPress={() =>
@@ -433,6 +424,9 @@ const TTSTab: React.FC = () => {
               />
 
               <ReaderSheetPreferenceItem
+                description={getString(
+                  'readerScreen.bottomSheet.ttsScrollToTopDescription',
+                )}
                 label="Scroll to Top"
                 value={tts?.scrollToTop !== false}
                 onPress={() =>
@@ -442,26 +436,6 @@ const TTSTab: React.FC = () => {
                 }
                 theme={theme}
               />
-
-              <View style={styles.resetButtonContainer}>
-                <Button
-                  title={getString('common.reset')}
-                  mode="outlined"
-                  onPress={() => {
-                    setChapterReaderSettings({
-                      tts: {
-                        pitch: 1,
-                        rate: 1,
-                        engine: undefined,
-                        voice: undefined,
-                        autoPageAdvance: false,
-                        scrollToTop: true,
-                      },
-                    });
-                  }}
-                  style={styles.resetButton}
-                />
-              </View>
             </>
           ) : null}
         </View>
@@ -499,19 +473,6 @@ const styles = StyleSheet.create({
   section: {
     marginVertical: 8,
   },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  label: {
-    fontSize: 16,
-  },
-  value: {
-    fontSize: 14,
-  },
   sliderSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -519,16 +480,6 @@ const styles = StyleSheet.create({
   sliderLabel: {
     fontSize: 16,
     marginBottom: 8,
-  },
-  slider: {
-    marginHorizontal: -10,
-  },
-  resetButtonContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  resetButton: {
-    alignSelf: 'flex-start',
   },
   bottomSpacing: {
     height: 24,

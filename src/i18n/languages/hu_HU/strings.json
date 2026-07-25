@@ -22,7 +22,7 @@
     "dataManagement": "Data Management",
     "deleteReadChapters": "Olvasott fejezetek törlése",
     "deleteReadChaptersDialogTitle": "All chapters marked as read will be deleted.",
-    "importEpub": "Import Epub",
+    "importEpub": "Import EPUB",
     "importNovel": "Import Novel",
     "importStaticFiles": "Import Static Files",
     "novelInsertFailed": "novel insert failed",
@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "Either chapter is empty or the app couldn't scrape it",
     "chapterName": "Chapter: %{name}",
     "completed": "Download completed",
-    "dbInfo": "A letöltések egy SQLite adatbázisban vannak elmentve.",
     "downloading": "Downloading",
     "downloadingNovel": "Downloading: %{name}",
     "downloadsLower": "letöltések",
@@ -348,7 +347,7 @@
     },
     "empty": "A könyvtárad üres. Adj sorozatokat a könyvtáradhoz a Böngészés menüben.",
     "extraMenu": {
-      "importEpub": "Import Epub",
+      "importEpub": "Import EPUB",
       "openRandom": "Open Random Entry",
       "updateCategory": "Update Category",
       "updateLibrary": "Update Library"

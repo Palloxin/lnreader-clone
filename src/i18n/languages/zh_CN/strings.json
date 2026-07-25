@@ -260,7 +260,6 @@
     "chapterEmptyOrScrapeError": "章节为空或应用无法抓取",
     "chapterName": "章节：%{name}",
     "completed": "下载完成",
-    "dbInfo": "已下载章节保存在 SQLite 数据库中。",
     "downloading": "正在下载",
     "downloadingNovel": "正在下载：%{name}",
     "downloadsLower": "下载",
@@ -348,7 +347,7 @@
     },
     "empty": "您的书库是空的。请从浏览将小说添加到您的书库中。",
     "extraMenu": {
-      "importEpub": "导入Epub",
+      "importEpub": "导入EPUB",
       "openRandom": "随机打开",
       "updateCategory": "更新分类",
       "updateLibrary": "更新书库"

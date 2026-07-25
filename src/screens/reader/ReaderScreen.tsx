@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useChapterGeneralSettings, useTheme } from '@hooks/persisted';
 
 import ReaderAppbar from './components/ReaderAppbar';
@@ -20,9 +20,11 @@ import {
 import { BottomSheetModalMethods } from '@gorhom/bottom-sheet/lib/typescript/types';
 import { useBackHandler } from '@hooks/index';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { Keyboard, Share, StyleSheet, View } from 'react-native';
 import { Drawer } from 'react-native-drawer-layout';
 import { EMPTY_READER_SEARCH_RESULT, ReaderSearchResult } from './types';
+import * as Linking from 'expo-linking';
+import { resolveUrl } from '@services/plugin/fetch';
 
 const Chapter = ({ route, navigation }: ChapterScreenProps) => {
   const [open, setOpen] = useState(false);
@@ -218,6 +220,21 @@ export const ChapterContent = ({
     hideHeader();
   }, [hideHeader, onUserInteraction, searchVisible]);
 
+  const chapterUrl = resolveUrl(novel.pluginId, chapter.path);
+  const openChapterInWebView = useCallback(() => {
+    navigation.navigate('WebviewScreen', {
+      name: novel.name,
+      url: chapter.path,
+      pluginId: novel.pluginId,
+    });
+  }, [chapter.path, navigation, novel.name, novel.pluginId]);
+  const openChapterInBrowser = useCallback(() => {
+    void Linking.openURL(chapterUrl);
+  }, [chapterUrl]);
+  const shareChapter = useCallback(() => {
+    void Share.share({ message: chapterUrl });
+  }, [chapterUrl]);
+
   if (error) {
     return (
       <ErrorScreenV2
@@ -272,12 +289,14 @@ export const ChapterContent = ({
             searchResult={searchResult}
             resetSearchResult={resetSearchResult}
             resetSearch={resetSearch}
+            openInWebView={openChapterInWebView}
+            openInBrowser={openChapterInBrowser}
+            shareChapter={shareChapter}
           />
           {!searchVisible ? (
             <ReaderFooter
               openReaderSheet={openReaderSheet}
               scrollToStart={scrollToStart}
-              navigation={navigation}
               openDrawer={openDrawerI}
             />
           ) : null}
