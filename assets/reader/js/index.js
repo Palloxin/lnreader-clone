@@ -240,7 +240,7 @@ const Footer = () => {
       hour12: false,
     });
   }, 10000);
-  return div(
+  const wrapper = div(
     {
       id: 'reader-footer-wrapper',
       class: () =>
@@ -287,6 +287,20 @@ const Footer = () => {
       ),
     ),
   );
+  const footerObserver = new ResizeObserver(() => {
+    document.documentElement.style.setProperty(
+      '--pageReader-footerHeight',
+      `${wrapper.offsetHeight}px`,
+    );
+  });
+  footerObserver.observe(wrapper);
+  requestAnimationFrame(() => {
+    document.documentElement.style.setProperty(
+      '--pageReader-footerHeight',
+      `${wrapper.offsetHeight}px`,
+    );
+  });
+  return wrapper;
 };
 
 const TTSController = () => {

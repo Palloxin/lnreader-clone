@@ -71,27 +71,12 @@ window.readerSearch = new (function () {
   };
 
   this.refreshLayout = () => {
-    reader.refresh();
-
     if (!reader.generalSettings.val.pageReader || !window.pageReader) {
+      reader.refresh();
       return;
     }
 
-    const totalPages = parseInt(
-      (reader.chapterWidth + reader.readerSettings.val.padding * 2) /
-        reader.layoutWidth,
-      10,
-    );
-
-    if (!Number.isFinite(totalPages) || totalPages <= 0) {
-      return;
-    }
-
-    pageReader.totalPages.val = totalPages;
-
-    if (pageReader.page.val >= totalPages) {
-      pageReader.movePage(totalPages - 1);
-    }
+    pageReader.repaginate();
   };
 
   this.resetMatches = () => {
@@ -361,7 +346,9 @@ window.readerSearch = new (function () {
 
     if (oldIndex !== this.index) {
       if (oldIndex >= 0) {
-        this.matches[oldIndex]?.classList.remove('lnreader-search-match-active');
+        this.matches[oldIndex]?.classList.remove(
+          'lnreader-search-match-active',
+        );
       }
       this.matches[this.index].classList.add('lnreader-search-match-active');
       this.scrollToMatch(this.matches[this.index]);

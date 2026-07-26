@@ -1,13 +1,19 @@
 body.page-reader {
   overflow: hidden;
-  padding-bottom: unset;
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 body.page-reader > #LNReader-chapter {
-  height: calc(90vh);
+  height: calc(100% - var(--pageReader-footerHeight, 0px));
   column-width: calc(100vw - var(--readerSettings-padding) * 2);
   column-gap: calc(var(--readerSettings-padding) * 2);
-  transition: 200ms;
+  column-fill: auto;
+  transition: transform 200ms;
 }
 .transition-chapter {
   height: 100vh;
