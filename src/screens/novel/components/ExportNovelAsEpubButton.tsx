@@ -133,14 +133,23 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
       }
 
       const epubChapters: EpubExportChapter[] = chapters.map(
-        (chapter, index) => ({
-          title:
-            chapter.name?.trim() ||
-            `Chapter ${chapter.chapterNumber || index + 1}`,
-          htmlPath: `${NOVEL_STORAGE}/${novel.pluginId}/${novel.id}/${chapter.id}/index.html`,
-          novelId: novel.id.toString(),
-          chapterId: chapter.id.toString(),
-        }),
+        (chapter, index) => {
+          const chapterNumber = chapter.chapterNumber ?? index + 1;
+          const numberedTitle = getString('novelScreen.chapterChapnum', {
+            num: chapterNumber,
+          });
+          const sourceTitle = chapter.name?.trim();
+
+          return {
+            title:
+              options.includeChapterNumber && sourceTitle
+                ? `${numberedTitle} — ${sourceTitle}`
+                : sourceTitle || numberedTitle,
+            htmlPath: `${NOVEL_STORAGE}/${novel.pluginId}/${novel.id}/${chapter.id}/index.html`,
+            novelId: novel.id.toString(),
+            chapterId: chapter.id.toString(),
+          };
+        },
       );
 
       backgroundTasks.enqueue({

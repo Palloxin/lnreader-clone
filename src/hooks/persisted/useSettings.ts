@@ -215,6 +215,7 @@ export interface ChapterReaderSettings {
   epubUseAppTheme: boolean;
   epubUseCustomCSS: boolean;
   epubUseCustomJS: boolean;
+  epubIncludeChapterNumber: boolean;
 }
 
 const initialAppSettings: AppSettings = {
@@ -316,6 +317,7 @@ export const initialChapterReaderSettings: ChapterReaderSettings = {
   epubUseAppTheme: false,
   epubUseCustomCSS: false,
   epubUseCustomJS: false,
+  epubIncludeChapterNumber: false,
 };
 
 export const useAppSettings = () => {

@@ -404,6 +404,7 @@ export interface StringMap {
   'novelScreen.exportEpubModal.fileNameRequired': 'string';
   'novelScreen.exportEpubModal.includeCustomCSS': 'string';
   'novelScreen.exportEpubModal.includeCustomJS': 'string';
+  'novelScreen.exportEpubModal.includeChapterNumber': 'string';
   'novelScreen.exportEpubModal.invalidRange': 'string';
   'novelScreen.exportEpubModal.selectFolder': 'string';
   'novelScreen.exportEpubModal.startChapter': 'string';

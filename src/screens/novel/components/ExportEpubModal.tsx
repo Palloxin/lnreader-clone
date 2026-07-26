@@ -27,6 +27,7 @@ export interface EpubExportOptions {
   useAppTheme: boolean;
   useCustomCSS: boolean;
   useCustomJS: boolean;
+  includeChapterNumber: boolean;
 }
 
 const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
@@ -41,6 +42,7 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
     epubUseAppTheme = false,
     epubUseCustomCSS = false,
     epubUseCustomJS = false,
+    epubIncludeChapterNumber = false,
     setChapterReaderSettings,
   } = useChapterReaderSettings();
 
@@ -49,6 +51,7 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
   const useAppTheme = useBoolean(epubUseAppTheme);
   const useCustomCSS = useBoolean(epubUseCustomCSS);
   const useCustomJS = useBoolean(epubUseCustomJS);
+  const includeChapterNumber = useBoolean(epubIncludeChapterNumber);
   const exportAll = useBoolean(true);
   const [startChapter, setStartChapter] = useState('');
   const [endChapter, setEndChapter] = useState('');
@@ -110,6 +113,7 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
       epubUseAppTheme: useAppTheme.value,
       epubUseCustomCSS: useCustomCSS.value,
       epubUseCustomJS: useCustomJS.value,
+      epubIncludeChapterNumber: includeChapterNumber.value,
     });
 
     setSubmitting(true);
@@ -121,6 +125,7 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
           useAppTheme: useAppTheme.value,
           useCustomCSS: useCustomCSS.value,
           useCustomJS: useCustomJS.value,
+          includeChapterNumber: includeChapterNumber.value,
         },
         start,
         end,
@@ -222,6 +227,14 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
               exportAll.toggle();
               setRangeError('');
             }}
+            theme={theme}
+          />
+          <SwitchItem
+            label={getString(
+              'novelScreen.exportEpubModal.includeChapterNumber',
+            )}
+            value={includeChapterNumber.value}
+            onPress={includeChapterNumber.toggle}
             theme={theme}
           />
           {!exportAll.value ? (

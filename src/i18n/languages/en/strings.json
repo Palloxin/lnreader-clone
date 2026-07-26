@@ -470,6 +470,7 @@
       "fileNameRequired": "Enter a file name",
       "includeCustomCSS": "Include Custom CSS",
       "includeCustomJS": "Include Custom JS",
+      "includeChapterNumber": "Include chapter number in chapter titles",
       "invalidRange": "Please enter valid chapter numbers",
       "selectFolder": "Select destination folder for EPUB file",
       "startChapter": "Start Chapter",
