@@ -423,6 +423,7 @@ const TTSController = () => {
       return;
     }
     stopEvent(e);
+    controllerElement ??= document.getElementById('TTS-Controller');
     const touch = e.changedTouches[0];
     const bounds = controllerElement.getBoundingClientRect();
     dragOffsetX = touch.clientX - bounds.left;
