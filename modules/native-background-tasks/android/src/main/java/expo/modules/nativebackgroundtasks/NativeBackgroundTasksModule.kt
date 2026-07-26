@@ -140,12 +140,15 @@ class NativeBackgroundTasksModule : Module() {
 
         AsyncFunction("fail") { taskId: String, error: String, shouldRetry: Boolean ->
             runBlocking(Dispatchers.IO) {
-                dao.updateProgress(taskId, null, error, System.currentTimeMillis())
-                dao.finishRunning(
-                    taskId,
-                    if (shouldRetry) BackgroundTaskState.QUEUED else BackgroundTaskState.FAILED,
-                    System.currentTimeMillis(),
-                )
+                val currentState = dao.get(taskId)?.state
+                if (currentState !in listOf(BackgroundTaskState.PAUSED, BackgroundTaskState.CANCELLED)) {
+                    dao.updateProgress(taskId, null, error, System.currentTimeMillis())
+                    dao.finishRunning(
+                        taskId,
+                        if (shouldRetry) BackgroundTaskState.QUEUED else BackgroundTaskState.FAILED,
+                        System.currentTimeMillis(),
+                    )
+                }
                 TaskExecutionRegistry.complete(taskId, TaskExecutionResult.Failure(error, shouldRetry))
             }
         }

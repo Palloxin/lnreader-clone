@@ -37,9 +37,13 @@ std::shared_ptr<Promise<EpubNovel>> HybridEpub::parseNovelAndChapters(
 std::shared_ptr<Promise<EpubExportResult>> HybridEpub::exportEpub(
     const EpubExportMetadata& metadata,
     const std::vector<EpubExportChapter>& chapters,
-    const std::string& outputPath) {
+    const std::string& outputPath,
+    const std::function<
+        std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(
+            double, double, const std::string&)>&
+        onProgress) {
   return Promise<EpubExportResult>::async(
-      [metadata, chapters, outputPath]() {
+      [metadata, chapters, outputPath, onProgress]() {
         EpubArchiveMetadata archiveMetadata{
             metadata.title,
             metadata.language,
@@ -61,7 +65,21 @@ std::shared_ptr<Promise<EpubExportResult>> HybridEpub::exportEpub(
           });
         }
         const EpubArchiveResult result =
-            exportEpubArchive(archiveMetadata, archiveChapters, outputPath);
+            exportEpubArchive(
+                archiveMetadata,
+                archiveChapters,
+                outputPath,
+                [onProgress](std::size_t completedChapters,
+                             std::size_t totalChapters,
+                             const std::string& chapterTitle) {
+                  const std::shared_ptr<Promise<void>> progressPromise =
+                      onProgress(static_cast<double>(completedChapters),
+                                 static_cast<double>(totalChapters),
+                                 chapterTitle)
+                          ->await()
+                          .get();
+                  progressPromise->await().get();
+                });
         return EpubExportResult(
             result.outputPath, static_cast<double>(result.chapterCount));
       });

@@ -14,7 +14,9 @@ namespace margelo::nitro::nitroepub {
 EpubArchiveResult exportEpubArchive(
     const EpubArchiveMetadata& metadata,
     const std::vector<EpubArchiveChapter>& chapters,
-    const std::string& outputPath) {
+    const std::string& outputPath,
+    std::function<void(std::size_t, std::size_t, const std::string&)>
+        onProgress) {
   if (metadata.title.empty()) {
     throw std::runtime_error("EPUB title cannot be empty");
   }
@@ -78,6 +80,11 @@ EpubArchiveResult exportEpubArchive(
       zip.addDeflated(
           "EPUB/text/chapter-" + std::to_string(index) + ".xhtml",
           chapterDocument(availableChapters[index], body, hasJavaScript));
+      if (onProgress) {
+        onProgress(index + 1,
+                   availableChapters.size(),
+                   availableChapters[index].title);
+      }
     }
 
     zip.addDeflated(

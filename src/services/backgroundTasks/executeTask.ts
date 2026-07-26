@@ -2,6 +2,7 @@ import { createDriveBackup, driveRestore } from '../backup/drive';
 import { createBackup, restoreBackup } from '../backup/local';
 import { createSelfHostBackup, selfHostRestore } from '../backup/selfhost';
 import { downloadChapters } from '../download/downloadChapter';
+import { exportEpub } from '../epub/export';
 import { importEpubBatch } from '../epub/import';
 import { migrateNovel } from '../migrate/migrateNovel';
 import { updateLibrary } from '../updates';
@@ -21,6 +22,8 @@ export const executeBackgroundTask = async (
   switch (task.name) {
     case 'IMPORT_EPUB':
       return importEpubBatch(task.data, updateProgress);
+    case 'EXPORT_EPUB':
+      return exportEpub(task.data, updateProgress);
     case 'UPDATE_LIBRARY':
       return updateLibrary(task.data || {}, updateProgress, enqueue);
     case 'DRIVE_BACKUP':

@@ -12,6 +12,7 @@ export type {
   BackgroundTaskMetadata,
   ChapterDownload,
   DownloadChapterTask,
+  EpubExportData,
   EpubImportFile,
   HeadlessBackgroundTaskData,
   MigrateNovelData,

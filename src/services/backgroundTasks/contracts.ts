@@ -1,6 +1,10 @@
 import type { DriveFile } from '@api/drive/types';
 import type { NovelInfo } from '@database/types';
 import type { NativeBackgroundTaskRecord } from '@modules/native-background-tasks';
+import type {
+  EpubExportChapter,
+  EpubExportMetadata,
+} from '@modules/nitro-epub';
 
 export type SelfHostData = {
   host: string;
@@ -31,6 +35,14 @@ export type EpubImportFile = {
   uri: string;
 };
 
+export type EpubExportData = {
+  novelName: string;
+  metadata: EpubExportMetadata;
+  chapters: EpubExportChapter[];
+  destinationUri: string;
+  fileName: string;
+};
+
 export type ChapterDownload = {
   chapterId: number;
   chapterName: string;
@@ -38,6 +50,7 @@ export type ChapterDownload = {
 
 export type BackgroundTask =
   | { name: 'IMPORT_EPUB'; data: { files: EpubImportFile[] } }
+  | { name: 'EXPORT_EPUB'; data: EpubExportData }
   | {
       name: 'UPDATE_LIBRARY';
       data?: { categoryId?: number; categoryName?: string };

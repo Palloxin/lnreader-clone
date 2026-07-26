@@ -25,7 +25,7 @@ object TaskNotificationFactory {
                 "Background tasks",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Downloads, imports, backups, and library updates"
+                description = "Downloads, imports, exports, backups, and library updates"
                 setSound(null, null)
             },
         )
@@ -79,6 +79,8 @@ object TaskNotificationFactory {
         val progress = task.progress
         if (task.state == BackgroundTaskState.SUCCEEDED) {
             builder.setContentText("Completed").setProgress(0, 0, false)
+        } else if (task.state == BackgroundTaskState.FAILED) {
+            builder.setContentText("Failed: $contentText").setProgress(0, 0, false)
         } else if (progress == null) {
             builder.setProgress(100, 0, true)
         } else {

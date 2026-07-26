@@ -13,6 +13,7 @@ Modules.
 - Write the required `mimetype` entry first and without compression.
 - Build exports on a Nitro worker thread and atomically publish the completed
   archive.
+- Report completed chapter counts while an export is running.
 
 The exporter accepts chapter file paths rather than chapter bodies so large
 novels do not need to be retained in the JavaScript heap.

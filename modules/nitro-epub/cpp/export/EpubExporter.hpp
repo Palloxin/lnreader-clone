@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,8 @@ struct EpubArchiveResult {
 EpubArchiveResult exportEpubArchive(
     const EpubArchiveMetadata& metadata,
     const std::vector<EpubArchiveChapter>& chapters,
-    const std::string& outputPath);
+    const std::string& outputPath,
+    std::function<void(std::size_t, std::size_t, const std::string&)>
+        onProgress = {});
 
 } // namespace margelo::nitro::nitroepub

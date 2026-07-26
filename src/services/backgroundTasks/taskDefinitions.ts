@@ -15,6 +15,7 @@ export const ACTIVE_BACKGROUND_TASK_STATES = new Set([
 const MULTIPLICABLE_TASKS: BackgroundTask['name'][] = [
   'DOWNLOAD_CHAPTER',
   'IMPORT_EPUB',
+  'EXPORT_EPUB',
   'MIGRATE_NOVEL',
 ];
 
@@ -35,6 +36,10 @@ export const getBackgroundTaskTitle = (task: BackgroundTask) => {
         : `${getString('notifications.IMPORT_EPUB')} (${
             task.data.files.length
           })`;
+    case 'EXPORT_EPUB':
+      return `${getString('notifications.EXPORT_EPUB')}: ${
+        task.data.novelName
+      }`;
     case 'MIGRATE_NOVEL':
       return `${getString('notifications.MIGRATE_NOVEL')}: ${
         task.data.fromNovel.name
@@ -62,6 +67,8 @@ export const createBackgroundTaskMetadata = (
       ? task.data.chapters[0]?.chapterName
       : task.name === 'IMPORT_EPUB'
       ? task.data.files[0]?.filename
+      : task.name === 'EXPORT_EPUB'
+      ? getString('novelScreen.epub.preparingExport')
       : undefined,
 });
 

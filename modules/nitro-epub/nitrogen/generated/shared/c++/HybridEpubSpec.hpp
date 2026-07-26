@@ -29,6 +29,7 @@ namespace margelo::nitro::nitroepub { struct EpubExportChapter; }
 #include "EpubExportMetadata.hpp"
 #include "EpubExportChapter.hpp"
 #include <vector>
+#include <functional>
 
 namespace margelo::nitro::nitroepub {
 
@@ -62,7 +63,7 @@ namespace margelo::nitro::nitroepub {
     public:
       // Methods
       virtual std::shared_ptr<Promise<EpubNovel>> parseNovelAndChapters(const std::string& epubDirPath) = 0;
-      virtual std::shared_ptr<Promise<EpubExportResult>> exportEpub(const EpubExportMetadata& metadata, const std::vector<EpubExportChapter>& chapters, const std::string& outputPath) = 0;
+      virtual std::shared_ptr<Promise<EpubExportResult>> exportEpub(const EpubExportMetadata& metadata, const std::vector<EpubExportChapter>& chapters, const std::string& outputPath, const std::function<std::shared_ptr<Promise<std::shared_ptr<Promise<void>>>>(double /* completedChapters */, double /* totalChapters */, const std::string& /* chapterTitle */)>& onProgress) = 0;
 
     protected:
       // Hybrid Setup

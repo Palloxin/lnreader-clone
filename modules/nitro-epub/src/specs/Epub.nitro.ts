@@ -22,6 +22,11 @@ export interface Epub extends HybridObject<{ android: 'c++'; ios: 'c++' }> {
   exportEpub(
     metadata: EpubExportMetadata,
     chapters: EpubExportChapter[],
-    outputPath: string
+    outputPath: string,
+    onProgress: (
+      completedChapters: number,
+      totalChapters: number,
+      chapterTitle: string
+    ) => Promise<void>
   ): Promise<EpubExportResult>
 }

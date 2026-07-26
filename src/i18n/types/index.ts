@@ -410,9 +410,12 @@ export interface StringMap {
   'novelScreen.exportEpubModal.startGreaterThanEnd': 'string';
   'novelScreen.exportEpubModal.title': 'string';
   'novelScreen.epub.exportFailed': 'string';
+  'novelScreen.epub.exportingChapter': 'string';
   'novelScreen.epub.exportSuccess': 'string';
   'novelScreen.epub.noDownloadedChapters': 'string';
   'novelScreen.epub.noNovelSelected': 'string';
+  'novelScreen.epub.preparingExport': 'string';
+  'novelScreen.epub.savingExport': 'string';
   'novelScreen.coverSaved': 'string';
   'novelScreen.coverNotSaved': 'string';
   'novelScreen.deleteChapterError': 'string';
@@ -573,6 +576,7 @@ export interface StringMap {
   'onboardingScreen.system': 'string';
   'onboardingScreen.complete': 'string';
   'notifications.IMPORT_EPUB': 'string';
+  'notifications.EXPORT_EPUB': 'string';
   'notifications.UPDATE_LIBRARY': 'string';
   'notifications.DRIVE_BACKUP': 'string';
   'notifications.DRIVE_RESTORE': 'string';

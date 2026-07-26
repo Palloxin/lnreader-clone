@@ -16,10 +16,17 @@ interface ExportEpubModalProps {
   onSubmit: (
     uri: string,
     fileName: string,
+    options: EpubExportOptions,
     startChapter?: number,
     endChapter?: number,
   ) => Promise<void>;
   hideModal: () => void;
+}
+
+export interface EpubExportOptions {
+  useAppTheme: boolean;
+  useCustomCSS: boolean;
+  useCustomJS: boolean;
 }
 
 const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
@@ -107,7 +114,17 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
 
     setSubmitting(true);
     try {
-      await onSubmitProp(uri, trimmedFileName, start, end);
+      await onSubmitProp(
+        uri,
+        trimmedFileName,
+        {
+          useAppTheme: useAppTheme.value,
+          useCustomCSS: useCustomCSS.value,
+          useCustomJS: useCustomJS.value,
+        },
+        start,
+        end,
+      );
       hideModal();
     } finally {
       setSubmitting(false);
@@ -158,7 +175,16 @@ const ExportEpubModal: React.FC<ExportEpubModalProps> = ({
                 placeholder={getString(
                   'novelScreen.exportEpubModal.selectFolder',
                 )}
-                right={<TextInput.Icon icon="folder-outline" />}
+                right={
+                  <TextInput.Icon
+                    accessibilityLabel={getString(
+                      'novelScreen.exportEpubModal.selectFolder',
+                    )}
+                    forceTextInputFocus={false}
+                    icon="folder-outline"
+                    onPress={() => void openFolderPicker()}
+                  />
+                }
                 theme={{ colors: { ...theme } }}
                 value={uri}
               />

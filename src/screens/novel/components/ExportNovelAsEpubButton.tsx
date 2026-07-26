@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
 import { Portal } from 'react-native-paper';
 import { StatusBar } from 'react-native';
-import { copyFile, openDocumentTree } from 'react-native-saf-x';
+import { openDocumentTree } from 'react-native-saf-x';
 
-import { epub, type EpubExportChapter } from '@modules/nitro-epub';
-import NativeFile from '@modules/native-file';
+import { type EpubExportChapter } from '@modules/nitro-epub';
 
 import { NovelInfo } from '@database/types';
 import { useChapterReaderSettings, useTheme } from '@hooks/persisted';
@@ -13,23 +12,14 @@ import { showToast } from '@utils/showToast';
 import { NOVEL_STORAGE } from '@utils/Storages';
 import { getString } from '@i18n/translations';
 import { getNovelDownloadedChapters } from '@database/queries/ChapterQueries';
+import { backgroundTasks } from '@services/backgroundTasks';
 
-import ExportEpubModal from './ExportEpubModal';
+import ExportEpubModal, { EpubExportOptions } from './ExportEpubModal';
 
 interface ExportNovelAsEpubButtonProps {
   novel?: NovelInfo;
   renderIcon: (onPress: () => void) => React.ReactNode;
 }
-
-const sanitizeEpubFileName = (fileName: string) => {
-  const withoutExtension = fileName.trim().replace(/\.epub$/i, '');
-  return (
-    withoutExtension
-      .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '')
-      .replace(/[. ]+$/g, '')
-      .trim() || 'novel'
-  );
-};
 
 const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
   novel,
@@ -44,19 +34,12 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
   } = useBoolean(false);
 
   const readerSettings = useChapterReaderSettings();
-  const {
-    epubUseAppTheme = false,
-    epubUseCustomCSS = false,
-    epubUseCustomJS = false,
-  } = readerSettings;
-
-  const epubStylesheet = useMemo(() => {
+  const appThemeStylesheet = useMemo(() => {
     if (!novel) {
       return '';
     }
 
-    const appThemeStyles = epubUseAppTheme
-      ? `
+    return `
       html {
         scroll-behavior: smooth;
         overflow-x: hidden;
@@ -86,17 +69,18 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
         width: auto;
         height: auto;
         max-width: 100%;
-      }`
-      : '';
+      }`;
+  }, [novel, readerSettings, theme.primary]);
 
-    const customStyles = epubUseCustomCSS
-      ? readerSettings.customCSS
-          .replace(RegExp(`#sourceId-${novel.pluginId}\\s*\\{`, 'g'), 'body {')
-          .replace(RegExp(`#sourceId-${novel.pluginId}[^.#A-Z]*`, 'gi'), '')
-      : '';
+  const customStylesheet = useMemo(() => {
+    if (!novel) {
+      return '';
+    }
 
-    return appThemeStyles + customStyles;
-  }, [novel, epubUseAppTheme, epubUseCustomCSS, readerSettings, theme.primary]);
+    return readerSettings.customCSS
+      .replace(RegExp(`#sourceId-${novel.pluginId}\\s*\\{`, 'g'), 'body {')
+      .replace(RegExp(`#sourceId-${novel.pluginId}[^.#A-Z]*`, 'gi'), '');
+  }, [novel, readerSettings.customCSS]);
 
   const epubJavaScript = useMemo(() => {
     if (!novel) {
@@ -118,6 +102,7 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
   const exportNovelAsEpub = async (
     destinationUri: string,
     fileName: string,
+    options: EpubExportOptions,
     startChapter?: number,
     endChapter?: number,
   ) => {
@@ -125,8 +110,6 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
       showToast(getString('novelScreen.epub.noNovelSelected'));
       return;
     }
-
-    let tempEpubPath: string | undefined;
 
     try {
       const chapters = await getNovelDownloadedChapters(
@@ -149,10 +132,6 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
         resolvedDestinationUri = selectedFolder.uri;
       }
 
-      const epubFileName = `${sanitizeEpubFileName(fileName)}.epub`;
-      tempEpubPath = `${NativeFile.ExternalCachesDirectoryPath}/epub-export-${
-        novel.id
-      }-${Date.now()}.epub`;
       const epubChapters: EpubExportChapter[] = chapters.map(
         (chapter, index) => ({
           title:
@@ -164,45 +143,33 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
         }),
       );
 
-      const result = await epub.exportEpub(
-        {
-          title: novel.name,
-          language: 'en',
-          coverPath: novel.cover || '',
-          description: novel.summary || '',
-          author: novel.author || '',
-          bookId: `urn:lnreader:${novel.pluginId}:${novel.id}`,
-          stylesheet: epubStylesheet,
-          javascript: epubUseCustomJS ? epubJavaScript : '',
+      backgroundTasks.enqueue({
+        name: 'EXPORT_EPUB',
+        data: {
+          novelName: novel.name,
+          destinationUri: resolvedDestinationUri,
+          fileName,
+          chapters: epubChapters,
+          metadata: {
+            title: novel.name,
+            language: 'en',
+            coverPath: novel.cover || '',
+            description: novel.summary || '',
+            author: novel.author || '',
+            bookId: `urn:lnreader:${novel.pluginId}:${novel.id}`,
+            stylesheet:
+              (options.useAppTheme ? appThemeStylesheet : '') +
+              (options.useCustomCSS ? customStylesheet : ''),
+            javascript: options.useCustomJS ? epubJavaScript : '',
+          },
         },
-        epubChapters,
-        tempEpubPath,
-      );
-
-      await copyFile(
-        `file://${result.outputPath}`,
-        `${resolvedDestinationUri}/${epubFileName}`,
-        { replaceIfDestinationExists: true },
-      );
-      showToast(
-        getString('novelScreen.epub.exportSuccess', {
-          chapters: result.chapterCount.toString(),
-        }),
-      );
+      });
     } catch (error) {
       showToast(
         getString('novelScreen.epub.exportFailed', {
           error: error instanceof Error ? error.message : String(error),
         }),
       );
-    } finally {
-      try {
-        if (tempEpubPath && (await NativeFile.exists(tempEpubPath))) {
-          await NativeFile.unlink(tempEpubPath);
-        }
-      } catch {
-        // Export cleanup must not replace the original result or error.
-      }
     }
   };
 
