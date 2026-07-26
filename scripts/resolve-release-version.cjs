@@ -4,7 +4,7 @@ const path = require('path');
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
 const BUMP_TYPES = new Set(['major', 'minor', 'patch']);
 
-const bumpType = process.argv[2];
+const bumpType = process.argv[2]?.toLowerCase();
 
 if (!BUMP_TYPES.has(bumpType)) {
   console.error('Usage: node scripts/resolve-release-version.cjs <bump-type>');
