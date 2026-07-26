@@ -3,14 +3,17 @@ import { StyleSheet, FlatList, Text, FlatListProps } from 'react-native';
 import GlobalSearchNovelCover from '../globalsearch/GlobalSearchNovelCover';
 
 import { showToast } from '@utils/showToast';
-import { Dialog } from '@components';
 import { getString } from '@i18n/translations';
 import { MigrateNovelScreenProps } from '@navigators/types';
 import { NovelInfo } from '@database/types';
 import { ThemeColors } from '@theme/types';
 import { SourceSearchResult } from './MigrationNovels';
 import { NovelItem } from '@plugins/types';
-import { backgroundTasks } from '@services/backgroundTasks';
+import {
+  backgroundTasks,
+  type MigrationNovelOptions,
+} from '@services/backgroundTasks';
+import MigrationReviewDialog from './MigrationReviewDialog';
 
 interface MigrationNovelListProps {
   data: SourceSearchResult;
@@ -25,6 +28,12 @@ interface SelectedNovel {
   name: string;
 }
 
+const DEFAULT_MIGRATION_OPTIONS: MigrationNovelOptions = {
+  cover: 'destination',
+  metadata: 'destination',
+  redownloadChapters: true,
+};
+
 const MigrationNovelList = ({
   data,
   fromNovel,
@@ -33,12 +42,9 @@ const MigrationNovelList = ({
   navigation,
 }: MigrationNovelListProps) => {
   const pluginId = data.id;
-  const [selectedNovel, setSelectedNovel] = useState<SelectedNovel>(
-    {} as SelectedNovel,
-  );
-  const [migrateNovelDialog, setMigrateNovelDialog] = useState(false);
-  const showMigrateNovelDialog = () => setMigrateNovelDialog(true);
-  const hideMigrateNovelDialog = () => setMigrateNovelDialog(false);
+  const [selectedNovel, setSelectedNovel] = useState<SelectedNovel>();
+  const [migrationOptions, setMigrationOptions] =
+    useState<MigrationNovelOptions>(DEFAULT_MIGRATION_OPTIONS);
 
   const inLibrary = (path: string) =>
     library.some(obj => obj.pluginId === pluginId && obj.path === path);
@@ -62,9 +68,26 @@ const MigrationNovelList = ({
     if (inLibrary(path)) {
       showToast(getString('browseScreen.migration.novelAlreadyInLibrary'));
     } else {
+      setMigrationOptions(DEFAULT_MIGRATION_OPTIONS);
       setSelectedNovel({ path, name });
-      showMigrateNovelDialog();
     }
+  };
+
+  const hideMigrateNovelDialog = () => setSelectedNovel(undefined);
+
+  const migrateSelectedNovel = () => {
+    if (!selectedNovel) return;
+
+    backgroundTasks.enqueue({
+      name: 'MIGRATE_NOVEL',
+      data: {
+        pluginId,
+        fromNovel,
+        toNovelPath: selectedNovel.path,
+        options: migrationOptions,
+      },
+    });
+    hideMigrateNovelDialog();
   };
 
   return (
@@ -88,37 +111,15 @@ const MigrationNovelList = ({
           </Text>
         }
       />
-      <Dialog.Root
-        visible={migrateNovelDialog}
-        onDismiss={hideMigrateNovelDialog}
-      >
-        <Dialog.Title>{getString('novelScreen.migrate')}</Dialog.Title>
-        <Dialog.Description>
-          {getString('browseScreen.migration.dialogMessage', {
-            url: selectedNovel.name,
-          })}
-        </Dialog.Description>
-        <Dialog.Actions>
-          <Dialog.Action
-            onPress={hideMigrateNovelDialog}
-            title={getString('common.cancel')}
-          />
-          <Dialog.Action
-            onPress={() => {
-              hideMigrateNovelDialog();
-              backgroundTasks.enqueue({
-                name: 'MIGRATE_NOVEL',
-                data: {
-                  pluginId,
-                  fromNovel,
-                  toNovelPath: selectedNovel.path,
-                },
-              });
-            }}
-            title={getString('novelScreen.migrate')}
-          />
-        </Dialog.Actions>
-      </Dialog.Root>
+      <MigrationReviewDialog
+        destinationName={selectedNovel?.name ?? ''}
+        options={migrationOptions}
+        theme={theme}
+        visible={selectedNovel !== undefined}
+        onCancel={hideMigrateNovelDialog}
+        onChange={setMigrationOptions}
+        onMigrate={migrateSelectedNovel}
+      />
     </>
   );
 };

@@ -7,10 +7,23 @@ export type SelfHostData = {
   backupFolder: string;
 };
 
+export type MigrationNovelPreference = 'current' | 'destination';
+
+export type MigrationNovelOptions = {
+  cover: MigrationNovelPreference;
+  metadata: MigrationNovelPreference;
+  redownloadChapters: boolean;
+};
+
 export type MigrateNovelData = {
   pluginId: string;
   fromNovel: NovelInfo;
   toNovelPath: string;
+  /**
+   * Optional for compatibility with migration tasks queued before review
+   * options were introduced.
+   */
+  options?: MigrationNovelOptions;
 };
 
 export type EpubImportFile = {

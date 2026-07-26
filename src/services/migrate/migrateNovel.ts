@@ -16,6 +16,8 @@ import type {
   BackgroundTaskEnqueuer,
   ChapterDownload,
   MigrateNovelData,
+  MigrationNovelOptions,
+  MigrationNovelPreference,
   TaskProgressUpdater,
 } from '@services/backgroundTasks/contracts';
 import { dbManager } from '@database/db';
@@ -43,8 +45,28 @@ const sortChaptersByNumber = (novelName: string, chapters: ChapterInfo[]) => {
   });
 };
 
+const LEGACY_MIGRATION_OPTIONS: MigrationNovelOptions = {
+  cover: 'current',
+  metadata: 'current',
+  redownloadChapters: true,
+};
+
+const selectMigrationValue = (
+  currentValue: string | null | undefined,
+  destinationValue: string | null | undefined,
+  preference: MigrationNovelPreference,
+) =>
+  preference === 'destination'
+    ? destinationValue || currentValue || ''
+    : currentValue || destinationValue || '';
+
 export const migrateNovel = async (
-  { pluginId, fromNovel, toNovelPath }: MigrateNovelData,
+  {
+    pluginId,
+    fromNovel,
+    toNovelPath,
+    options = LEGACY_MIGRATION_OPTIONS,
+  }: MigrateNovelData,
   setMeta: TaskProgressUpdater,
   enqueue: BackgroundTaskEnqueuer,
 ) => {
@@ -72,12 +94,36 @@ export const migrateNovel = async (
     await tx
       .update(novelSchema)
       .set({
-        cover: fromNovel.cover || toNovel!.cover || '',
-        summary: fromNovel.summary || toNovel!.summary || '',
-        author: fromNovel.author || toNovel!.author || '',
-        artist: fromNovel.artist || toNovel!.artist || '',
-        status: fromNovel.status || toNovel!.status || '',
-        genres: fromNovel.genres || toNovel!.genres || '',
+        cover: selectMigrationValue(
+          fromNovel.cover,
+          toNovel!.cover,
+          options.cover,
+        ),
+        summary: selectMigrationValue(
+          fromNovel.summary,
+          toNovel!.summary,
+          options.metadata,
+        ),
+        author: selectMigrationValue(
+          fromNovel.author,
+          toNovel!.author,
+          options.metadata,
+        ),
+        artist: selectMigrationValue(
+          fromNovel.artist,
+          toNovel!.artist,
+          options.metadata,
+        ),
+        status: selectMigrationValue(
+          fromNovel.status,
+          toNovel!.status,
+          options.metadata,
+        ),
+        genres: selectMigrationValue(
+          fromNovel.genres,
+          toNovel!.genres,
+          options.metadata,
+        ),
         inLibrary: true,
       })
       .where(eq(novelSchema.id, toNovel!.id));
@@ -143,7 +189,7 @@ export const migrateNovel = async (
         .where(eq(chapterSchema.id, toChapter.id));
     });
 
-    if (fromChapter.isDownloaded) {
+    if (options.redownloadChapters && fromChapter.isDownloaded) {
       chaptersToDownload.push({
         chapterId: toChapter.id,
         chapterName: toChapter.name,

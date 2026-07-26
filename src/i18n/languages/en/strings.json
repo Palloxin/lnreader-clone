@@ -159,10 +159,18 @@
     "latest": "Latest",
     "listEmpty": "Enable languages from settings",
     "migration": {
+      "cover": "Cover",
       "dialogMessage": "Migrate %{url}?",
+      "keepCurrent": "Keep current",
+      "metadata": "Novel details",
       "novelAlreadyInLibrary": "Novel already in library",
+      "preservedState": "Categories, matched chapter progress and bookmarks, and reader settings will be preserved.",
+      "redownloadChapters": "Re-download matching downloaded chapters",
+      "reviewDescription": "Choose what to keep when migrating to %{name}.",
+      "reviewTitle": "Review migration",
       "selectSource": "Select Source",
-      "selectSourceDesc": "Select a Source To Migrate From"
+      "selectSourceDesc": "Select a Source To Migrate From",
+      "useDestination": "Use destination source"
     },
     "noSource": "Your library does not have any novels from this source",
     "noPlugins": "No plugins found. Add a repository or enable more languages in Browse Settings.",

@@ -145,10 +145,18 @@ export interface StringMap {
   'browseScreen.lastUsed': 'string';
   'browseScreen.latest': 'string';
   'browseScreen.listEmpty': 'string';
+  'browseScreen.migration.cover': 'string';
   'browseScreen.migration.dialogMessage': 'string';
+  'browseScreen.migration.keepCurrent': 'string';
+  'browseScreen.migration.metadata': 'string';
   'browseScreen.migration.novelAlreadyInLibrary': 'string';
+  'browseScreen.migration.preservedState': 'string';
+  'browseScreen.migration.redownloadChapters': 'string';
+  'browseScreen.migration.reviewDescription': 'string';
+  'browseScreen.migration.reviewTitle': 'string';
   'browseScreen.migration.selectSource': 'string';
   'browseScreen.migration.selectSourceDesc': 'string';
+  'browseScreen.migration.useDestination': 'string';
   'browseScreen.noSource': 'string';
   'browseScreen.noPlugins': 'string';
   'browseScreen.noSearchResults': 'string';

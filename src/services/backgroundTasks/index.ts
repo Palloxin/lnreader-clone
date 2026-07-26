@@ -15,6 +15,8 @@ export type {
   EpubImportFile,
   HeadlessBackgroundTaskData,
   MigrateNovelData,
+  MigrationNovelOptions,
+  MigrationNovelPreference,
   QueuedBackgroundTask,
   SelfHostData,
   TaskProgressUpdater,
