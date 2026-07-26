@@ -77,7 +77,7 @@ if (title) {
     } else {
       setChapterReaderSettings({ customJS: jsValue });
     }
-    showToast('Saved');
+    showToast(getString('common.saved'));
   };
 
   const handleReset = () => {
@@ -125,7 +125,7 @@ if (title) {
           setJsValue(content.trim());
           setChapterReaderSettings({ customJS: content.trim() });
         }
-        showToast('Imported');
+        showToast(getString('common.imported'));
       }
     } catch (error: any) {
       showToast(error.message);
@@ -146,7 +146,10 @@ if (title) {
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
           <Pressable
-            style={[styles.tab, activeCodeTab === 'css' && styles.activeTab]}
+            accessibilityLabel="CSS"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeCodeTab === 'css' }}
+            style={styles.tab}
             onPress={() => setActiveCodeTab('css')}
             android_ripple={{ color: theme.rippleColor }}
           >
@@ -172,10 +175,21 @@ if (title) {
             >
               CSS
             </Text>
+            {activeCodeTab === 'css' ? (
+              <View
+                style={[
+                  styles.tabIndicator,
+                  { backgroundColor: theme.primary },
+                ]}
+              />
+            ) : null}
           </Pressable>
 
           <Pressable
-            style={[styles.tab, activeCodeTab === 'js' && styles.activeTab]}
+            accessibilityLabel="JavaScript"
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeCodeTab === 'js' }}
+            style={styles.tab}
             onPress={() => setActiveCodeTab('js')}
             android_ripple={{ color: theme.rippleColor }}
           >
@@ -201,6 +215,14 @@ if (title) {
             >
               JS
             </Text>
+            {activeCodeTab === 'js' ? (
+              <View
+                style={[
+                  styles.tabIndicator,
+                  { backgroundColor: theme.primary },
+                ]}
+              />
+            ) : null}
           </Pressable>
         </View>
 
@@ -252,7 +274,11 @@ if (title) {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <Button
-            title="Import"
+            title={
+              activeCodeTab === 'css'
+                ? getString('readerSettings.openCSSFile')
+                : getString('readerSettings.openJSFile')
+            }
             onPress={handleImport}
             mode="outlined"
             style={styles.button}
@@ -309,11 +335,7 @@ const createStyles = (theme: ThemeColors) =>
     tabContainer: {
       flexDirection: 'row',
       borderBottomWidth: 1,
-      borderBottomColor: 'rgba(0, 0, 0, 0.12)',
-    },
-    activeTab: {
-      borderBottomColor: theme.primary,
-      borderBottomWidth: 2,
+      borderBottomColor: theme.outlineVariant,
     },
     tab: {
       flex: 1,
@@ -322,6 +344,14 @@ const createStyles = (theme: ThemeColors) =>
       justifyContent: 'center',
       paddingVertical: 12,
       minHeight: 48,
+    },
+    tabIndicator: {
+      position: 'absolute',
+      bottom: 0,
+      width: '60%',
+      height: 3,
+      borderTopLeftRadius: 3,
+      borderTopRightRadius: 3,
     },
     tabIcon: {
       marginEnd: 8,
