@@ -51,8 +51,8 @@ const Chapter = ({ route, navigation }: ChapterScreenProps) => {
   const closeDrawer = useCallback(() => setOpen(false), []);
 
   const renderDrawerContent = useCallback(
-    () => (drawerMounted ? <ChapterDrawer /> : null),
-    [drawerMounted],
+    () => (drawerMounted ? <ChapterDrawer onClose={closeDrawer} /> : null),
+    [closeDrawer, drawerMounted],
   );
 
   return (

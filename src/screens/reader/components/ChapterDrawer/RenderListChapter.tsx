@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Pressable, TextStyle, StyleProp, ViewStyle } from 'react-native';
 import { Text } from 'react-native-paper';
-import color from 'color';
 import { ChapterInfo } from '@database/types';
 import { ThemeColors } from '@theme/types';
 
@@ -33,12 +32,14 @@ const RenderListChapter = ({
   onPress,
   chapterId,
 }: Props) => {
+  const isCurrentChapter = item.id === chapterId;
+
   return (
     <View
       style={[
         styles.drawerElementContainer,
-        item.id === chapterId && {
-          backgroundColor: color(theme.primary).alpha(0.12).string(),
+        isCurrentChapter && {
+          backgroundColor: theme.secondaryContainer,
         },
       ]}
     >
@@ -51,7 +52,13 @@ const RenderListChapter = ({
           numberOfLines={1}
           style={[
             styles.chapterNameCtn,
-            { color: item.unread ? theme.onSurface : theme.outline },
+            {
+              color: isCurrentChapter
+                ? theme.onSecondaryContainer
+                : item.unread
+                ? theme.onSurface
+                : theme.onSurfaceVariant,
+            },
           ]}
         >
           {item.name}
@@ -60,7 +67,13 @@ const RenderListChapter = ({
           <Text
             style={[
               styles.releaseDateCtn,
-              { color: item.unread ? theme.onSurfaceVariant : theme.outline },
+              {
+                color: isCurrentChapter
+                  ? theme.onSecondaryContainer
+                  : item.unread
+                  ? theme.onSurfaceVariant
+                  : theme.outline,
+              },
             ]}
           >
             {item.releaseTime}
