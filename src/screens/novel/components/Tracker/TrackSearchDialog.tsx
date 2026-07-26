@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInputSubmitEditingEvent,
+} from 'react-native';
 import { TextInput, TouchableRipple } from 'react-native-paper';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 import { FlashList } from '@shopify/flash-list';
@@ -101,8 +106,11 @@ const TrackSearchDialog: React.FC<TrackSearchDialogProps> = ({
       return;
     }
 
-    scheduleSearch(novelName);
-  }, [cancelScheduledSearch, novelName, scheduleSearch, visible]);
+    cancelScheduledSearch();
+    searchTimer.current = setTimeout(() => {
+      void getSearchResults(novelName);
+    }, 0);
+  }, [cancelScheduledSearch, getSearchResults, novelName, visible]);
 
   const handleSearchTextChange = useCallback(
     (value: string) => {
@@ -113,10 +121,13 @@ const TrackSearchDialog: React.FC<TrackSearchDialogProps> = ({
     [scheduleSearch],
   );
 
-  const handleSubmitSearch = useCallback(() => {
-    cancelScheduledSearch();
-    void getSearchResults(searchText);
-  }, [cancelScheduledSearch, getSearchResults, searchText]);
+  const handleSubmitSearch = useCallback(
+    (event: TextInputSubmitEditingEvent) => {
+      cancelScheduledSearch();
+      void getSearchResults(event.nativeEvent.text);
+    },
+    [cancelScheduledSearch, getSearchResults],
+  );
 
   const handleClearSearch = useCallback(() => {
     cancelScheduledSearch();
@@ -202,6 +213,7 @@ const TrackSearchDialog: React.FC<TrackSearchDialogProps> = ({
           value={searchText}
           onChangeText={handleSearchTextChange}
           onSubmitEditing={handleSubmitSearch}
+          returnKeyType="search"
           textColor={theme.onSurface}
           theme={{
             colors: {
