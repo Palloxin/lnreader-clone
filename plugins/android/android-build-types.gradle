@@ -1,4 +1,18 @@
+def releaseAbiSplitsEnabled = providers
+    .gradleProperty("releaseAbiSplits")
+    .map { value -> value.toBoolean() }
+    .getOrElse(false)
+
 android {
+    splits {
+        abi {
+            enable releaseAbiSplitsEnabled
+            reset()
+            include "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+            universalApk releaseAbiSplitsEnabled
+        }
+    }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug

@@ -1,0 +1,199 @@
+name: Release Android
+run-name: Release v${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable release version, for example 2.0.4
+        required: true
+        type: string
+
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CI: 'true'
+  EXPO_NO_TELEMETRY: '1'
+  NODE_ENV: 'production'
+  RELEASE_VERSION: ${{ inputs.version }}
+
+jobs:
+  release-android:
+    name: Build and Publish
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      github.actor_id == vars.RELEASE_ACTOR_ID &&
+      github.triggering_actor == vars.RELEASE_ACTOR_LOGIN
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set Up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Set Up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Validate Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must use stable semver, for example 2.0.4"
+            exit 1
+          fi
+
+          if git rev-parse --verify --quiet "refs/tags/v$RELEASE_VERSION"; then
+            echo "Tag v$RELEASE_VERSION already exists"
+            exit 1
+          fi
+
+          if gh release view "v$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "Release v$RELEASE_VERSION already exists"
+            exit 1
+          fi
+
+      - name: Prepare Release Commit
+        run: |
+          pnpm release:prepare "$RELEASE_VERSION"
+
+          if git diff --quiet -- \
+            package.json \
+            app.json \
+            .github/ISSUE_TEMPLATE/report_issue.yml \
+            .github/ISSUE_TEMPLATE/request_feature.yml; then
+            CURRENT_VERSION="$(node -p "require('./package.json').version")"
+            if [ "$CURRENT_VERSION" != "$RELEASE_VERSION" ]; then
+              echo "No release changes were generated for $RELEASE_VERSION"
+              exit 1
+            fi
+            echo "Release version $RELEASE_VERSION is already committed; resuming"
+          else
+            git diff --check
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add \
+              package.json \
+              app.json \
+              .github/ISSUE_TEMPLATE/report_issue.yml \
+              .github/ISSUE_TEMPLATE/request_feature.yml
+            git commit -m "chore: Release v$RELEASE_VERSION"
+          fi
+
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Configure Release Environment
+        env:
+          MYANIMELIST_CLIENT_ID: ${{ vars.MYANIMELIST_CLIENT_ID }}
+          ANILIST_CLIENT_ID: ${{ vars.ANILIST_CLIENT_ID }}
+        run: |
+          pnpm generate:env:release \
+            --build-type "Release" \
+            --node-env "production" \
+            --myanimelist-client-id "$MYANIMELIST_CLIENT_ID" \
+            --anilist-client-id "$ANILIST_CLIENT_ID"
+
+      - name: Generate Native Android Project
+        run: |
+          pnpm exec expo prebuild \
+            --platform android \
+            --clean \
+            --no-install
+
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
+          cache-cleanup: on-success
+          add-job-summary: always
+
+      - name: Build Release APKs
+        working-directory: android
+        run: |
+          mkdir -p app/build/intermediates/sourcemaps/react/release
+
+          ./gradlew :app:assembleRelease \
+            --build-cache \
+            --parallel \
+            -PreleaseAbiSplits=true \
+            --stacktrace
+
+      - name: Package Release APKs
+        run: pnpm release:package "$RELEASE_VERSION"
+
+      - name: Verify APK Signatures
+        env:
+          EXPECTED_SIGNER_SHA256: fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c
+        run: |
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner |
+            sort -V |
+            tail -1)"
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "Android apksigner was not found"
+            exit 1
+          fi
+
+          for APK in release-artifacts/*.apk; do
+            "$APKSIGNER" verify "$APK"
+            SIGNER_SHA256="$(
+              "$APKSIGNER" verify --print-certs "$APK" |
+                awk -F ': ' '/Signer #1 certificate SHA-256 digest/ {
+                  print $2
+                  exit
+                }'
+            )"
+
+            if [ "$SIGNER_SHA256" != "$EXPECTED_SIGNER_SHA256" ]; then
+              echo "Unexpected signer for $APK: $SIGNER_SHA256"
+              exit 1
+            fi
+          done
+
+      - name: Upload Release APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: LNReader-v${{ inputs.version }}
+          path: release-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Push Release Commit
+        run: git push origin HEAD:master
+
+      - name: Create Draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$RELEASE_VERSION" \
+            release-artifacts/* \
+            --target "$RELEASE_SHA" \
+            --title "LNReader v$RELEASE_VERSION" \
+            --generate-notes \
+            --draft
