@@ -232,14 +232,6 @@ const SettingsReaderScreen = () => {
     [],
   );
 
-  const tabBarBorderColor = useMemo(
-    () =>
-      color(theme.isDark ? '#FFFFFF' : '#000000')
-        .alpha(0.12)
-        .string(),
-    [theme.isDark],
-  );
-
   const renderTabBar = useCallback(
     (props: TabBarProps<ReaderSettingsRoute>) => (
       <TopTabBar
@@ -248,7 +240,7 @@ const SettingsReaderScreen = () => {
           styles.tabBar,
           {
             backgroundColor: theme.surfaceContainerLow ?? theme.surface,
-            borderBottomColor: tabBarBorderColor,
+            borderBottomColor: theme.outlineVariant,
           },
         ]}
         indicatorStyle={{ backgroundColor: theme.primary }}
@@ -258,7 +250,7 @@ const SettingsReaderScreen = () => {
       />
     ),
     [
-      tabBarBorderColor,
+      theme.outlineVariant,
       theme.onSurfaceVariant,
       theme.primary,
       theme.rippleColor,

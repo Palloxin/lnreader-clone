@@ -244,7 +244,7 @@ const ChaptersSettingsSheet = ({
       style={[
         {
           backgroundColor: theme.surfaceContainerLow ?? theme.surface,
-          borderBottomColor: theme.outline,
+          borderBottomColor: theme.outlineVariant,
         },
         styles.tabBar,
       ]}

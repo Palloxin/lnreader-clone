@@ -8,7 +8,6 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SceneMap, TabDescriptor, TabView } from 'react-native-tab-view';
-import color from 'color';
 
 import { useLibrarySettings, useTheme } from '@hooks/persisted';
 import { getString } from '@i18n/translations';
@@ -186,14 +185,6 @@ const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
 
   const layout = useWindowDimensions();
 
-  const borderBottomColor = useMemo(
-    () =>
-      color(theme.isDark ? '#FFFFFF' : '#000000')
-        .alpha(0.12)
-        .string(),
-    [theme.isDark],
-  );
-
   const renderTabBar = useCallback(
     (props: any) => (
       <TopTabBar
@@ -202,7 +193,7 @@ const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
         style={[
           {
             backgroundColor: theme.surfaceContainerLow ?? theme.surface,
-            borderBottomColor,
+            borderBottomColor: theme.outlineVariant,
           },
           styles.tabBar,
           style,
@@ -218,7 +209,7 @@ const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
       theme.surfaceContainerLow,
       theme.onSurfaceVariant,
       theme.rippleColor,
-      borderBottomColor,
+      theme.outlineVariant,
       style,
     ],
   );

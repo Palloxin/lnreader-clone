@@ -224,7 +224,13 @@ const ReaderBottomSheetV2: React.FC<ReaderBottomSheetV2Props> = ({
       <TopTabBar
         {...props}
         indicatorStyle={{ backgroundColor: theme.primary }}
-        style={[styles.tabBar, { backgroundColor: tabHeaderColor }]}
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: tabHeaderColor,
+            borderBottomColor: theme.outlineVariant,
+          },
+        ]}
         inactiveColor={theme.onSurfaceVariant}
         activeColor={theme.primary}
         pressColor={Color(theme.primary).alpha(0.12).string()}

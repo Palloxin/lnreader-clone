@@ -19,7 +19,6 @@ import {
   SceneRendererProps,
   TabView,
 } from 'react-native-tab-view';
-import Color from 'color';
 
 import {
   SearchbarV2,
@@ -201,14 +200,6 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
 
   const searchLower = useMemo(() => searchText.toLowerCase(), [searchText]);
 
-  const tabBarBorderColor = useMemo(
-    () =>
-      Color(theme.isDark ? '#FFFFFF' : '#000000')
-        .alpha(0.12)
-        .string(),
-    [theme.isDark],
-  );
-
   const renderTabBar = useCallback(
     (props: SceneRendererProps & { navigationState: State }) => {
       return categories.length ? (
@@ -219,7 +210,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
           style={[
             {
               backgroundColor: theme.surface,
-              borderBottomColor: tabBarBorderColor,
+              borderBottomColor: theme.outlineVariant,
             },
             styles.tabBar,
           ]}
@@ -236,7 +227,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       styles.tabBar,
       styles.tabBarIndicator,
       styles.tabStyle,
-      tabBarBorderColor,
+      theme.outlineVariant,
       theme.primary,
       theme.rippleColor,
       theme.secondary,

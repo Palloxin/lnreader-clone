@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { TabView, type TabBarProps } from 'react-native-tab-view';
-import Color from 'color';
 
 import { useSearch } from '@hooks';
 import { useTheme } from '@hooks/persisted';
@@ -77,11 +76,9 @@ const BrowseScreen = ({ navigation }: BrowseScreenProps) => {
       backgroundColor: theme.surface,
       elevation: 0,
       borderBottomWidth: 1,
-      borderBottomColor: Color(theme.isDark ? '#FFFFFF' : '#000000')
-        .alpha(0.12)
-        .string(),
+      borderBottomColor: theme.outlineVariant,
     }),
-    [theme.isDark, theme.surface],
+    [theme.outlineVariant, theme.surface],
   );
   const androidRipple = useMemo(
     () => ({ color: theme.rippleColor }),
