@@ -201,10 +201,12 @@ export const BUILD_TYPE = ${JSON.stringify(buildType)};
 export const GIT_HASH = ${JSON.stringify(gitHash)};
 export const RELEASE_DATE = ${JSON.stringify(releaseDate)};
 export const NODE_ENV = ${JSON.stringify(nodeEnv)};
-export const MYANIMELIST_CLIENT_ID = ${formatTypeScriptValue(
+export const MYANIMELIST_CLIENT_ID: string | undefined = ${formatTypeScriptValue(
   myanimelistClientId,
 )};
-export const ANILIST_CLIENT_ID = ${formatTypeScriptValue(anilistClientId)};
+export const ANILIST_CLIENT_ID: string | undefined = ${formatTypeScriptValue(
+  anilistClientId,
+)};
 
 export default {
   BUILD_TYPE,

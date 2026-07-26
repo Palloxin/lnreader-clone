@@ -13,7 +13,6 @@ const baseOAuthUrl = 'https://myanimelist.net/v1/oauth2/authorize';
 const tokenUrl = 'https://myanimelist.net/v1/oauth2/token';
 const baseApiUrl = 'https://api.myanimelist.net/v2';
 const challenge = pkceChallenger();
-const authUrl = `${baseOAuthUrl}?response_type=code&client_id=${clientId}&code_challenge_method=plain&code_challenge=${challenge}`;
 const redirectUri = Linking.createURL('tracker/MAL');
 
 export const malToNormalized: Record<string, UserListStatus> = {
@@ -34,6 +33,11 @@ const normalizedToMal: Record<UserListStatus, string> = {
 
 export const myAnimeListTracker: Tracker = {
   authenticate: async () => {
+    if (!clientId) {
+      throw new Error('MyAnimeList client ID is not configured');
+    }
+
+    const authUrl = `${baseOAuthUrl}?response_type=code&client_id=${clientId}&code_challenge_method=plain&code_challenge=${challenge}`;
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type !== 'success') {
