@@ -56,6 +56,69 @@ function getGitHash() {
   return execSync('git rev-parse --short HEAD').toString().trim();
 }
 
+function readEnvValue(filePath, key) {
+  if (!fs.existsSync(filePath)) {
+    return undefined;
+  }
+
+  const line = fs
+    .readFileSync(filePath, 'utf8')
+    .split(/\r?\n/)
+    .find(entry => entry.startsWith(`${key}=`));
+
+  if (!line) {
+    return undefined;
+  }
+
+  const value = line.slice(key.length + 1).trim();
+
+  if (!value || value === 'undefined') {
+    return undefined;
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+    return typeof parsedValue === 'string' ? parsedValue : value;
+  } catch {
+    return value;
+  }
+}
+
+function resolveOptionalValue({ argument, existingValue, environmentValue }) {
+  const value = argument ?? existingValue ?? environmentValue;
+
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  if (value === true) {
+    throw new Error('Expected a value after the client ID argument');
+  }
+
+  return String(value);
+}
+
+function formatEnvEntry(key, value) {
+  return value === undefined ? undefined : `${key}=${JSON.stringify(value)}`;
+}
+
+function formatTypeScriptValue(value) {
+  return JSON.stringify(value) ?? 'undefined';
+}
+
+function writeFileAtomically(filePath, content) {
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+
+  try {
+    fs.writeFileSync(temporaryPath, content, 'utf8');
+    fs.renameSync(temporaryPath, filePath);
+  } finally {
+    if (fs.existsSync(temporaryPath)) {
+      fs.rmSync(temporaryPath);
+    }
+  }
+}
+
 function getHiddenEnvFiles(rootDir) {
   return fs
     .readdirSync(rootDir, { withFileTypes: true })
@@ -87,10 +150,19 @@ function readHiddenEnvFiles(rootDir) {
 
 const args = parseArgs(process.argv);
 const projectRoot = path.join(__dirname, '..');
+const envFilePath = path.join(projectRoot, '.env');
 
 const buildType = args['build-type'] || 'Beta';
-const myanimelistClientId = args['myanimelist-client-id'];
-const anilistClientId = args['anilist-client-id'];
+const myanimelistClientId = resolveOptionalValue({
+  argument: args['myanimelist-client-id'],
+  existingValue: readEnvValue(envFilePath, 'MYANIMELIST_CLIENT_ID'),
+  environmentValue: process.env.MYANIMELIST_CLIENT_ID,
+});
+const anilistClientId = resolveOptionalValue({
+  argument: args['anilist-client-id'],
+  existingValue: readEnvValue(envFilePath, 'ANILIST_CLIENT_ID'),
+  environmentValue: process.env.ANILIST_CLIENT_ID,
+});
 
 const gitHash = args['git-hash'] || getGitHash();
 const releaseDate = args['release-date'] || formatUtcDate(new Date());
@@ -99,14 +171,16 @@ const nodeEnv =
   (buildType.toLowerCase().includes('release') ? 'production' : 'development');
 
 const generatedEnvContent = [
-  `BUILD_TYPE=${JSON.stringify(buildType)}`,
-  `GIT_HASH=${JSON.stringify(gitHash)}`,
-  `RELEASE_DATE=${JSON.stringify(releaseDate)}`,
-  `NODE_ENV=${JSON.stringify(nodeEnv)}`,
-  `MYANIMELIST_CLIENT_ID=${JSON.stringify(myanimelistClientId)}`,
-  `ANILIST_CLIENT_ID=${JSON.stringify(anilistClientId)}`,
+  formatEnvEntry('BUILD_TYPE', buildType),
+  formatEnvEntry('GIT_HASH', gitHash),
+  formatEnvEntry('RELEASE_DATE', releaseDate),
+  formatEnvEntry('NODE_ENV', nodeEnv),
+  formatEnvEntry('MYANIMELIST_CLIENT_ID', myanimelistClientId),
+  formatEnvEntry('ANILIST_CLIENT_ID', anilistClientId),
   '',
-].join('\n');
+]
+  .filter(value => value !== undefined)
+  .join('\n');
 
 const { files: hiddenEnvFiles, content: hiddenEnvContent } =
   readHiddenEnvFiles(projectRoot);
@@ -115,7 +189,6 @@ const envContent = hiddenEnvContent
   ? `${generatedEnvContent}\n# Imported hidden env files\n${hiddenEnvContent}\n`
   : generatedEnvContent;
 
-const envFilePath = path.join(projectRoot, '.env');
 const buildInfoPath = path.join(
   projectRoot,
   'src',
@@ -128,8 +201,10 @@ export const BUILD_TYPE = ${JSON.stringify(buildType)};
 export const GIT_HASH = ${JSON.stringify(gitHash)};
 export const RELEASE_DATE = ${JSON.stringify(releaseDate)};
 export const NODE_ENV = ${JSON.stringify(nodeEnv)};
-export const MYANIMELIST_CLIENT_ID = ${JSON.stringify(myanimelistClientId)};
-export const ANILIST_CLIENT_ID = ${JSON.stringify(anilistClientId)};
+export const MYANIMELIST_CLIENT_ID = ${formatTypeScriptValue(
+  myanimelistClientId,
+)};
+export const ANILIST_CLIENT_ID = ${formatTypeScriptValue(anilistClientId)};
 
 export default {
   BUILD_TYPE,
@@ -143,14 +218,20 @@ export default {
 
 try {
   fs.mkdirSync(path.dirname(buildInfoPath), { recursive: true });
-  fs.writeFileSync(buildInfoPath, buildInfoContent, 'utf8');
-  fs.writeFileSync(envFilePath, envContent, 'utf8');
+  writeFileAtomically(buildInfoPath, buildInfoContent);
+  writeFileAtomically(envFilePath, envContent);
 
-  console.log(`Generated .env for ${buildType} build`);
+  console.log(`Generated build environment for ${buildType} build`);
+  console.log(
+    `Wrote ${path.relative(projectRoot, envFilePath)} and ${path.relative(
+      projectRoot,
+      buildInfoPath,
+    )}`,
+  );
 
   if (hiddenEnvFiles.length > 0) {
     console.log(
-      `Imported ${hiddenEnvFiles.length} hidden env file(s):`,
+      `Imported ${hiddenEnvFiles.length} hidden environment file(s):`,
       hiddenEnvFiles.map(filePath => path.basename(filePath)),
     );
   }
@@ -160,8 +241,12 @@ try {
     GIT_HASH: gitHash,
     RELEASE_DATE: releaseDate,
     NODE_ENV: nodeEnv,
+    MYANIMELIST_CLIENT_ID: myanimelistClientId
+      ? 'configured'
+      : 'not configured',
+    ANILIST_CLIENT_ID: anilistClientId ? 'configured' : 'not configured',
   });
 } catch (err) {
-  console.error('Error: Could not write .env file:', err.message);
+  console.error('Error: Could not generate build environment:', err.message);
   process.exit(1);
 }
