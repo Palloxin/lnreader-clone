@@ -37,6 +37,7 @@ import NativeVolumeButtonListener from '@modules/native-volume-button-listener';
 import NativeFile from '@modules/native-file';
 import { useNovelActions, useNovelValue } from '@screens/novel/NovelContext';
 import useTimeTracking from './useTimeTracking';
+import { useEventListener } from 'expo';
 
 type AdjacentChapters = [
   nextChapter: ChapterInfo | undefined,
@@ -118,36 +119,27 @@ export default function useChapter(
     hiddenRef.current = hidden;
   }, [hidden]);
 
-  const connectVolumeButton = useCallback(() => {
-    const offset = defaultTo(
-      volumeButtonsOffset,
-      Math.round(Dimensions.get('window').height * 0.75),
-    );
-    NativeVolumeButtonListener.setActive(true);
-    const subUp = NativeVolumeButtonListener.addListener('VolumeUp', () => {
-      webViewRef.current?.injectJavaScript(`(()=>{
-        window.scrollBy({top: -${offset}, behavior: 'smooth'})
-      })()`);
-    });
-    const subDown = NativeVolumeButtonListener.addListener('VolumeDown', () => {
-      webViewRef.current?.injectJavaScript(`(()=>{
-        window.scrollBy({top: ${offset}, behavior: 'smooth'})
-      })()`);
-    });
-    return () => {
-      NativeVolumeButtonListener.setActive(false);
-      subUp.remove();
-      subDown.remove();
-    };
-  }, [webViewRef, volumeButtonsOffset]);
+  const volumeButtonOffset = defaultTo(
+    volumeButtonsOffset,
+    Math.round(Dimensions.get('window').height * 0.75),
+  );
+
+  useEventListener(NativeVolumeButtonListener, 'VolumeUp', () => {
+    webViewRef.current?.injectJavaScript(`(()=>{
+      window.scrollBy({top: -${volumeButtonOffset}, behavior: 'smooth'})
+    })()`);
+  });
+
+  useEventListener(NativeVolumeButtonListener, 'VolumeDown', () => {
+    webViewRef.current?.injectJavaScript(`(()=>{
+      window.scrollBy({top: ${volumeButtonOffset}, behavior: 'smooth'})
+    })()`);
+  });
 
   useEffect(() => {
-    if (useVolumeButtons) {
-      const cleanup = connectVolumeButton();
-      return cleanup;
-    }
-    return undefined;
-  }, [useVolumeButtons, connectVolumeButton]);
+    NativeVolumeButtonListener.setActive(useVolumeButtons);
+    return () => NativeVolumeButtonListener.setActive(false);
+  }, [useVolumeButtons]);
 
   /**
    * Reads the chapter from local storage, falling back to the plugin when it
