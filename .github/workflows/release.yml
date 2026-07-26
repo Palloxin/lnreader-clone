@@ -1,13 +1,18 @@
 name: Release Android
-run-name: Release v${{ inputs.version }}
+run-name: Draft ${{ inputs.bump }} Android release
 
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Stable release version, for example 2.0.4
+      bump:
+        description: Version component to increment
         required: true
-        type: string
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 concurrency:
   group: release-android
@@ -20,11 +25,11 @@ env:
   CI: 'true'
   EXPO_NO_TELEMETRY: '1'
   NODE_ENV: 'production'
-  RELEASE_VERSION: ${{ inputs.version }}
+  RELEASE_BUMP: ${{ inputs.bump }}
 
 jobs:
   release-android:
-    name: Build and Publish
+    name: Build Draft Release
     if: >-
       github.ref == 'refs/heads/master' &&
       github.actor_id == vars.RELEASE_ACTOR_ID &&
@@ -58,6 +63,17 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Resolve Release Version
+        id: version
+        run: |
+          RELEASE_VERSION="$(
+            node scripts/resolve-release-version.cjs "$RELEASE_BUMP"
+          )"
+
+          echo "Releasing $RELEASE_BUMP version: $RELEASE_VERSION"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
+          echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate Release
         env:
@@ -103,6 +119,27 @@ jobs:
               .github/ISSUE_TEMPLATE/report_issue.yml \
               .github/ISSUE_TEMPLATE/request_feature.yml
             git commit -m "chore: Release v$RELEASE_VERSION"
+          fi
+
+          git fetch origin master
+          REMOTE_VERSION="$(
+            node -e "
+              const { execFileSync } = require('child_process');
+              const contents = execFileSync(
+                'git',
+                ['show', 'origin/master:package.json'],
+                { encoding: 'utf8' },
+              );
+              process.stdout.write(JSON.parse(contents).version);
+            "
+          )"
+
+          if [ "$REMOTE_VERSION" = "$RELEASE_VERSION" ]; then
+            echo "Release commit is already on master; resuming from it"
+            git checkout --detach origin/master
+            echo "RELEASE_ALREADY_PUSHED=true" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_ALREADY_PUSHED=false" >> "$GITHUB_ENV"
           fi
 
           echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
@@ -178,14 +215,19 @@ jobs:
       - name: Upload Release APKs
         uses: actions/upload-artifact@v4
         with:
-          name: LNReader-v${{ inputs.version }}
+          name: LNReader-v${{ steps.version.outputs.version }}
           path: release-artifacts/
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
 
       - name: Push Release Commit
-        run: git push origin HEAD:master
+        run: |
+          if [ "$RELEASE_ALREADY_PUSHED" = "true" ]; then
+            echo "Release commit is already on master"
+          else
+            git push origin HEAD:master
+          fi
 
       - name: Create Draft GitHub Release
         env:
