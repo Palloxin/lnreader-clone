@@ -1,8 +1,7 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import type { WebViewProgressEvent } from 'react-native-webview/lib/WebViewTypes';
 import { ProgressBar } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPlugin } from '@plugins/pluginManager';
 import { useBackHandler } from '@hooks';
@@ -31,7 +30,6 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
     [isNovel, pluginId, url],
   );
   const userAgent = useMemo(() => getUserAgent(), []);
-  const { bottom } = useSafeAreaInsets();
 
   const theme = useTheme();
   const webViewRef = useRef<WebView | null>(null);
@@ -94,10 +92,8 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
   const injectJavaScriptCode =
     'window.ReactNativeWebView.postMessage(JSON.stringify({localStorage, sessionStorage}))';
 
-  // Stable object props: a new `source` reloads the page, and a new
-  // `containerStyle` re-applies layout on every progress update.
+  // A new `source` reloads the page, so keep it stable across progress updates.
   const source = useMemo(() => ({ uri }), [uri]);
-  const containerStyle = useMemo(() => ({ paddingBottom: bottom }), [bottom]);
 
   return (
     <>
@@ -132,7 +128,6 @@ const WebviewScreen = ({ route, navigation }: WebviewScreenProps) => {
         onMessage={({ nativeEvent }: { nativeEvent: { data: string } }) =>
           setTempData(JSON.parse(nativeEvent.data))
         }
-        containerStyle={containerStyle}
       />
       {menuVisible ? (
         <Menu
