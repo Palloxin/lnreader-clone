@@ -1,6 +1,38 @@
 import { getString } from '@i18n/translations';
 import sanitizeHtml from 'sanitize-html';
 
+const PLUGIN_ISSUE_REPORT_URL =
+  'https://github.com/lnreader/lnreader-plugins/issues/new';
+
+export const isPluginIssueReportUrl = (url: string): boolean =>
+  url === PLUGIN_ISSUE_REPORT_URL ||
+  url.startsWith(`${PLUGIN_ISSUE_REPORT_URL}?`);
+
+const escapeHtml = (value: string): string =>
+  value.replace(
+    /[&<>"']/g,
+    character =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[character] as string),
+  );
+
+const getPluginIssueReportUrl = (
+  pluginId: string,
+  novelName: string,
+  chapterName: string,
+): string => {
+  const title = `[${pluginId}] Empty chapter: ${novelName} — ${chapterName}`;
+
+  return `${PLUGIN_ISSUE_REPORT_URL}?template=report_issue.yml&title=${encodeURIComponent(
+    title,
+  )}`;
+};
+
 /** Built once: rebuilding it per chapter allocates the whole tag list again. */
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat([
@@ -74,9 +106,12 @@ export const sanitizeChapterText = (
   return (
     text ||
     getString('readerScreen.emptyChapterMessage', {
-      pluginId,
-      novelName,
-      chapterName,
+      pluginId: escapeHtml(pluginId),
+      novelName: escapeHtml(novelName),
+      chapterName: escapeHtml(chapterName),
+      reportUrl: escapeHtml(
+        getPluginIssueReportUrl(pluginId, novelName, chapterName),
+      ),
     })
   );
 };

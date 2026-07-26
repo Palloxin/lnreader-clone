@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { NativeEventEmitter, NativeModules, StatusBar } from 'react-native';
 import WebView from 'react-native-webview';
+import * as Linking from 'expo-linking';
 import color from 'color';
 
 import { useTheme } from '@hooks/persisted';
@@ -23,6 +24,7 @@ import { ReaderSearchResult } from '../types';
 import { useTtsSession } from '../hooks/useTtsSession';
 import type { TtsSettings } from '@modules/nitro-tts';
 import { ChapterInfo } from '@database/types';
+import { isPluginIssueReportUrl } from '../utils/sanitizeChapterText';
 
 type WebViewPostEvent = {
   type: string;
@@ -417,6 +419,13 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({
       showsVerticalScrollIndicator={false}
       javaScriptEnabled={true}
       webviewDebuggingEnabled={__DEV__}
+      onShouldStartLoadWithRequest={({ url }) => {
+        if (isPluginIssueReportUrl(url)) {
+          void Linking.openURL(url);
+          return false;
+        }
+        return true;
+      }}
       onLoadEnd={() => {
         webViewRef.current?.injectJavaScript(
           `if (window.reader && window.reader.batteryLevel) {
