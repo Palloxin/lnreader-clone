@@ -1,1 +1,0 @@
-export const BACKGROUND_TASKS_STORE_KEY = 'APP_SERVICE';
