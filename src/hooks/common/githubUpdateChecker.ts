@@ -9,7 +9,7 @@ interface GithubUpdate {
 
 export const useGithubUpdateChecker = (): GithubUpdate => {
   const latestReleaseUrl =
-    'https://api.github.com/repos/rajarsheechatterjee/lnreader/releases/latest';
+    '';
 
   const [checking, setChecking] = useState(true);
   const [latestRelease, setLatestRelease] = useState<any>();
