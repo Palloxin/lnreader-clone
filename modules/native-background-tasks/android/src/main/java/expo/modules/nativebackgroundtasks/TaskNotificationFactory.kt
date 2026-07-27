@@ -15,6 +15,7 @@ object TaskNotificationFactory {
     const val ACTION_RESUME = "expo.modules.nativebackgroundtasks.RESUME"
     const val ACTION_CANCEL = "expo.modules.nativebackgroundtasks.CANCEL"
     const val EXTRA_TASK_ID = "taskId"
+    private const val TERMINAL_NOTIFICATION_MASK = 0x40000000
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -32,6 +33,9 @@ object TaskNotificationFactory {
     }
 
     fun notificationId(taskId: String): Int = taskId.hashCode().and(Int.MAX_VALUE).coerceAtLeast(1)
+
+    fun terminalNotificationId(taskId: String): Int =
+        notificationId(taskId).xor(TERMINAL_NOTIFICATION_MASK).coerceAtLeast(1)
 
     fun build(context: Context, task: BackgroundTaskEntity): Notification {
         ensureChannel(context)
@@ -66,7 +70,13 @@ object TaskNotificationFactory {
             .setContentText(contentText)
             .setContentIntent(contentIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setCategory(
+                if (task.state in listOf(BackgroundTaskState.SUCCEEDED, BackgroundTaskState.FAILED)) {
+                    NotificationCompat.CATEGORY_STATUS
+                } else {
+                    NotificationCompat.CATEGORY_PROGRESS
+                },
+            )
             .setOngoing(task.state == BackgroundTaskState.RUNNING || task.state == BackgroundTaskState.QUEUED)
             .setAutoCancel(task.state == BackgroundTaskState.SUCCEEDED || task.state == BackgroundTaskState.FAILED)
             .setOnlyAlertOnce(true)
@@ -114,9 +124,17 @@ object TaskNotificationFactory {
             .notify(notificationId(task.id), build(context, task))
     }
 
-    fun dismiss(context: Context, taskId: String) {
+    fun postTerminal(context: Context, task: BackgroundTaskEntity) {
+        require(task.state in listOf(BackgroundTaskState.SUCCEEDED, BackgroundTaskState.FAILED))
         context.getSystemService(NotificationManager::class.java)
-            .cancel(notificationId(taskId))
+            .notify(terminalNotificationId(task.id), build(context, task))
+    }
+
+    fun dismiss(context: Context, taskId: String) {
+        context.getSystemService(NotificationManager::class.java).apply {
+            cancel(notificationId(taskId))
+            cancel(terminalNotificationId(taskId))
+        }
     }
 
     private fun actionIntent(

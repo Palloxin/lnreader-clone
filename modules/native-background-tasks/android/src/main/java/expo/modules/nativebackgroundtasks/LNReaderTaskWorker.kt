@@ -60,7 +60,9 @@ class LNReaderTaskWorker(
                         return Result.success()
                     }
                     dao.finishRunning(taskId, BackgroundTaskState.SUCCEEDED, System.currentTimeMillis())
-                    dao.get(taskId)?.let { TaskNotificationFactory.update(applicationContext, it) }
+                    dao.get(taskId)?.let {
+                        TaskNotificationFactory.postTerminal(applicationContext, it)
+                    }
                     Result.success()
                 }
                 is TaskExecutionResult.Failure -> {
@@ -73,7 +75,9 @@ class LNReaderTaskWorker(
                         Result.retry()
                     } else {
                         dao.updateState(taskId, BackgroundTaskState.FAILED, System.currentTimeMillis())
-                        dao.get(taskId)?.let { TaskNotificationFactory.update(applicationContext, it) }
+                        dao.get(taskId)?.let {
+                            TaskNotificationFactory.postTerminal(applicationContext, it)
+                        }
                         Result.success()
                     }
                 }
