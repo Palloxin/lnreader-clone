@@ -10,16 +10,36 @@ import { getString } from '@i18n/translations';
 import { StyleSheet } from 'react-native';
 import dayjs from 'dayjs';
 import NativeFile from '@modules/native-file';
+import { useState } from 'react';
+import {
+  DEFAULT_BACKUP_OPTIONS,
+  type BackupOptions,
+} from '@services/backup/options';
+import { BackupOptionsDialog } from './Components/BackupOptions';
 
 const BackupSettings = ({ navigation }: BackupSettingsScreenProps) => {
   const theme = useTheme();
+  const [backupOptions, setBackupOptions] = useState<BackupOptions>({
+    ...DEFAULT_BACKUP_OPTIONS,
+  });
+  const {
+    value: backupOptionsVisible,
+    setFalse: closeBackupOptions,
+    setTrue: openBackupOptions,
+  } = useBoolean();
   const {
     value: googleDriveModalVisible,
     setFalse: closeGoogleDriveModal,
     setTrue: openGoogleDriveModal,
   } = useBoolean();
 
-  const createLocalBackup = async () => {
+  const createLocalBackup = () => {
+    setBackupOptions({ ...DEFAULT_BACKUP_OPTIONS });
+    openBackupOptions();
+  };
+
+  const chooseLocalBackupDestination = async () => {
+    closeBackupOptions();
     try {
       const filename = `lnreader_backup_${dayjs().format(
         'YYYY-MM-DD_HH_mm',
@@ -30,7 +50,7 @@ const BackupSettings = ({ navigation }: BackupSettingsScreenProps) => {
       );
       backgroundTasks.enqueue({
         name: 'LOCAL_BACKUP',
-        data: { destinationUri },
+        data: { destinationUri, options: backupOptions },
       });
     } catch {
       // Closing Android's document picker intentionally leaves the queue unchanged.
@@ -114,6 +134,14 @@ const BackupSettings = ({ navigation }: BackupSettingsScreenProps) => {
         theme={theme}
         visible={selfHostModalVisible}
         closeModal={closeSelfHostModal}
+      />
+      <BackupOptionsDialog
+        onCancel={closeBackupOptions}
+        onChange={setBackupOptions}
+        onConfirm={chooseLocalBackupDestination}
+        options={backupOptions}
+        theme={theme}
+        visible={backupOptionsVisible}
       />
     </SafeAreaView>
   );

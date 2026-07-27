@@ -130,10 +130,12 @@ class NativeBackgroundTasksModule : Module() {
             }
         }
 
-        AsyncFunction("complete") { taskId: String ->
+        AsyncFunction("complete") { taskId: String, completionText: String ->
             runBlocking(Dispatchers.IO) {
-                dao.updateCheckpoint(taskId, null, System.currentTimeMillis())
-                dao.finishRunning(taskId, BackgroundTaskState.SUCCEEDED, System.currentTimeMillis())
+                val now = System.currentTimeMillis()
+                dao.updateCheckpoint(taskId, null, now)
+                dao.updateProgress(taskId, null, completionText, now)
+                dao.finishRunning(taskId, BackgroundTaskState.SUCCEEDED, now)
                 TaskExecutionRegistry.complete(taskId, TaskExecutionResult.Success)
             }
         }

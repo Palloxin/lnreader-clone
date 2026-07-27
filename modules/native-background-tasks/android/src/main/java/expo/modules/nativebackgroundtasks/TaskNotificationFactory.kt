@@ -78,13 +78,20 @@ object TaskNotificationFactory {
 
         val progress = task.progress
         if (task.state == BackgroundTaskState.SUCCEEDED) {
-            builder.setContentText("Completed").setProgress(0, 0, false)
+            builder.setContentText(contentText).setProgress(0, 0, false)
         } else if (task.state == BackgroundTaskState.FAILED) {
-            builder.setContentText("Failed: $contentText").setProgress(0, 0, false)
+            builder.setContentText(contentText).setProgress(0, 0, false)
         } else if (progress == null) {
             builder.setProgress(100, 0, true)
         } else {
             builder.setProgress(100, (progress.coerceIn(0.0, 1.0) * 100).toInt(), false)
+        }
+
+        if (
+            task.state in listOf(BackgroundTaskState.SUCCEEDED, BackgroundTaskState.FAILED) &&
+            contentText.isNotBlank()
+        ) {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
         }
 
         if (

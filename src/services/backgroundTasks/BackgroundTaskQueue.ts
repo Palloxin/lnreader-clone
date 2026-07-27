@@ -128,9 +128,20 @@ export class BackgroundTaskQueue {
         },
       );
       this.throwIfInterrupted(taskId);
-      await NativeBackgroundTasks.complete(taskId);
+      const completedTask = this.getSnapshot().find(item => item.id === taskId);
+      await NativeBackgroundTasks.complete(
+        taskId,
+        completedTask?.meta.completionText ??
+          getString('notifications.taskCompleted'),
+      );
     } catch (error) {
-      await NativeBackgroundTasks.fail(taskId, String(error), false);
+      await NativeBackgroundTasks.fail(
+        taskId,
+        getString('notifications.taskFailed', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+        false,
+      );
       if (!this.interruptedTasks.has(taskId)) {
         throw error;
       }
