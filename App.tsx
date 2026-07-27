@@ -2,6 +2,8 @@ import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
 import { enableFreeze } from 'react-native-screens';
 
+import * as NavigationBar from 'expo-navigation-bar';
+
 enableFreeze(true);
 
 import React from 'react';
@@ -30,6 +32,8 @@ Notifications.setNotificationHandler({
 
 createTables();
 LottieSplashScreen.hide();
+
+NavigationBar.setBehaviorAsync('overlay-swipe');
 
 const App = () => {
   return (
