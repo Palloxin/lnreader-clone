@@ -27,7 +27,7 @@ class NativeBackgroundTasksModule : Module() {
             reactContextRef = null
         }
 
-        AsyncFunction("enqueue") { type: String, payload: String, title: String, description: String, allowsDuplicates: Boolean ->
+        AsyncFunction("enqueue") { type: String, payload: String, title: String, description: String, allowsDuplicates: Boolean, queueName: String ->
             runBlocking(Dispatchers.IO) {
                 if (!allowsDuplicates) {
                     dao.getActiveByType(type)?.let { return@runBlocking it.id }
@@ -39,6 +39,7 @@ class NativeBackgroundTasksModule : Module() {
                     payload = payload,
                     title = title,
                     description = description,
+                    queueName = queueName,
                     state = BackgroundTaskState.QUEUED,
                     progress = null,
                     progressText = null,

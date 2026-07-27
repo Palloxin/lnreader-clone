@@ -81,6 +81,11 @@ export type DownloadChapterTask = {
   data: {
     novelName: string;
     /**
+     * Optional for compatibility with download tasks queued before
+     * per-plugin execution lanes were introduced.
+     */
+    pluginId?: string;
+    /**
      * Optional for compatibility with download tasks persisted before the
      * per-novel queue identity was introduced.
      */

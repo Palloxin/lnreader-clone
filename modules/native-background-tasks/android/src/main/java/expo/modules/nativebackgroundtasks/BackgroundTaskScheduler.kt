@@ -10,7 +10,6 @@ import androidx.work.WorkManager
 import java.util.UUID
 
 object BackgroundTaskScheduler {
-    private const val QUEUE_NAME = "lnreader-background-task-queue"
     const val TASK_ID = "taskId"
 
     suspend fun enqueue(context: Context, taskId: String): UUID {
@@ -28,7 +27,7 @@ object BackgroundTaskScheduler {
         BackgroundTaskDatabase.get(context).tasks()
             .assignWork(taskId, request.id.toString(), System.currentTimeMillis())
         WorkManager.getInstance(context).enqueueUniqueWork(
-            QUEUE_NAME,
+            task.queueName,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             request,
         )
@@ -52,6 +51,7 @@ object BackgroundTaskScheduler {
             payload = """{"name":"$LIBRARY_UPDATE_TASK_TYPE"}""",
             title = title,
             description = description,
+            queueName = "lnreader-background-task:task:$LIBRARY_UPDATE_TASK_TYPE",
             state = BackgroundTaskState.QUEUED,
             progress = null,
             progressText = null,

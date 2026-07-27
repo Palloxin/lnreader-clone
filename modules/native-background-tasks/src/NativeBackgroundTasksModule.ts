@@ -22,6 +22,7 @@ type NativeBackgroundTasksModule = {
     title: string,
     description: string,
     allowsDuplicates: boolean,
+    queueName: string,
   ): Promise<string>;
   getTasks(): Promise<NativeBackgroundTaskRecord[]>;
   pause(taskId: string): Promise<void>;

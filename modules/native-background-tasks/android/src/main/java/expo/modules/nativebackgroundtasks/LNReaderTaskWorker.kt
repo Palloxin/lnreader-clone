@@ -21,7 +21,19 @@ class LNReaderTaskWorker(
             return Result.success()
         }
 
-        dao.markRunning(taskId, BackgroundTaskState.RUNNING, System.currentTimeMillis())
+        val claimed = dao.tryMarkRunning(
+            taskId,
+            BackgroundTaskState.RUNNING,
+            System.currentTimeMillis(),
+            MAX_CONCURRENT_DOWNLOADS,
+        )
+        if (claimed == 0) {
+            return if (dao.get(taskId)?.state == BackgroundTaskState.QUEUED) {
+                Result.retry()
+            } else {
+                Result.success()
+            }
+        }
         val runningTask = dao.get(taskId) ?: return Result.failure()
         setForeground(createForegroundInfo(runningTask))
         val execution = TaskExecutionRegistry.register(taskId)
@@ -85,5 +97,9 @@ class LNReaderTaskWorker(
         } else {
             ForegroundInfo(id, notification)
         }
+    }
+
+    companion object {
+        private const val MAX_CONCURRENT_DOWNLOADS = 3
     }
 }
