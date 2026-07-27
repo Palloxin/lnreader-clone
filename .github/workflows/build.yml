@@ -149,6 +149,7 @@ jobs:
             "app/build/outputs/apk/preRelease/$PRERELEASE_APK_NAME"
 
       - name: Upload Preview APK
+        id: upload-nightly
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PRERELEASE_ARTIFACT_NAME }}
@@ -156,3 +157,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+      - name: Notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK }}
+          ARTIFACT_URL: ${{ steps.upload-nightly.outputs.artifact-url }}
+        run: |
+          short_sha="${GITHUB_SHA::8}"
+          message="[${GITHUB_REPOSITORY}] New nightly build published: \`${short_sha}\`"
+          content="**[${message}](${ARTIFACT_URL})**"
+
+          payload=$(jq -n \
+            --arg content "$content" \
+            '{content: $content}')
+
+          curl --fail-with-body \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
+            "$DISCORD_WEBHOOK_URL"
