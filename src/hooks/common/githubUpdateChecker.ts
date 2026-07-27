@@ -15,8 +15,8 @@ export const useGithubUpdateChecker = (): GithubUpdate => {
   const [latestRelease, setLatestRelease] = useState<any>();
 
   const checkForRelease = async () => {
-    const res = await fetch(latestReleaseUrl);
-    const data = await res.json();
+    const res = '';
+    const data = '';
 
     const release = {
       tag_name: data.tag_name,
