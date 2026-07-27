@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - async-plugins-build
+      - async-plugins
 jobs:
   build-android:
     name: Build App
