@@ -165,11 +165,23 @@ jobs:
         run: |
           short_sha="${GITHUB_SHA::8}"
           message="[${GITHUB_REPOSITORY}] New nightly build published: \`${short_sha}\`"
-          content="**[${message}](${ARTIFACT_URL})**"
 
           payload=$(jq -n \
-            --arg content "$content" \
-            '{content: $content}')
+            --arg title "$message" \
+            --arg url "$ARTIFACT_URL" \
+            '{
+              username: "GitHub",
+              avatar_url: "https://github.com/github.png",
+              embeds: [{
+                author: {
+                  name: "github-actions[bot]",
+                  icon_url: "https://github.com/github.png"
+                },
+                title: $title,
+                url: $url,
+                color: 3092790
+              }]
+            }')
 
           curl --fail-with-body \
             --request POST \
