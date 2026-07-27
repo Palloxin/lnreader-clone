@@ -178,6 +178,41 @@ describe('production migrations', () => {
         sqlite.executeSync(statement.trim());
       }
 
+      sqlite.executeSync(`
+        INSERT INTO Category (id, name, sort)
+        VALUES (1, 'Existing category', 1)
+      `);
+      sqlite.executeSync(`
+        INSERT INTO Novel (id, path, pluginId, name, inLibrary)
+        VALUES (1, '/existing', 'existing-plugin', 'Existing novel', 1)
+      `);
+      sqlite.executeSync(`
+        INSERT INTO Chapter (
+          id,
+          novelId,
+          path,
+          name,
+          unread,
+          isDownloaded,
+          readTime,
+          updatedTime
+        )
+        VALUES (
+          1,
+          1,
+          '/existing/chapter-1',
+          'Existing chapter',
+          1,
+          1,
+          '2026-07-26T10:00:00.000Z',
+          '2026-07-26T11:00:00.000Z'
+        )
+      `);
+      sqlite.executeSync(`
+        INSERT INTO NovelCategory (id, novelId, categoryId)
+        VALUES (1, 1, 1)
+      `);
+
       const drizzleDb = drizzle(sqlite, { schema });
       await migrate(drizzleDb, getPendingMigrations(sqlite));
 
@@ -194,6 +229,27 @@ describe('production migrations', () => {
           'Repository',
         ]),
       );
+
+      expect(
+        sqlite.executeSync(
+          'SELECT id, name, chaptersDownloaded, chaptersUnread, totalChapters FROM Novel',
+        ).rows,
+      ).toEqual([
+        {
+          id: 1,
+          name: 'Existing novel',
+          chaptersDownloaded: 1,
+          chaptersUnread: 1,
+          totalChapters: 1,
+        },
+      ]);
+      expect(
+        sqlite.executeSync('SELECT id, novelId, name FROM Chapter').rows,
+      ).toEqual([{ id: 1, novelId: 1, name: 'Existing chapter' }]);
+      expect(
+        sqlite.executeSync('SELECT id, novelId, categoryId FROM NovelCategory')
+          .rows,
+      ).toEqual([{ id: 1, novelId: 1, categoryId: 1 }]);
     } finally {
       sqlite.close();
     }

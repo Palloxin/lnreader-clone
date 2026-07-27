@@ -89,6 +89,8 @@ SELECT
 FROM `Novel`;--> statement-breakpoint
 CREATE TABLE `__migration_Chapter` AS SELECT * FROM `Chapter`;--> statement-breakpoint
 CREATE TABLE `__migration_NovelCategory` AS SELECT * FROM `NovelCategory`;--> statement-breakpoint
+DELETE FROM `NovelCategory`;--> statement-breakpoint
+DELETE FROM `Chapter`;--> statement-breakpoint
 DROP TABLE `Novel`;--> statement-breakpoint
 ALTER TABLE `__new_Novel` RENAME TO `Novel`;--> statement-breakpoint
 INSERT INTO `Chapter` SELECT * FROM `__migration_Chapter`;--> statement-breakpoint
