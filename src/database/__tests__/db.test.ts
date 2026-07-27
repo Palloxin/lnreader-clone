@@ -244,7 +244,8 @@ describe('production migrations', () => {
       expect(appliedMigrations.map(row => row.name)).toEqual([
         '20251222152612_past_mandrill',
         '20260612232322_normal_saracen',
-		'20260719143427_long_moondragon'
+        '20260719143427_long_moondragon',
+        '20260727081855_calm_chimera',
       ]);
     } finally {
       sqlite.close();
