@@ -36,11 +36,13 @@ const TIME_SPENT_MIGRATION_CREATED_AT = 1784471667000;
 const CHAPTER_COLUMN_MIGRATIONS = [
   {
     columnName: 'scanlator',
+    columnDefinition: 'text',
     migrationName: SCANLATOR_MIGRATION_NAME,
     createdAt: SCANLATOR_MIGRATION_CREATED_AT,
   },
   {
     columnName: 'timeSpent',
+    columnDefinition: 'integer DEFAULT 0',
     migrationName: TIME_SPENT_MIGRATION_NAME,
     createdAt: TIME_SPENT_MIGRATION_CREATED_AT,
   },
@@ -106,6 +108,32 @@ export const repairInterruptedNovelMigration = (
   }
 
   executor.executeSync("ALTER TABLE '__new_Novel' RENAME TO 'Novel';");
+};
+
+/**
+ * Brings a retained Chapter snapshot up to the current schema before an
+ * interrupted migration is retried. Older snapshots can predate columns that
+ * were added to Chapter, so restoring them with the current migration would
+ * otherwise fail with a column-count mismatch.
+ */
+export const repairChapterMigrationSnapshot = (executor: MigrationExecutor) => {
+  const snapshotColumns = executor.executeRawSync(
+    'PRAGMA table_info(__migration_Chapter);',
+  );
+
+  if (snapshotColumns.length === 0) {
+    return;
+  }
+
+  const snapshotColumnNames = new Set(snapshotColumns.map(row => row[1]));
+  for (const migration of CHAPTER_COLUMN_MIGRATIONS) {
+    if (snapshotColumnNames.has(migration.columnName)) {
+      continue;
+    }
+    executor.executeSync(
+      `ALTER TABLE '__migration_Chapter' ADD COLUMN '${migration.columnName}' ${migration.columnDefinition};`,
+    );
+  }
 };
 
 /**
@@ -232,6 +260,7 @@ export const initializeDatabase = () => {
   if (!initialization) {
     setPragmas(_db);
     repairInterruptedNovelMigration(_db);
+    repairChapterMigrationSnapshot(_db);
     repairMigrationHistory(_db);
     initialization = migrate(drizzleDb, getPendingMigrations(_db)).then(() => {
       runDatabaseBootstrap(_db);

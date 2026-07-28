@@ -6,6 +6,7 @@ import { schema } from '@database/schema';
 
 import {
   getPendingMigrations,
+  repairChapterMigrationSnapshot,
   repairInterruptedNovelMigration,
   repairMigrationHistory,
   runDatabaseBootstrap,
@@ -459,6 +460,126 @@ describe('production migrations', () => {
         sqlite.executeSync('SELECT novelId, categoryId FROM NovelCategory')
           .rows,
       ).toEqual([{ novelId: 1, categoryId: 1 }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('repairs an interrupted Chapter snapshot missing recent columns', async () => {
+    const sqlite = open({ name: ':memory:' });
+    (sqlite as any).executeAsync ??= sqlite.execute;
+    (sqlite as any).executeRawAsync ??= sqlite.executeRaw;
+    try {
+      createSchema(sqlite);
+      sqlite.executeSync(`
+        INSERT INTO Category (id, name, sort)
+        VALUES (1, 'Existing category', 1)
+      `);
+      sqlite.executeSync(`
+        INSERT INTO Novel (id, path, pluginId, name, inLibrary)
+        VALUES (1, '/interrupted', 'legacy-plugin', 'Interrupted novel', 1)
+      `);
+      sqlite.executeSync(`
+        INSERT INTO Chapter (
+          id,
+          novelId,
+          path,
+          name,
+          unread,
+          isDownloaded
+        )
+        VALUES (
+          1,
+          1,
+          '/interrupted/chapter-1',
+          'Chapter 1',
+          1,
+          1
+        )
+      `);
+      sqlite.executeSync(`
+        INSERT INTO NovelCategory (id, novelId, categoryId)
+        VALUES (1, 1, 1)
+      `);
+
+      sqlite.executeSync(
+        'CREATE TABLE __migration_Chapter AS SELECT * FROM Chapter',
+      );
+      sqlite.executeSync('ALTER TABLE Chapter ADD scanlator text');
+      sqlite.executeSync('ALTER TABLE Chapter ADD timeSpent integer DEFAULT 0');
+      sqlite.executeSync(
+        'CREATE TABLE __migration_Novel AS SELECT * FROM Novel',
+      );
+      sqlite.executeSync(
+        'CREATE TABLE __migration_NovelCategory AS SELECT * FROM NovelCategory',
+      );
+      sqlite.executeSync(`
+        CREATE TABLE __drizzle_migrations (
+          id INTEGER PRIMARY KEY,
+          hash text NOT NULL,
+          created_at numeric,
+          name text,
+          applied_at text
+        )
+      `);
+      sqlite.executeSync(`
+        INSERT INTO __drizzle_migrations (hash, created_at, name)
+        VALUES ('', 1766417172000, NULL)
+      `);
+
+      repairChapterMigrationSnapshot(sqlite);
+      repairMigrationHistory(sqlite);
+
+      const snapshotColumns = sqlite
+        .executeRawSync('PRAGMA table_info(__migration_Chapter)')
+        .map(column => column[1]);
+      expect(snapshotColumns).toEqual(
+        expect.arrayContaining(['scanlator', 'timeSpent']),
+      );
+
+      const drizzleDb = drizzle(sqlite, { schema });
+      await migrate(drizzleDb, getPendingMigrations(sqlite));
+
+      expect(
+        sqlite.executeSync('SELECT id, name, scanlator, timeSpent FROM Chapter')
+          .rows,
+      ).toEqual([
+        {
+          id: 1,
+          name: 'Chapter 1',
+          scanlator: null,
+          timeSpent: 0,
+        },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it('preserves snapshot columns while adding a missing timeSpent column', () => {
+    const sqlite = open({ name: ':memory:' });
+    try {
+      createSchema(sqlite);
+      sqlite.executeSync('ALTER TABLE Chapter ADD scanlator text');
+      sqlite.executeSync(`
+        INSERT INTO Novel (id, path, pluginId, name)
+        VALUES (1, '/snapshot', 'legacy-plugin', 'Snapshot novel')
+      `);
+      sqlite.executeSync(`
+        INSERT INTO Chapter (id, novelId, path, name, scanlator)
+        VALUES (1, 1, '/snapshot/chapter-1', 'Chapter 1', 'Group')
+      `);
+      sqlite.executeSync(
+        'CREATE TABLE __migration_Chapter AS SELECT * FROM Chapter',
+      );
+
+      repairChapterMigrationSnapshot(sqlite);
+
+      expect(
+        sqlite.executeSync(
+          'SELECT id, scanlator, timeSpent FROM __migration_Chapter',
+        ).rows,
+      ).toEqual([{ id: 1, scanlator: 'Group', timeSpent: 0 }]);
     } finally {
       sqlite.close();
     }

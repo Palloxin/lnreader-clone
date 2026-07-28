@@ -92,7 +92,42 @@ DELETE FROM `NovelCategory`;--> statement-breakpoint
 DELETE FROM `Chapter`;--> statement-breakpoint
 DROP TABLE IF EXISTS `Novel`;--> statement-breakpoint
 ALTER TABLE `__new_Novel` RENAME TO `Novel`;--> statement-breakpoint
-INSERT OR REPLACE INTO `Chapter` SELECT * FROM `__migration_Chapter`;--> statement-breakpoint
+INSERT OR REPLACE INTO `Chapter` (
+	`id`,
+	`novelId`,
+	`path`,
+	`name`,
+	`releaseTime`,
+	`bookmark`,
+	`unread`,
+	`readTime`,
+	`isDownloaded`,
+	`updatedTime`,
+	`chapterNumber`,
+	`page`,
+	`position`,
+	`progress`,
+	`scanlator`,
+	`timeSpent`
+)
+SELECT
+	`id`,
+	`novelId`,
+	`path`,
+	`name`,
+	`releaseTime`,
+	`bookmark`,
+	`unread`,
+	`readTime`,
+	`isDownloaded`,
+	`updatedTime`,
+	`chapterNumber`,
+	`page`,
+	`position`,
+	`progress`,
+	`scanlator`,
+	`timeSpent`
+FROM `__migration_Chapter`;--> statement-breakpoint
 INSERT OR REPLACE INTO `NovelCategory` SELECT * FROM `__migration_NovelCategory`;--> statement-breakpoint
 DROP TABLE `__migration_Novel`;--> statement-breakpoint
 DROP TABLE `__migration_Chapter`;--> statement-breakpoint
