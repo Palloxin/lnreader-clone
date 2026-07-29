@@ -42,6 +42,13 @@ type NativeBackgroundTasksModule = {
     description: string,
   ): Promise<void>;
   cancelLibraryUpdates(): Promise<void>;
+  scheduleAutomaticBackups(
+    intervalHours: number,
+    title: string,
+    description: string,
+    directoryUri: string,
+  ): Promise<void>;
+  cancelAutomaticBackups(): Promise<void>;
 };
 
 export default requireNativeModule<NativeBackgroundTasksModule>(

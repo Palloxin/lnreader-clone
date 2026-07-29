@@ -75,6 +75,16 @@ export interface StringMap {
   'appearanceScreen.theme.yotsuba': 'string';
   'appearanceScreen.theme.catppuccin': 'string';
   'appearanceScreen.theme.yinyang': 'string';
+  'backupScreen.automaticBackupFrequency': 'string';
+  'backupScreen.automaticBackupDescription': 'string';
+  'backupScreen.automaticBackupOff': 'string';
+  'backupScreen.automaticBackupEvery6Hours': 'string';
+  'backupScreen.automaticBackupEvery12Hours': 'string';
+  'backupScreen.automaticBackupDaily': 'string';
+  'backupScreen.automaticBackupEvery2Days': 'string';
+  'backupScreen.automaticBackupWeekly': 'string';
+  'backupScreen.automaticBackupLocation': 'string';
+  'backupScreen.lastAutomaticBackup': 'string';
   'backupScreen.backupName': 'string';
   'backupScreen.backupCreated': 'string';
   'backupScreen.backupCreatedWithWarnings': 'string';
@@ -95,7 +105,6 @@ export interface StringMap {
   'backupScreen.categoryFileWriteFailed': 'string';
   'backupScreen.createBackup': 'string';
   'backupScreen.createBackupDesc': 'string';
-  'backupScreen.createBackupWarning': 'string';
   'backupScreen.downloadingData': 'string';
   'backupScreen.downloadingDownloadedFiles': 'string';
   'backupScreen.failed': 'string';
@@ -154,7 +163,6 @@ export interface StringMap {
   'backupScreen.remoteBackup': 'string';
   'backupScreen.restoreBackup': 'string';
   'backupScreen.restoreBackupDesc': 'string';
-  'backupScreen.restoreLargeBackupsWarning': 'string';
   'backupScreen.restorinBackup': 'string';
   'backupScreen.restoringData': 'string';
   'backupScreen.restoringSelectedFiles': 'string';

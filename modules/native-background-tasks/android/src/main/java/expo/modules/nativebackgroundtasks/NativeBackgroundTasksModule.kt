@@ -168,6 +168,20 @@ class NativeBackgroundTasksModule : Module() {
         AsyncFunction("cancelLibraryUpdates") {
             LibraryUpdateScheduler.cancel(appContext.reactContext!!)
         }
+
+        AsyncFunction("scheduleAutomaticBackups") { intervalHours: Long, title: String, description: String, directoryUri: String ->
+            AutomaticBackupScheduler.schedule(
+                appContext.reactContext!!,
+                intervalHours,
+                title,
+                description,
+                directoryUri.ifEmpty { null },
+            )
+        }
+
+        AsyncFunction("cancelAutomaticBackups") {
+            AutomaticBackupScheduler.cancel(appContext.reactContext!!)
+        }
     }
 
     private suspend fun requireTask(taskId: String): BackgroundTaskEntity =

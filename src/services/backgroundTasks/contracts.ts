@@ -70,7 +70,11 @@ export type BackgroundTask =
   | { name: 'SELF_HOST_RESTORE'; data: SelfHostData }
   | {
       name: 'LOCAL_BACKUP';
-      data: { destinationUri: string; options?: BackupOptions };
+      data: {
+        destinationUri: string;
+        options?: BackupOptions;
+        automatic?: boolean;
+      };
     }
   | { name: 'LOCAL_RESTORE'; data: { sourceUri: string } }
   | { name: 'MIGRATE_NOVEL'; data: MigrateNovelData }
