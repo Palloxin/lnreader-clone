@@ -269,6 +269,7 @@ export interface StringMap {
   'common.globally': 'string';
   'common.install': 'string';
   'common.imported': 'string';
+  'common.later': 'string';
   'common.logout': 'string';
   'common.name': 'string';
   'common.newUpdateAvailable': 'string';
@@ -285,6 +286,7 @@ export interface StringMap {
   'common.save': 'string';
   'common.saved': 'string';
   'common.search': 'string';
+  'common.skipVersion': 'string';
   'common.searchFor': 'string';
   'common.searchResults': 'string';
   'common.settings': 'string';
