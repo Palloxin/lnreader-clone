@@ -12,6 +12,7 @@ import { switchNovelToLibraryQuery } from '@database/queries/NovelQueries';
 import {
   BACKGROUND_TASKS_STORE_KEY,
   BackgroundTask,
+  getDownloadProgressKey,
   QueuedBackgroundTask,
 } from '@services/backgroundTasks';
 import { useMMKVObject } from 'react-native-mmkv';
@@ -120,6 +121,30 @@ export const useLibrary = (): UseLibraryReturnType => {
   const [taskQueue] = useMMKVObject<(BackgroundTask | QueuedBackgroundTask)[]>(
     BACKGROUND_TASKS_STORE_KEY,
   );
+  const downloadProgressKey = useMemo(
+    () => getDownloadProgressKey(taskQueue),
+    [taskQueue],
+  );
+  const previousDownloadProgressKeyRef = useRef(downloadProgressKey);
+  const hadDownloadTasksRef = useRef(downloadProgressKey.length > 0);
+
+  useEffect(() => {
+    if (downloadProgressKey.length > 0) {
+      if (
+        hadDownloadTasksRef.current &&
+        previousDownloadProgressKeyRef.current !== downloadProgressKey
+      ) {
+        void getLibrary();
+      }
+      hadDownloadTasksRef.current = true;
+    } else if (hadDownloadTasksRef.current) {
+      hadDownloadTasksRef.current = false;
+      void getLibrary();
+    }
+
+    previousDownloadProgressKeyRef.current = downloadProgressKey;
+  }, [downloadProgressKey, getLibrary]);
+
   const restoreTasksCount = useMemo(
     () =>
       taskQueue?.filter(t => {

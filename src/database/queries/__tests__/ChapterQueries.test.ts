@@ -509,9 +509,14 @@ describe('ChapterQueries', () => {
       await insertTestChapter(testDb, novelId, {
         isDownloaded: true,
       });
+      const untouchedChapterId = await insertTestChapter(testDb, novelId, {
+        isDownloaded: true,
+      });
 
       const chapters = await getNovelChapters(novelId);
-      const downloadedChapters = chapters.filter(c => c.isDownloaded);
+      const downloadedChapters = chapters.filter(
+        c => c.isDownloaded && c.id !== untouchedChapterId,
+      );
       await deleteDownloads(
         downloadedChapters.map(c => ({
           id: c.id,
@@ -521,7 +526,14 @@ describe('ChapterQueries', () => {
       );
 
       const updatedChapters = await getNovelChapters(novelId);
-      expect(updatedChapters.every(c => c.isDownloaded === false)).toBe(true);
+      expect(
+        updatedChapters
+          .filter(c => c.id !== untouchedChapterId)
+          .every(c => c.isDownloaded === false),
+      ).toBe(true);
+      expect(
+        updatedChapters.find(c => c.id === untouchedChapterId)?.isDownloaded,
+      ).toBe(true);
     });
   });
 
@@ -729,6 +741,18 @@ describe('ChapterQueries', () => {
       expect(result).toHaveLength(2);
       expect(result.every(c => c.isDownloaded === false)).toBe(true);
     });
+
+    it('returns chapters in reading order', async () => {
+      const testDb = getTestDb();
+      const novelId = await insertTestNovel(testDb, { inLibrary: true });
+      await insertTestChapter(testDb, novelId, { position: 3 });
+      await insertTestChapter(testDb, novelId, { position: 1 });
+      await insertTestChapter(testDb, novelId, { position: 2 });
+
+      const result = await getAllUndownloadedChapters(novelId);
+
+      expect(result.map(chapter => chapter.position)).toEqual([1, 2, 3]);
+    });
   });
 
   describe('getAllUndownloadedAndUnreadChapters', () => {
@@ -753,6 +777,17 @@ describe('ChapterQueries', () => {
       expect(result).toHaveLength(1);
       expect(result[0].isDownloaded).toBe(false);
       expect(result[0].unread).toBe(true);
+    });
+
+    it('returns unread chapters in reading order', async () => {
+      const testDb = getTestDb();
+      const novelId = await insertTestNovel(testDb, { inLibrary: true });
+      await insertTestChapter(testDb, novelId, { position: 5, unread: true });
+      await insertTestChapter(testDb, novelId, { position: 2, unread: true });
+
+      const result = await getAllUndownloadedAndUnreadChapters(novelId);
+
+      expect(result.map(chapter => chapter.position)).toEqual([2, 5]);
     });
   });
 

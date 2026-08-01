@@ -6,6 +6,7 @@ const mockUseNovelActions = jest.fn();
 const mockDownloadChapter = jest.fn();
 let mockDownloadingChapterIds = new Set<number>();
 let mockDownloadingNovelIds = new Set<number>();
+let mockDownloadQueue: any[] = [];
 
 jest.mock('../../NovelContext', () => ({
   useNovelValue: (key: string) => mockUseNovelValue(key),
@@ -20,6 +21,7 @@ jest.mock('@hooks/persisted', () => ({
     refreshNovelMetadata: false,
   }),
   useDownload: () => ({
+    downloadQueue: mockDownloadQueue,
     downloadingChapterIds: mockDownloadingChapterIds,
     downloadingNovelIds: mockDownloadingNovelIds,
     downloadChapter: mockDownloadChapter,
@@ -283,6 +285,7 @@ describe('NovelScreenList (task 12 context boundary cutover)', () => {
     jest.clearAllMocks();
     mockDownloadingChapterIds = new Set<number>();
     mockDownloadingNovelIds = new Set<number>();
+    mockDownloadQueue = [];
   });
 
   it('uses novelStore selector actions', () => {
@@ -346,6 +349,51 @@ describe('NovelScreenList (task 12 context boundary cutover)', () => {
 
     expect(store.state.getChapters).toHaveBeenCalledTimes(1);
     expect(store.state.updateChapter).not.toHaveBeenCalled();
+  });
+
+  it('reconciles chapter state as a novel download makes progress', () => {
+    const store = createStore();
+    mockDownloadingNovelIds = new Set<number>([baseNovel.id]);
+    mockDownloadQueue = [
+      {
+        id: 'download-1',
+        task: {
+          name: 'DOWNLOAD_CHAPTER',
+          data: { novelId: baseNovel.id, chapters: [] },
+        },
+        state: 'running',
+        meta: { progress: 0, isRunning: true },
+      },
+    ];
+    wireStoreSelectors(store);
+
+    const view = renderList();
+    expect(store.state.getChapters).not.toHaveBeenCalled();
+
+    mockDownloadQueue = [
+      {
+        ...mockDownloadQueue[0],
+        meta: { progress: 0.5, isRunning: true },
+      },
+    ];
+    view.rerender(
+      <NovelScreenList
+        headerOpacity={headerOpacity as any}
+        listRef={listRef as any}
+        navigation={navigation}
+        routeBaseNovel={{
+          name: 'Route Novel',
+          path: '/novel/test',
+          pluginId: 'plugin.test',
+        }}
+        selected={[]}
+        setSelected={jest.fn()}
+        onRefresh={onRefresh}
+        updating={false}
+      />,
+    );
+
+    expect(store.state.getChapters).toHaveBeenCalledTimes(1);
   });
 
   it('uses selector-backed page navigation action from novelStore', () => {
