@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { getCategoriesFromDb } from '@database/queries/CategoryQueries';
-import { getLibraryNovelsFromDb } from '@database/queries/LibraryQueries';
+import {
+  getLibraryNovelsFromDb,
+  getLibraryNovelsQuery,
+} from '@database/queries/LibraryQueries';
+import { useLiveQuery } from '@database/manager/liveQuery';
 
 import { Category, NovelInfo } from '@database/types';
 
@@ -43,6 +47,13 @@ export const useLibrary = (): UseLibraryReturnType => {
   const [categories, setCategories] = useState<ExtendedCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
+
+  const libraryQuery = useMemo(
+    () =>
+      getLibraryNovelsQuery(sortOrder, filter, searchText, downloadedOnlyMode),
+    [downloadedOnlyMode, filter, searchText, sortOrder],
+  );
+  useLiveQuery(libraryQuery, [{ table: 'Novel' }], setLibrary);
 
   const refreshCategories = useCallback(async () => {
     const dbCategories = await getCategoriesFromDb();
