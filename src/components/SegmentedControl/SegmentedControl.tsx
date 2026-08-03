@@ -7,6 +7,11 @@ import {
   GestureResponderEvent,
 } from 'react-native';
 import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
+import {
+  SegmentedButton,
+  SingleChoiceSegmentedButtonRow,
+} from '@expo/ui/jetpack-compose';
+import { ExpoHost, getSegmentedButtonColors } from '@components/ExpoUI';
 import { ThemeColors } from '@theme/types';
 
 export interface SegmentedControlOption<T extends string = string> {
@@ -18,7 +23,7 @@ export interface SegmentedControlOption<T extends string = string> {
 export interface SegmentedControlProps<T extends string = string> {
   options: SegmentedControlOption<T>[];
   value: T;
-  onChange: (value: T, event: GestureResponderEvent) => void;
+  onChange: (value: T, event?: GestureResponderEvent) => void;
   theme: ThemeColors;
   showCheckIcon?: boolean;
   showLabels?: boolean;
@@ -32,6 +37,39 @@ export function SegmentedControl<T extends string = string>({
   showCheckIcon = true,
   showLabels = true,
 }: SegmentedControlProps<T>) {
+  /**
+   * Compose's SegmentedButton only exposes a `Label` slot and always shows
+   * Material 3's default check icon on the selected segment, so icon-only
+   * controls (and the unsupported labels-without-check combination) keep the
+   * previous React Native implementation below.
+   */
+  const useComposeSegmentedButtons =
+    showLabels && showCheckIcon && !options.some(option => option.icon);
+
+  if (useComposeSegmentedButtons) {
+    const colors = getSegmentedButtonColors(theme);
+    return (
+      <ExpoHost
+        theme={theme}
+        style={styles.host}
+        matchContents={{ vertical: true }}
+      >
+        <SingleChoiceSegmentedButtonRow>
+          {options.map(option => (
+            <SegmentedButton
+              key={option.value}
+              selected={value === option.value}
+              onClick={() => onChange(option.value)}
+              colors={colors}
+            >
+              <SegmentedButton.Label>{option.label}</SegmentedButton.Label>
+            </SegmentedButton>
+          ))}
+        </SingleChoiceSegmentedButtonRow>
+      </ExpoHost>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {options.map((option, index) => {
@@ -99,6 +137,9 @@ export function SegmentedControl<T extends string = string>({
 }
 
 const styles = StyleSheet.create({
+  host: {
+    width: '100%',
+  },
   container: {
     flexDirection: 'row',
     height: 40,
