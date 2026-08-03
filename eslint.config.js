@@ -59,4 +59,22 @@ module.exports = defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+
+  {
+    files: ['src/screens/**/*.{ts,tsx}', 'src/navigators/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@expo/ui', '@expo/ui/*'],
+              message:
+                'Screens must not import @expo/ui directly. Use an LNReader component wrapper (e.g. src/components/ExpoUI) instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
