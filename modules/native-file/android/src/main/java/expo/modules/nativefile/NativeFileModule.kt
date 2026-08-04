@@ -292,6 +292,9 @@ class NativeFileModule : Module() {
             coroutineScope.launch {
                 try {
                     val file = File(filepath)
+                    if (file.exists() && !file.isDirectory) {
+                        throw IOException("A file already exists at the directory path")
+                    }
                     if (!file.exists() && !file.mkdirs()) {
                         throw IOException("Directory could not be created")
                     }
@@ -383,14 +386,21 @@ class NativeFileModule : Module() {
             }
         }
 
+        Constant("DocumentDirectoryPath") {
+            val context = reactContext ?: appContext.currentActivity
+            context?.filesDir?.absolutePath.orEmpty()
+        }
+
         Constant("ExternalDirectoryPath") {
-            val externalDirectory = reactContext?.getExternalFilesDir(null)
-            externalDirectory?.absolutePath ?: ""
+            val context = reactContext ?: appContext.currentActivity
+            val directory = context?.getExternalFilesDir(null) ?: context?.filesDir
+            directory?.absolutePath.orEmpty()
         }
 
         Constant("ExternalCachesDirectoryPath") {
-            val externalCachesDirectory = reactContext?.externalCacheDir
-            externalCachesDirectory?.absolutePath ?: ""
+            val context = reactContext ?: appContext.currentActivity
+            val directory = context?.externalCacheDir ?: context?.cacheDir
+            directory?.absolutePath.orEmpty()
         }
     }
 

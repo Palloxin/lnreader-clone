@@ -12,6 +12,7 @@ export type DirectorySelection = {
 };
 
 type NativeFileModule = {
+  DocumentDirectoryPath: string;
   ExternalDirectoryPath: string;
   ExternalCachesDirectoryPath: string;
   createDocument(filename: string, mimeType: string): Promise<string>;

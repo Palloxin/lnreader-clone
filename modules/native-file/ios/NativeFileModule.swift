@@ -52,6 +52,11 @@ public class NativeFileModule: Module {
       promise.reject("NOT_IMPLEMENTED", "downloadFile is not implemented on iOS")
     }
 
+    Constant("DocumentDirectoryPath") {
+      let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
+      return paths.first ?? ""
+    }
+
     Constant("ExternalDirectoryPath") {
       let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
       return paths.first ?? ""
