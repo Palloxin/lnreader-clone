@@ -223,7 +223,7 @@ void parse_opf_from_folder(const std::string &base_dir,
         {
             meta_out.cssPaths.push_back(join(opf_dir, href));
         }
-        else if (media_type == "image/jpeg" || media_type == "image/png" || media_type == "image/jpg")
+        else if (media_type.rfind("image/", 0) == 0)
         {
             meta_out.imagePaths.push_back(join(opf_dir, href));
         }
