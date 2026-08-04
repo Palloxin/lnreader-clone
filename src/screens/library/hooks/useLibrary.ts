@@ -27,6 +27,7 @@ export type UseLibraryReturnType = {
   library: NovelInfo[];
   categories: ExtendedCategory[];
   isLoading: boolean;
+  error?: unknown;
   setCategories: React.Dispatch<React.SetStateAction<ExtendedCategory[]>>;
   refreshCategories: () => Promise<void>;
   setLibrary: React.Dispatch<React.SetStateAction<NovelInfo[]>>;
@@ -46,7 +47,11 @@ export const useLibrary = (): UseLibraryReturnType => {
   const [library, setLibrary] = useState<NovelInfo[]>([]);
   const [categories, setCategories] = useState<ExtendedCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>();
   const [searchText, setSearchText] = useState('');
+  const hasLoadedRef = useRef(false);
+  const hasErrorRef = useRef(false);
+  const loadRequestIdRef = useRef(0);
 
   const libraryQuery = useMemo(
     () =>
@@ -79,17 +84,38 @@ export const useLibrary = (): UseLibraryReturnType => {
   }, []);
 
   const getLibrary = useCallback(async () => {
-    if (searchText) {
+    const requestId = ++loadRequestIdRef.current;
+    if (!hasLoadedRef.current || hasErrorRef.current || searchText) {
       setIsLoading(true);
     }
+    hasErrorRef.current = false;
+    setError(undefined);
 
-    const [, novels] = await Promise.all([
-      refreshCategories(),
-      getLibraryNovelsFromDb(sortOrder, filter, searchText, downloadedOnlyMode),
-    ]);
+    try {
+      const [, novels] = await Promise.all([
+        refreshCategories(),
+        getLibraryNovelsFromDb(
+          sortOrder,
+          filter,
+          searchText,
+          downloadedOnlyMode,
+        ),
+      ]);
 
-    setLibrary(novels);
-    setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLibrary(novels);
+      }
+    } catch (loadError) {
+      if (requestId === loadRequestIdRef.current) {
+        hasErrorRef.current = true;
+        setError(loadError);
+      }
+    } finally {
+      if (requestId === loadRequestIdRef.current) {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
+      }
+    }
   }, [downloadedOnlyMode, filter, refreshCategories, searchText, sortOrder]);
 
   const libraryLookup = useMemo(() => {
@@ -125,9 +151,11 @@ export const useLibrary = (): UseLibraryReturnType => {
     [downloadedOnlyMode, filter, refreshCategories, searchText, sortOrder],
   );
 
-  useFocusEffect(() => {
-    getLibrary();
-  });
+  useFocusEffect(
+    useCallback(() => {
+      void getLibrary();
+    }, [getLibrary]),
+  );
 
   const [taskQueue] = useMMKVObject<(BackgroundTask | QueuedBackgroundTask)[]>(
     BACKGROUND_TASKS_STORE_KEY,
@@ -186,6 +214,7 @@ export const useLibrary = (): UseLibraryReturnType => {
     library,
     categories,
     isLoading,
+    error,
     setLibrary,
     setCategories,
     refreshCategories,

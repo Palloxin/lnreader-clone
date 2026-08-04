@@ -1,6 +1,11 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
-import { getLibraryNovelsQuery } from '@database/queries/LibraryQueries';
+import {
+  getLibraryNovelsFromDb,
+  getLibraryNovelsQuery,
+} from '@database/queries/LibraryQueries';
+import { getCategoriesFromDb } from '@database/queries/CategoryQueries';
 import { NovelInfo } from '@database/types';
 import { useLiveQuery } from '@database/manager/liveQuery';
 import { useLibrary } from '../useLibrary';
@@ -49,8 +54,21 @@ const mockGetLibraryNovelsQuery = getLibraryNovelsQuery as jest.MockedFunction<
 const mockUseLiveQuery = useLiveQuery as jest.MockedFunction<
   typeof useLiveQuery
 >;
+const mockGetLibraryNovelsFromDb =
+  getLibraryNovelsFromDb as jest.MockedFunction<typeof getLibraryNovelsFromDb>;
+const mockGetCategoriesFromDb = getCategoriesFromDb as jest.MockedFunction<
+  typeof getCategoriesFromDb
+>;
+const mockUseFocusEffect = useFocusEffect as jest.MockedFunction<
+  typeof useFocusEffect
+>;
 
 describe('useLibrary', () => {
+  beforeEach(() => {
+    mockGetLibraryNovelsFromDb.mockResolvedValue([]);
+    mockGetCategoriesFromDb.mockResolvedValue([]);
+  });
+
   it('updates the library when the reactive Novel query changes', () => {
     let onLibraryChange: ((novels: NovelInfo[]) => void) | undefined;
     mockUseLiveQuery.mockImplementation((_query, fireOn, callback) => {
@@ -77,5 +95,27 @@ describe('useLibrary', () => {
       false,
     );
     expect(result.current.library).toEqual([updatedNovel]);
+  });
+
+  it('stops loading and exposes database errors', async () => {
+    const databaseError = new Error('Failed to load categories');
+    mockGetCategoriesFromDb.mockRejectedValueOnce(databaseError);
+    mockUseFocusEffect.mockImplementationOnce(callback => {
+      callback();
+    });
+
+    const { result } = renderHook(useLibrary);
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).toBe(databaseError);
+  });
+
+  it('keeps the focus callback stable across renders', () => {
+    const { rerender } = renderHook(useLibrary);
+    const firstFocusCallback = mockUseFocusEffect.mock.calls.at(-1)?.[0];
+
+    rerender(undefined);
+
+    expect(mockUseFocusEffect.mock.calls.at(-1)?.[0]).toBe(firstFocusCallback);
   });
 });
