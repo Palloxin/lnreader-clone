@@ -43,9 +43,11 @@ int main(int argc, char** argv) {
 <package version="3.0">
   <metadata>
     <dc:title>Image fixture</dc:title>
+    <meta name="cover" content="cover-document"/>
   </metadata>
   <manifest>
     <item id="nav" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    <item id="cover-document" href="Text/cover.xhtml" media-type="application/xhtml+xml"/>
     <item id="chapter" href="Text/chapter.xhtml" media-type="application/xhtml+xml"/>
     <item id="jpeg" href="Images/cover.jpg" media-type="image/jpeg"/>
     <item id="png" href="Images/illustration.png" media-type="image/png"/>
@@ -54,6 +56,7 @@ int main(int argc, char** argv) {
     <item id="svg" href="Images/illustration.svg" media-type="image/svg+xml"/>
   </manifest>
   <spine>
+    <itemref idref="cover-document"/>
     <itemref idref="chapter"/>
   </spine>
 </package>)xml");
@@ -71,6 +74,9 @@ int main(int argc, char** argv) {
 </ncx>)xml");
   writeFile(fixtureDirectory / "OEBPS/Text/chapter.xhtml",
             "<html><body>Chapter</body></html>");
+  writeFile(
+      fixtureDirectory / "OEBPS/Text/cover.xhtml",
+      R"xml(<html><body><svg xmlns:xlink="http://www.w3.org/1999/xlink"><image xlink:href="../Images/cover.jpg"/></svg></body></html>)xml");
 
   const EpubMetadata metadata = parseEpub(fixtureDirectory.string());
   const std::filesystem::path imageDirectory = fixtureDirectory / "OEBPS/Images";
@@ -85,6 +91,10 @@ int main(int argc, char** argv) {
                       imageDirectory / "illustration.gif"));
   assert(containsPath(metadata.imagePaths,
                       imageDirectory / "illustration.svg"));
+  assert(metadata.cover == (imageDirectory / "cover.jpg").string());
+  assert(metadata.chapters.size() == 2);
+  assert(metadata.chapters.front().path ==
+         (fixtureDirectory / "OEBPS/Text/cover.xhtml").string());
 
   return 0;
 }
