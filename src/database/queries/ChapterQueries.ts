@@ -799,13 +799,13 @@ export const getUpdatedOverviewFromDb = async () =>
     .orderBy(desc(sql`update_date`), novelSchema.id)
     .all();
 
-export const getDetailedUpdatesFromDb = async (
+export const getDetailedUpdatesQuery = (
   novelId: number,
   onlyDownloadableChapters?: boolean,
   updateDate?: string,
   limit?: number,
-): Promise<Update[]> => {
-  return dbManager
+) =>
+  dbManager
     .select({
       ...getColumns(chapterSchema),
       pluginId: novelSchema.pluginId,
@@ -828,9 +828,20 @@ export const getDetailedUpdatesFromDb = async (
       ),
     )
     .orderBy(desc(chapterSchema.updatedTime))
-    .limit(limit ?? -1)
-    .all();
-};
+    .limit(limit ?? -1);
+
+export const getDetailedUpdatesFromDb = (
+  novelId: number,
+  onlyDownloadableChapters?: boolean,
+  updateDate?: string,
+  limit?: number,
+): Promise<Update[]> =>
+  getDetailedUpdatesQuery(
+    novelId,
+    onlyDownloadableChapters,
+    updateDate,
+    limit,
+  ).all();
 
 export const isChapterDownloaded = (chapterId: number): boolean => {
   const result = dbManager.getSync(
