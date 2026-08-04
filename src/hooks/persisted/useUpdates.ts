@@ -8,7 +8,6 @@ import { UpdateOverview } from '@database/types';
 import { useMMKVBoolean, useMMKVString } from 'react-native-mmkv';
 import dayjs from 'dayjs';
 import { parseChapterNumber } from '@utils/parseChapterNumber';
-import { useFocusEffect } from '@react-navigation/native';
 
 export const SHOW_LAST_UPDATE_TIME = 'SHOW_LAST_UPDATE_TIME';
 export const LAST_UPDATE_TIME = 'LAST_UPDATE_TIME';
@@ -78,15 +77,6 @@ export const useUpdates = () => {
       );
     }
   }, [lastUpdateTime, setLastUpdateTime]);
-
-  useFocusEffect(
-    useCallback(() => {
-      //? Push updates to the end of the stack to avoid lag
-      const timer = setTimeout(() => void getUpdates(), 0);
-
-      return () => clearTimeout(timer);
-    }, [getUpdates]),
-  );
 
   return useMemo(
     () => ({
