@@ -28,6 +28,7 @@ import NativeFile from '@modules/native-file';
 import { ChapterFilterKey, ChapterOrderKey } from '@database/constants';
 import { chapterFilterToSQL, chapterOrderToSQL } from '@database/utils/parser';
 import { castInt } from '@database/manager/manager';
+import { createNovelTriggerQueryUpdate } from '@database/queryStrings/triggers';
 
 // #region Mutations
 
@@ -366,7 +367,15 @@ export const markPreviousChaptersUnread = async (
 
 export const clearUpdates = async (): Promise<void> => {
   await dbManager.write(async tx => {
+    // The chapter update trigger recalculates novel aggregates once per row.
+    // Bypass it for this database-wide operation and update the one affected
+    // aggregate in bulk instead.
+    await tx.run(
+      sql.raw('DROP TRIGGER IF EXISTS update_novel_stats_on_update'),
+    );
     await tx.update(chapterSchema).set({ updatedTime: null }).run();
+    await tx.update(novelSchema).set({ lastUpdatedAt: null }).run();
+    await tx.run(sql.raw(createNovelTriggerQueryUpdate));
   });
 };
 

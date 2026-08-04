@@ -7,6 +7,8 @@
 import './mockDb';
 import { setupTestDatabase, getTestDb, teardownTestDatabase } from './setup';
 import { insertTestNovel, insertTestChapter, clearAllTables } from './testData';
+import { chapterSchema } from '@database/schema';
+import { eq } from 'drizzle-orm';
 
 import {
   markChapterRead,
@@ -661,10 +663,10 @@ describe('ChapterQueries', () => {
   });
 
   describe('clearUpdates', () => {
-    it('should clear all update timestamps', async () => {
+    it('should clear update timestamps and preserve the update trigger', async () => {
       const testDb = getTestDb();
       const novelId = await insertTestNovel(testDb, { inLibrary: true });
-      await insertTestChapter(testDb, novelId, {
+      const chapterId = await insertTestChapter(testDb, novelId, {
         updatedTime: '2024-01-01',
       });
       await insertTestChapter(testDb, novelId, {
@@ -675,6 +677,25 @@ describe('ChapterQueries', () => {
 
       const chapters = await getNovelChapters(novelId);
       expect(chapters.every(c => c.updatedTime === null)).toBe(true);
+      expect(
+        testDb.sqlite.executeSync(
+          'SELECT lastUpdatedAt FROM Novel WHERE id = ?',
+          [novelId],
+        ).rows[0]?.lastUpdatedAt,
+      ).toBeNull();
+
+      await testDb.drizzleDb
+        .update(chapterSchema)
+        .set({ updatedTime: '2024-02-01' })
+        .where(eq(chapterSchema.id, chapterId))
+        .run();
+
+      expect(
+        testDb.sqlite.executeSync(
+          'SELECT lastUpdatedAt FROM Novel WHERE id = ?',
+          [novelId],
+        ).rows[0]?.lastUpdatedAt,
+      ).toBe('2024-02-01');
     });
   });
 
