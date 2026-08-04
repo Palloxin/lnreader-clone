@@ -1291,6 +1291,7 @@ describe('ChapterQueries', () => {
       const result = await getUpdatedOverviewFromDb();
 
       expect(result.length).toBeGreaterThanOrEqual(1);
+      expect(result[0]?.inLibrary).toBe(true);
     });
   });
 
