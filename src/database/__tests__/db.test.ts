@@ -195,6 +195,43 @@ describe('runDatabaseBootstrap', () => {
 });
 
 describe('production migrations', () => {
+  it('rebuilds novel counters with one scan of the Chapter snapshot', () => {
+    const sqlite = open({ name: ':memory:' });
+    try {
+      createSchema(sqlite);
+
+      const statements = migrations.migrations['20260727081855_calm_chimera']
+        .split('--> statement-breakpoint')
+        .map((statement: string) => statement.trim())
+        .filter(Boolean);
+      const counterStatementIndex = statements.findIndex((statement: string) =>
+        statement.startsWith('INSERT INTO `__new_Novel`'),
+      );
+
+      expect(counterStatementIndex).toBeGreaterThan(0);
+      for (const statement of statements.slice(0, counterStatementIndex)) {
+        sqlite.executeSync(statement);
+      }
+
+      const queryPlan = sqlite
+        .executeRawSync(
+          `EXPLAIN QUERY PLAN ${statements[counterStatementIndex]}`,
+        )
+        .map(row => String(row[3]));
+
+      expect(
+        queryPlan.filter(detail => detail.includes('SCAN __migration_Chapter')),
+      ).toHaveLength(1);
+      expect(queryPlan).not.toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('CORRELATED SCALAR SUBQUERY'),
+        ]),
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it('can run after test schema exists', async () => {
     const sqlite = open({ name: ':memory:' });
     (sqlite as any).executeAsync ??= sqlite.execute;
