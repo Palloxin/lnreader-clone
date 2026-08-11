@@ -128,4 +128,5 @@ export interface BackupCategory extends Category {
 export interface Repository {
   id: number;
   url: string;
+  enabled: boolean;
 }

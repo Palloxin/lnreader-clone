@@ -7,7 +7,7 @@ import reverse from 'lodash-es/reverse';
 import uniqBy from 'lodash-es/uniqBy';
 import { encode, decode } from 'urlencode';
 
-import { getRepositoriesFromDb } from '@database/queries/RepositoryQueries';
+import { getEnabledRepositoriesFromDb } from '@database/queries/RepositoryQueries';
 import { getUserAgent } from '@hooks/persisted/useUserAgent';
 import { newer } from '@utils/compareVersion';
 import NativeFile from '@modules/native-file';
@@ -176,7 +176,7 @@ const updatePlugin = async (plugin: PluginItem) => {
 
 const fetchPlugins = async (): Promise<PluginItem[]> => {
   const allPlugins: PluginItem[] = [];
-  const allRepositories = await getRepositoriesFromDb();
+  const allRepositories = await getEnabledRepositoriesFromDb();
 
   const repoPluginsRes = await Promise.allSettled(
     allRepositories.map(({ url }) => fetch(url).then(res => res.json())),

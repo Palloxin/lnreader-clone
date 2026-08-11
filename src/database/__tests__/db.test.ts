@@ -370,6 +370,10 @@ describe('production migrations', () => {
         INSERT INTO NovelCategory (id, novelId, categoryId)
         VALUES (1, 1, 1)
       `);
+      sqlite.executeSync(`
+        INSERT INTO Repository (id, url)
+        VALUES (1, 'https://example.com/plugins.min.json')
+      `);
 
       const drizzleDb = drizzle(sqlite, { schema });
       await migrate(drizzleDb, getPendingMigrations(sqlite));
@@ -408,6 +412,15 @@ describe('production migrations', () => {
         sqlite.executeSync('SELECT id, novelId, categoryId FROM NovelCategory')
           .rows,
       ).toEqual([{ id: 1, novelId: 1, categoryId: 1 }]);
+      expect(
+        sqlite.executeSync('SELECT id, url, enabled FROM Repository').rows,
+      ).toEqual([
+        {
+          id: 1,
+          url: 'https://example.com/plugins.min.json',
+          enabled: 1,
+        },
+      ]);
     } finally {
       sqlite.close();
     }
@@ -774,6 +787,7 @@ describe('production migrations', () => {
         '20260612232322_normal_saracen',
         '20260719143427_long_moondragon',
         '20260727081855_calm_chimera',
+        '20260811071655_parched_human_torch',
       ]);
     } finally {
       sqlite.close();

@@ -11,6 +11,7 @@ interface ConfirmationDialogProps {
   confirmLabel: string;
   cancelLabel?: string;
   confirmTone?: DialogActionTone;
+  confirmFirst?: boolean;
   onConfirm: () => void | Promise<void>;
   onDismiss: () => void;
 }
@@ -22,6 +23,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   confirmLabel,
   cancelLabel = getString('common.cancel'),
   confirmTone = 'danger',
+  confirmFirst = false,
   onDismiss,
   onConfirm,
 }) => {
@@ -37,6 +39,23 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     }
   };
 
+  const cancelAction = (
+    <Dialog.Action key="cancel" disabled={isConfirming} onPress={onDismiss}>
+      {cancelLabel}
+    </Dialog.Action>
+  );
+  const confirmAction = (
+    <Dialog.Action
+      key="confirm"
+      disabled={isConfirming}
+      loading={isConfirming}
+      tone={confirmTone}
+      onPress={handleConfirm}
+    >
+      {confirmLabel}
+    </Dialog.Action>
+  );
+
   return (
     <Dialog.Root
       visible={visible}
@@ -47,17 +66,9 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
         {message ? <Dialog.Description>{message}</Dialog.Description> : null}
       </Dialog.Header>
       <Dialog.Actions>
-        <Dialog.Action disabled={isConfirming} onPress={onDismiss}>
-          {cancelLabel}
-        </Dialog.Action>
-        <Dialog.Action
-          disabled={isConfirming}
-          loading={isConfirming}
-          tone={confirmTone}
-          onPress={handleConfirm}
-        >
-          {confirmLabel}
-        </Dialog.Action>
+        {confirmFirst
+          ? [confirmAction, cancelAction]
+          : [cancelAction, confirmAction]}
       </Dialog.Actions>
     </Dialog.Root>
   );

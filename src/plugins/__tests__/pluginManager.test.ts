@@ -1,6 +1,8 @@
 import NativeFile from '@modules/native-file';
+import { getEnabledRepositoriesFromDb } from '@database/queries/RepositoryQueries';
 import { getMMKVObject, setMMKVObject } from '@utils/mmkv/mmkv';
 import {
+  fetchPlugins,
   getPlugin,
   initializeInstalledPlugins,
   installPlugin,
@@ -10,7 +12,7 @@ import {
 import type { PluginItem } from '../types';
 
 jest.mock('@database/queries/RepositoryQueries', () => ({
-  getRepositoriesFromDb: jest.fn().mockResolvedValue([]),
+  getEnabledRepositoriesFromDb: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('@noble/ciphers/aes.js', () => ({
@@ -50,6 +52,28 @@ const pluginCode = (id: string) => `exports.default = {
   version: '1.0.0',
   site: 'https://example.com'
 };`;
+
+describe('fetchPlugins', () => {
+  it('fetches only the repositories selected by the enabled-repository query', async () => {
+    const repositoryUrl = 'https://example.com/plugins.min.json';
+    const plugin = {
+      id: 'available',
+      name: 'Available plugin',
+    } as PluginItem;
+    jest
+      .mocked(getEnabledRepositoriesFromDb)
+      .mockResolvedValueOnce([{ id: 1, url: repositoryUrl, enabled: true }]);
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      json: async () => [plugin],
+    } as Response);
+
+    await expect(fetchPlugins()).resolves.toEqual([plugin]);
+
+    expect(getEnabledRepositoriesFromDb).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith(repositoryUrl);
+    fetchSpy.mockRestore();
+  });
+});
 
 describe('reloadInstalledPlugins', () => {
   it('loads restored bundles and removes registry entries that cannot load', async () => {
@@ -99,6 +123,7 @@ describe('initializeInstalledPlugins', () => {
       throw new Error('Missing plugin bundle');
     });
     const fetchSpy = jest.spyOn(global, 'fetch');
+    fetchSpy.mockClear();
 
     await initializeInstalledPlugins();
 

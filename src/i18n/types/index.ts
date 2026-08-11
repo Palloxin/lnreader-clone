@@ -246,7 +246,11 @@ export interface StringMap {
   'categories.local': 'string';
   'categories.setCategories': 'string';
   'categories.setModalEmptyMsg': 'string';
+  'repositories.disable': 'string';
+  'repositories.disableTitle': 'string';
+  'repositories.disableWarning': 'string';
   'repositories.emptyMsg': 'string';
+  'repositories.toggle': 'string';
   'common.about': 'string';
   'common.add': 'string';
   'common.all': 'string';
@@ -657,7 +661,7 @@ export interface StringMap {
   'time.hours.other': 'string';
   'time.days.one': 'string';
   'time.days.other': 'string';
-'customCodeSettings.textManipulation': 'string';
+  'customCodeSettings.textManipulation': 'string';
   'customCodeSettings.codeSnippets': 'string';
   'customCodeSettings.cssSnippets': 'string';
   'customCodeSettings.javascriptSnippets': 'string';
