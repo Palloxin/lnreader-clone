@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include "EpubChapterNormalizer.hpp"
 #include "EpubParser.hpp"
 #include <sstream>
 
@@ -344,6 +345,7 @@ void parse_opf_from_folder(const std::string &base_dir,
             std::string chapter_href = id_to_href[idref];
             Chapter chapter;
             chapter.path = join(opf_dir, chapter_href);
+            normalizeEpubChapter(chapter.path);
 
             if (path_to_label.count(chapter.path))
             {

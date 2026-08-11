@@ -15,6 +15,12 @@ void writeFile(const std::filesystem::path& path, const std::string& content) {
   file << content;
 }
 
+std::string readFile(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  return {std::istreambuf_iterator<char>(file),
+          std::istreambuf_iterator<char>()};
+}
+
 bool containsPath(const std::vector<std::string>& paths,
                   const std::filesystem::path& expectedPath) {
   return std::find(paths.begin(), paths.end(), expectedPath.string()) !=
@@ -72,8 +78,12 @@ int main(int argc, char** argv) {
     </navPoint>
   </navMap>
 </ncx>)xml");
-  writeFile(fixtureDirectory / "OEBPS/Text/chapter.xhtml",
-            "<html><body>Chapter</body></html>");
+  writeFile(
+      fixtureDirectory / "OEBPS/Text/chapter.xhtml",
+      R"xml(<html><body>
+<svg><title>Chapter art</title><image width="1200" height="1600" href="../Images/illustration.png"/></svg>
+<svg xmlns:xlink="http://www.w3.org/1999/xlink"><image xlink:href="../Images/illustration.webp"/><path d="M0 0h10v10z"/></svg>
+</body></html>)xml");
   writeFile(
       fixtureDirectory / "OEBPS/Text/cover.xhtml",
       R"xml(<html><body><svg xmlns:xlink="http://www.w3.org/1999/xlink"><image xlink:href="../Images/cover.jpg"/></svg></body></html>)xml");
@@ -95,6 +105,24 @@ int main(int argc, char** argv) {
   assert(metadata.chapters.size() == 2);
   assert(metadata.chapters.front().path ==
          (fixtureDirectory / "OEBPS/Text/cover.xhtml").string());
+
+  const std::string coverChapter =
+      readFile(fixtureDirectory / "OEBPS/Text/cover.xhtml");
+  assert(coverChapter.find("<svg") == std::string::npos);
+  assert(coverChapter.find("<img src=\"../Images/cover.jpg\"") !=
+         std::string::npos);
+
+  const std::string regularChapter =
+      readFile(fixtureDirectory / "OEBPS/Text/chapter.xhtml");
+  assert(regularChapter.find(
+             "<img width=\"1200\" height=\"1600\" "
+             "src=\"../Images/illustration.png\" alt=\"Chapter art\"") !=
+         std::string::npos);
+  assert(regularChapter.find(
+             "<image xlink:href=\"../Images/illustration.webp\"") !=
+         std::string::npos);
+  assert(regularChapter.find("<path d=\"M0 0h10v10z\"") !=
+         std::string::npos);
 
   return 0;
 }
