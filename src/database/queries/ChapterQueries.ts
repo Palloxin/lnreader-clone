@@ -30,6 +30,17 @@ import { chapterFilterToSQL, chapterOrderToSQL } from '@database/utils/parser';
 import { castInt } from '@database/manager/manager';
 import { createNovelTriggerQueryUpdate } from '@database/queryStrings/triggers';
 
+const CHAPTER_ID_BATCH_SIZE = 500;
+const chunkChapterIds = (chapterIds: number[]) =>
+  Array.from(
+    { length: Math.ceil(chapterIds.length / CHAPTER_ID_BATCH_SIZE) },
+    (_, index) =>
+      chapterIds.slice(
+        index * CHAPTER_ID_BATCH_SIZE,
+        (index + 1) * CHAPTER_ID_BATCH_SIZE,
+      ),
+  );
+
 // #region Mutations
 
 /**
@@ -123,11 +134,13 @@ export const markChaptersRead = async (chapterIds: number[]): Promise<void> => {
     return;
   }
   await dbManager.write(async tx => {
-    await tx
-      .update(chapterSchema)
-      .set({ unread: false })
-      .where(inArray(chapterSchema.id, chapterIds))
-      .run();
+    for (const ids of chunkChapterIds(chapterIds)) {
+      await tx
+        .update(chapterSchema)
+        .set({ unread: false })
+        .where(inArray(chapterSchema.id, ids))
+        .run();
+    }
   });
 };
 
@@ -148,11 +161,13 @@ export const markChaptersUnread = async (
     return;
   }
   await dbManager.write(async tx => {
-    await tx
-      .update(chapterSchema)
-      .set({ unread: true })
-      .where(inArray(chapterSchema.id, chapterIds))
-      .run();
+    for (const ids of chunkChapterIds(chapterIds)) {
+      await tx
+        .update(chapterSchema)
+        .set({ unread: true })
+        .where(inArray(chapterSchema.id, ids))
+        .run();
+    }
   });
 };
 
@@ -208,25 +223,26 @@ export const deleteChapter = async (
 export const deleteChapters = async (
   pluginId: string,
   novelId: number,
-  chapters?: ChapterInfo[],
+  chapterIds?: number[],
 ): Promise<void> => {
-  if (!chapters?.length) {
+  if (!chapterIds?.length) {
     return;
   }
-  const chapterIds = chapters.map(chapter => chapter.id);
 
-  await Promise.all(
-    chapters.map(chapter =>
-      deleteDownloadedFiles(pluginId, novelId, chapter.id),
-    ),
-  );
+  for (const ids of chunkChapterIds(chapterIds)) {
+    await Promise.all(
+      ids.map(chapterId => deleteDownloadedFiles(pluginId, novelId, chapterId)),
+    );
+  }
 
   await dbManager.write(async tx => {
-    await tx
-      .update(chapterSchema)
-      .set({ isDownloaded: false })
-      .where(inArray(chapterSchema.id, chapterIds))
-      .run();
+    for (const ids of chunkChapterIds(chapterIds)) {
+      await tx
+        .update(chapterSchema)
+        .set({ isDownloaded: false })
+        .where(inArray(chapterSchema.id, ids))
+        .run();
+    }
   });
 };
 
@@ -311,11 +327,13 @@ export const updateChapterProgressByIds = async (
     return;
   }
   await dbManager.write(async tx => {
-    await tx
-      .update(chapterSchema)
-      .set({ progress })
-      .where(inArray(chapterSchema.id, chapterIds))
-      .run();
+    for (const ids of chunkChapterIds(chapterIds)) {
+      await tx
+        .update(chapterSchema)
+        .set({ progress })
+        .where(inArray(chapterSchema.id, ids))
+        .run();
+    }
   });
 };
 
@@ -326,6 +344,21 @@ export const bookmarkChapter = async (chapterId: number): Promise<void> => {
       .set({ bookmark: sql`NOT ${chapterSchema.bookmark}` })
       .where(eq(chapterSchema.id, chapterId))
       .run();
+  });
+};
+
+export const bookmarkChapters = async (chapterIds: number[]): Promise<void> => {
+  if (!chapterIds.length) {
+    return;
+  }
+  await dbManager.write(async tx => {
+    for (const ids of chunkChapterIds(chapterIds)) {
+      await tx
+        .update(chapterSchema)
+        .set({ bookmark: sql`NOT ${chapterSchema.bookmark}` })
+        .where(inArray(chapterSchema.id, ids))
+        .run();
+    }
   });
 };
 
@@ -555,6 +588,50 @@ export const getPageChapters = async (
   }
 
   return query.all();
+};
+
+export const getPageChapterIds = async (
+  novelId: number,
+  filter?: ChapterFilterKey[],
+  page?: string,
+  excludedScanlators?: string[],
+): Promise<number[]> => {
+  const conditions = [
+    eq(chapterSchema.novelId, novelId),
+    eq(chapterSchema.page, page || '1'),
+    chapterFilterToSQL(filter),
+    scanlatorFilterToSQL(excludedScanlators),
+  ].filter(Boolean) as any[];
+
+  const rows = await dbManager
+    .select({ id: chapterSchema.id })
+    .from(chapterSchema)
+    .where(and(...conditions))
+    .all();
+
+  return rows.map(chapter => chapter.id);
+};
+
+export const getChaptersByIds = async (
+  chapterIds: number[],
+): Promise<ChapterInfo[]> => {
+  const chapters = await Promise.all(
+    chunkChapterIds(chapterIds).map(ids =>
+      dbManager
+        .select()
+        .from(chapterSchema)
+        .where(inArray(chapterSchema.id, ids))
+        .all(),
+    ),
+  );
+  const chaptersById = new Map(
+    chapters.flat().map(chapter => [chapter.id, chapter]),
+  );
+
+  return chapterIds.flatMap(chapterId => {
+    const chapter = chaptersById.get(chapterId);
+    return chapter ? [chapter] : [];
+  });
 };
 
 export const getChapterCount = async (

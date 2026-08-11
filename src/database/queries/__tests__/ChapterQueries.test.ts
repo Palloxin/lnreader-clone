@@ -25,6 +25,7 @@ import {
   getChapter,
   getCustomPages,
   getPageChapters,
+  getPageChapterIds,
   getChapterCount,
   getChapterCountSync,
   getPageChaptersBatched,
@@ -36,6 +37,7 @@ import {
   getDetailedUpdatesFromDb,
   isChapterDownloaded,
   bookmarkChapter,
+  bookmarkChapters,
   insertChapters,
   deleteChapter,
   deleteChapters,
@@ -113,6 +115,25 @@ describe('ChapterQueries', () => {
     });
   });
 
+  describe('bookmarkChapters', () => {
+    it('should toggle multiple chapters by id', async () => {
+      const testDb = getTestDb();
+      const novelId = await insertTestNovel(testDb, { inLibrary: true });
+      const chapterId1 = await insertTestChapter(testDb, novelId, {
+        bookmark: false,
+      });
+      const chapterId2 = await insertTestChapter(testDb, novelId, {
+        bookmark: true,
+      });
+
+      await bookmarkChapters([chapterId1, chapterId2]);
+
+      const chapters = await getNovelChapters(novelId);
+      expect(chapters.find(c => c.id === chapterId1)?.bookmark).toBe(true);
+      expect(chapters.find(c => c.id === chapterId2)?.bookmark).toBe(false);
+    });
+  });
+
   describe('getNovelChapters', () => {
     it('should return all chapters for a novel', async () => {
       const testDb = getTestDb();
@@ -149,6 +170,16 @@ describe('ChapterQueries', () => {
       );
 
       expect(await getNovelChapters(novelId)).toHaveLength(1000);
+
+      const chapterIds = await getPageChapterIds(novelId, [], '1');
+      expect(chapterIds).toHaveLength(1001);
+
+      await markChaptersRead(chapterIds);
+      expect(
+        (await getPageChapters(novelId, undefined, [], '1')).every(
+          chapter => !chapter.unread,
+        ),
+      ).toBe(true);
 
       const backupChapters = await getAllNovelChaptersForBackup(novelId);
       expect(backupChapters).toHaveLength(1001);
@@ -509,10 +540,7 @@ describe('ChapterQueries', () => {
       const chapter2b = chapters.find(c => c.id === chapterId2);
       expect(chapter1b?.isDownloaded).toBe(true);
       expect(chapter2b?.isDownloaded).toBe(true);
-      await deleteChapters('test-plugin', novelId, [
-        { id: chapterId1 } as any,
-        { id: chapterId2 } as any,
-      ]);
+      await deleteChapters('test-plugin', novelId, [chapterId1, chapterId2]);
 
       const updatedChapters = await getNovelChapters(novelId);
       const chapter1a = updatedChapters.find(c => c.id === chapterId1);
