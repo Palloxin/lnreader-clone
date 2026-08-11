@@ -160,7 +160,7 @@ const Novel = ({ route, navigation }: NovelScreenProps) => {
             </Animated.View>
           )}
         </Portal>
-        <SafeAreaView excludeTop>
+        <SafeAreaView excludeTop excludeBottom>
           <Suspense fallback={<NovelScreenLoading theme={theme} />}>
             <NovelScreenList
               headerOpacity={headerOpacity}

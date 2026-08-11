@@ -30,7 +30,14 @@
         }
       ],
       "expo-localization",
-      "react-native-edge-to-edge",
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "enforceNavigationBarContrast": false
+          }
+        }
+      ],
       "expo-web-browser",
       "./plugins/withReaderAssets",
       [
