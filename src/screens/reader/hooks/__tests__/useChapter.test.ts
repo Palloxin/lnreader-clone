@@ -352,6 +352,28 @@ describe('useChapter', () => {
     );
   });
 
+  it('drops an empty chapter from the cache so a refresh refetches', async () => {
+    const store = createStore();
+    mockUseNovelActions.mockReturnValue(store.state);
+    mockFetchChapter.mockResolvedValueOnce('   ');
+
+    const { result } = renderHook(() => useFlatChapter(initialChapter));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.chapterText).toBe('SANITIZED:   ');
+    expect(store.chapterTextCache.read(initialChapter.id)).toBeUndefined();
+
+    mockFetchChapter.mockResolvedValue('recovered body');
+    await act(async () => {
+      result.current.refetch();
+    });
+
+    await waitFor(() =>
+      expect(result.current.chapterText).toBe('SANITIZED:recovered body'),
+    );
+    expect(mockFetchChapter).toHaveBeenCalledTimes(2);
+  });
+
   it('reuses prefetched promise cache to avoid duplicate concurrent fetches for same chapter', async () => {
     const store = createStore();
     mockUseNovelActions.mockReturnValue(store.state);

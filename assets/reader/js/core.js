@@ -908,6 +908,15 @@ window.addEventListener('load', () => {
       return;
     }
     if (
+      diffY > 80 &&
+      Math.abs(diffY) > Math.abs(diffX) * 2 &&
+      window.scrollY <= 0
+    ) {
+      e.preventDefault();
+      reader.post({ type: 'refresh' });
+      return;
+    }
+    if (
       reader.generalSettings.val.swipeGestures &&
       Math.abs(diffX) > Math.abs(diffY) * 2 &&
       Math.abs(diffX) > 180
