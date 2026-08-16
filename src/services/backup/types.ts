@@ -12,6 +12,7 @@ export enum BackupEntryName {
   CATEGORY = 'Category.json',
   SETTING = 'Setting.json',
   PLUGIN_METADATA = 'Plugins.json',
+  COVERS = 'Covers',
   NOVEL_AND_CHAPTERS = 'NovelAndChapters',
 }
 

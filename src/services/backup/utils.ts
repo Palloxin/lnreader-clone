@@ -35,6 +35,11 @@ import { INSTALLED_PLUGINS_KEY } from '@plugins/pluginManager';
 
 const APP_STORAGE_URI = 'file://' + ROOT_STORAGE;
 
+const stripUriSuffix = (uri: string) => uri.split(/[?#]/, 1)[0];
+
+const parentDirectory = (path: string) =>
+  path.slice(0, Math.max(0, path.lastIndexOf('/')));
+
 export const CACHE_DIR_PATH =
   NativeFile.ExternalCachesDirectoryPath + '/BackupData';
 
@@ -81,6 +86,7 @@ export const prepareBackupData = async (
 ): Promise<BackupResult> => {
   const options = resolveBackupOptions(requestedOptions);
   const novelDirPath = cacheDirPath + '/' + BackupEntryName.NOVEL_AND_CHAPTERS;
+  const coversDirPath = cacheDirPath + '/' + BackupEntryName.COVERS;
   let failedNovelCount = 0;
   let failedSectionCount = 0;
 
@@ -101,6 +107,7 @@ export const prepareBackupData = async (
   // novels
   if (options.library) {
     await NativeFile.mkdir(novelDirPath);
+    await NativeFile.mkdir(coversDirPath);
     await getAllNovels().then(async novels => {
       for (const novel of novels) {
         try {
@@ -111,16 +118,26 @@ export const prepareBackupData = async (
                 ...chapter,
                 isDownloaded: false,
               }));
-          const isStoredCover = novel.cover?.startsWith(APP_STORAGE_URI);
+          let cover = novel.cover;
+          if (cover?.startsWith(APP_STORAGE_URI)) {
+            try {
+              await NativeFile.copyFile(
+                stripUriSuffix(cover),
+                coversDirPath + '/' + novel.id,
+              );
+              cover = cover.replace(APP_STORAGE_URI, '');
+            } catch {
+              cover = options.downloadedFiles
+                ? cover.replace(APP_STORAGE_URI, '')
+                : null;
+            }
+          }
           await NativeFile.writeFile(
             novelDirPath + '/' + novel.id + '.json',
             JSON.stringify({
               chapters: backedUpChapters,
               ...novel,
-              cover:
-                !options.downloadedFiles && isStoredCover
-                  ? null
-                  : novel.cover?.replace(APP_STORAGE_URI, ''),
+              cover,
             }),
           );
         } catch {
@@ -228,6 +245,7 @@ export const restoreData = async (
 ): Promise<RestoreResult> => {
   const manifest = await getBackupManifest(cacheDirPath);
   const novelDirPath = cacheDirPath + '/' + BackupEntryName.NOVEL_AND_CHAPTERS;
+  const coversDirPath = cacheDirPath + '/' + BackupEntryName.COVERS;
   const pluginIds = new Set<string>();
 
   // version
@@ -263,7 +281,14 @@ export const restoreData = async (
           const backupNovel = JSON.parse(fileContent) as BackupNovel;
           pluginIds.add(backupNovel.pluginId);
 
-          if (!backupNovel.cover?.startsWith('http')) {
+          if (backupNovel.cover && !backupNovel.cover.startsWith('http')) {
+            const coverBackupPath = coversDirPath + '/' + backupNovel.id;
+            if (await NativeFile.exists(coverBackupPath)) {
+              const coverPath =
+                ROOT_STORAGE + stripUriSuffix(backupNovel.cover);
+              await NativeFile.mkdir(parentDirectory(coverPath));
+              await NativeFile.copyFile(coverBackupPath, coverPath);
+            }
             backupNovel.cover = APP_STORAGE_URI + backupNovel.cover;
           }
 

@@ -73,6 +73,7 @@ describe('selective backup data', () => {
     jest.mocked(NativeFile.exists).mockResolvedValue(false);
     jest.mocked(NativeFile.mkdir).mockResolvedValue(undefined);
     jest.mocked(NativeFile.writeFile).mockResolvedValue(undefined);
+    jest.mocked(NativeFile.copyFile).mockResolvedValue(undefined);
     jest.mocked(getAllNovels).mockResolvedValue([]);
     jest.mocked(getAllNovelChaptersForBackup).mockResolvedValue([]);
     jest.mocked(getCategoriesFromDb).mockResolvedValue([]);
@@ -129,14 +130,14 @@ describe('selective backup data', () => {
     expect(MMKVStorage.set).toHaveBeenCalledWith('INSTALL_PLUGINS', '[]');
   });
 
-  it('clears file-backed metadata when downloaded files are omitted', async () => {
+  it('includes stored covers with library data when downloads are omitted', async () => {
     jest.mocked(getAllNovels).mockResolvedValueOnce([
       {
         id: 1,
         name: 'Example',
         path: '/example',
         pluginId: 'source',
-        cover: 'file:///storage/Novels/source/1/cover.png',
+        cover: 'file:///storage/Novels/source/1/cover.png?123',
       },
     ]);
     jest.mocked(getAllNovelChaptersForBackup).mockResolvedValueOnce([
@@ -160,9 +161,91 @@ describe('selective backup data', () => {
       .mocked(NativeFile.writeFile)
       .mock.calls.find(([path]) => path.endsWith('/1.json'));
     expect(JSON.parse(novelWrite?.[1] ?? '{}')).toMatchObject({
-      cover: null,
+      cover: '/Novels/source/1/cover.png?123',
       chapters: [{ id: 10, isDownloaded: false }],
     });
+    expect(NativeFile.copyFile).toHaveBeenCalledWith(
+      'file:///storage/Novels/source/1/cover.png',
+      '/cache/Covers/1',
+    );
+  });
+
+  it('restores stored covers from library data and preserves missing covers', async () => {
+    const options: BackupOptions = {
+      library: true,
+      settings: false,
+      plugins: false,
+      downloadedFiles: false,
+    };
+    jest.mocked(NativeFile.readFile).mockImplementation(async path => {
+      if (path.endsWith('/Version.json')) {
+        return JSON.stringify({
+          appVersion: '2.1.2',
+          formatVersion: 2,
+          sections: options,
+        });
+      }
+      if (path.endsWith('/1.json')) {
+        return JSON.stringify({
+          id: 1,
+          name: 'Stored cover',
+          path: '/stored-cover',
+          pluginId: 'source',
+          cover: '/Novels/source/1/cover.png?123',
+          chapters: [],
+        });
+      }
+      if (path.endsWith('/2.json')) {
+        return JSON.stringify({
+          id: 2,
+          name: 'Missing cover',
+          path: '/missing-cover',
+          pluginId: 'source',
+          cover: null,
+          chapters: [],
+        });
+      }
+      return '[]';
+    });
+    jest
+      .mocked(NativeFile.exists)
+      .mockImplementation(async path =>
+        [
+          '/cache/NovelAndChapters',
+          '/cache/Covers/1',
+          '/cache/Category.json',
+        ].includes(path),
+      );
+    jest.mocked(NativeFile.readDir).mockResolvedValue([
+      {
+        name: '1.json',
+        path: '/cache/NovelAndChapters/1.json',
+        isDirectory: false,
+      },
+      {
+        name: '2.json',
+        path: '/cache/NovelAndChapters/2.json',
+        isDirectory: false,
+      },
+    ]);
+
+    await restoreData('/cache');
+
+    expect(NativeFile.copyFile).toHaveBeenCalledWith(
+      '/cache/Covers/1',
+      '/storage/Novels/source/1/cover.png',
+    );
+    expect(_restoreNovelAndChapters).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        id: 1,
+        cover: 'file:///storage/Novels/source/1/cover.png?123',
+      }),
+    );
+    expect(_restoreNovelAndChapters).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ id: 2, cover: null }),
+    );
   });
 
   it('omits the installed-plugin registry when plugin files are excluded', async () => {
