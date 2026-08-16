@@ -172,9 +172,18 @@ export default function useChapter(
         return cached;
       }
 
-      const pending = loadChapterText(chap).then(text =>
-        sanitizeChapterText(novel.pluginId, novel.name, chap.name, text),
-      );
+      const pending = loadChapterText(chap).then(text => {
+        const sanitized = sanitizeChapterText(
+          novel.pluginId,
+          novel.name,
+          chap.name,
+          text,
+        );
+        if (!text.trim()) {
+          chapterTextCache.remove(chap.id);
+        }
+        return sanitized;
+      });
       chapterTextCache.write(chap.id, pending);
       // Never keep a failed load in the cache, otherwise a retry would
       // resolve instantly with the same failure.
@@ -497,10 +506,11 @@ export default function useChapter(
   }, [getChapter]);
 
   const refetch = useCallback(() => {
+    chapterTextCache.remove(chapterRef.current.id);
     setLoading(true);
     setError('');
     getChapter();
-  }, [getChapter]);
+  }, [chapterTextCache, getChapter]);
 
   /**
    * Everything except `hidden`, which toggles on every tap on the page. Keeping

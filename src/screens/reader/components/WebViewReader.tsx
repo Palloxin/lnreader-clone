@@ -33,7 +33,10 @@ import { Dialog } from '@components/Dialog';
 import { TextInput } from 'react-native-paper';
 import useCustomCode from './Hooks/useCustomCode';
 import useTextModifications from './Hooks/useTextModifications';
-import { isPluginIssueReportUrl } from '../utils/sanitizeChapterText';
+import {
+  isChapterRefreshUrl,
+  isPluginIssueReportUrl,
+} from '../utils/sanitizeChapterText';
 
 export type WebViewPostEvent = {
   type: string;
@@ -138,6 +141,7 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({
     webViewRef,
     onUserInteraction,
     isTTSReadingRef,
+    refetch,
   } = useChapterContext();
   const theme = useTheme();
   const initialReaderSettings = useMemo(
@@ -458,6 +462,10 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({
           void Linking.openURL(url);
           return false;
         }
+        if (isChapterRefreshUrl(url)) {
+          refetch();
+          return false;
+        }
         return true;
       }}
       onLoadEnd={() => {
@@ -551,6 +559,9 @@ const WebViewReader: React.FC<WebViewReaderProps> = ({
             }
             case 'hide':
               onPress();
+              break;
+            case 'refresh':
+              refetch();
               break;
             case 'next':
               nextChapterScreenVisible.current = true;
