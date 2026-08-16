@@ -42,6 +42,11 @@ a {
   color: var(--theme-primary);
 }
 
+a:target {
+  scroll-margin-top: 200px;
+  scroll-margin-bottom: 50px;
+}
+
 sup {
   line-height: 0.1em;
 }
