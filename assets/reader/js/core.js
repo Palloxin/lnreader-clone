@@ -332,6 +332,9 @@ window.tts = new (function () {
       if (!el) return;
       if (this.readable(el)) {
         elements.push(el);
+        // innerText already includes readable descendants, so descending any
+        // further would add overlapping text to the speech queue.
+        return;
       }
       for (let i = 0; i < el.children.length; i++) {
         traverse(el.children[i]);
