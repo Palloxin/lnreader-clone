@@ -32,7 +32,7 @@ body:
           required: true
         - label: I have written a short but informative title.
           required: true
-        label: If this is an issue with a plugin, I should be opening an issue in the **[PLUGINS REPOSITORY](https://github.com/lnreader/lnreader-plugins/issues/new/choose)**.
+        - label: If this is an issue with a plugin, I should be opening an issue in the **[PLUGINS REPOSITORY](https://github.com/lnreader/lnreader-plugins/issues/new/choose)**.
           required: true
         - label: I have updated the app to version **[2.1.2](https://github.com/lnreader/lnreader/releases/latest)**.
           required: true
