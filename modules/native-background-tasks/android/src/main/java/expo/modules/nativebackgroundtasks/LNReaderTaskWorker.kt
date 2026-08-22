@@ -38,16 +38,13 @@ class LNReaderTaskWorker(
         setForeground(createForegroundInfo(runningTask))
         val execution = TaskExecutionRegistry.register(taskId)
 
-        applicationContext.startService(
-            Intent(applicationContext, LNReaderHeadlessTaskService::class.java).apply {
-                putExtra("taskId", runningTask.id)
-                putExtra("type", runningTask.type)
-                putExtra("payload", runningTask.payload)
-                runningTask.checkpoint?.let { putExtra("checkpoint", it) }
-            },
-        )
-
         return try {
+            applicationContext.startService(
+                Intent(applicationContext, LNReaderHeadlessTaskService::class.java).apply {
+                    putExtra(BackgroundTaskScheduler.TASK_ID, runningTask.id)
+                },
+            )
+
             when (val executionResult = execution.await()) {
                 TaskExecutionResult.Success -> {
                     val currentState = dao.get(taskId)?.state
@@ -88,6 +85,18 @@ class LNReaderTaskWorker(
                 dao.updateState(taskId, BackgroundTaskState.QUEUED, System.currentTimeMillis())
             }
             throw error
+        } catch (error: Exception) {
+            val latestState = dao.get(taskId)?.state
+            if (latestState !in listOf(BackgroundTaskState.PAUSED, BackgroundTaskState.CANCELLED)) {
+                val now = System.currentTimeMillis()
+                val message = error.message ?: error.javaClass.simpleName
+                dao.updateProgress(taskId, null, message, now)
+                dao.updateState(taskId, BackgroundTaskState.FAILED, now)
+                dao.get(taskId)?.let {
+                    TaskNotificationFactory.postTerminal(applicationContext, it)
+                }
+            }
+            Result.failure()
         } finally {
             TaskExecutionRegistry.cancel(taskId)
         }

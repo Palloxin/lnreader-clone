@@ -17,6 +17,7 @@ import NativeFile from '@modules/native-file';
 import NativeZipArchive from '@modules/native-zip-archive';
 import { epub } from '@modules/nitro-epub';
 import { showToast } from '@utils/showToast';
+import { createImportProgressReporter } from './importProgress';
 
 const decodePath = (path: string) => {
   try {
@@ -150,23 +151,15 @@ export const importEpub = async (
     );
     const now = dayjs().toISOString();
     if (novel.chapters) {
+      const reportProgress = createImportProgressReporter(setMeta);
       for (let i = 0; i < novel.chapters?.length; i++) {
         const chapter = novel.chapters[i];
         if (!chapter.name) {
           chapter.name = chapter.path.split(/[/\\]/).pop() || 'unknown';
         }
 
-        setMeta(meta => ({
-          ...meta,
-          progressText: chapter.name,
-        }));
-
         await insertLocalChapter(novelId, i, chapter.name, chapter.path, now);
-
-        setMeta(meta => ({
-          ...meta,
-          progress: i / novel.chapters.length,
-        }));
+        reportProgress(i + 1, novel.chapters.length, chapter.name);
       }
     }
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;

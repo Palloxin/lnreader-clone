@@ -1,12 +1,15 @@
 #include <string>
 #include "../pugixml.hpp"
 #include <iostream>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include "EpubChapterNormalizer.hpp"
 #include "EpubParser.hpp"
 #include <sstream>
+
+namespace {
 
 std::string join(const std::string &folder_path, const std::string &child_path)
 {
@@ -70,6 +73,37 @@ std::string getLocalName(const std::string &qualified_name)
     return separator == std::string::npos
         ? qualified_name
         : qualified_name.substr(separator + 1);
+}
+
+bool hasLocalName(const pugi::xml_node &node, const char *local_name)
+{
+    return getLocalName(node.name()) == local_name;
+}
+
+pugi::xml_node childByLocalName(const pugi::xml_node &parent, const char *local_name)
+{
+    for (pugi::xml_node child : parent.children())
+    {
+        if (hasLocalName(child, local_name))
+        {
+            return child;
+        }
+    }
+    return {};
+}
+
+void collectDescendantsByLocalName(const pugi::xml_node &parent,
+                                   const char *local_name,
+                                   std::vector<pugi::xml_node> &result)
+{
+    for (pugi::xml_node child : parent.children())
+    {
+        if (hasLocalName(child, local_name))
+        {
+            result.push_back(child);
+        }
+        collectDescendantsByLocalName(child, local_name, result);
+    }
 }
 
 std::string findImageReference(const pugi::xml_node &node)
@@ -138,9 +172,13 @@ bool hasProperty(const std::string &properties, const std::string &property)
 
 std::string find_toc_href(const pugi::xml_document &opf_doc)
 {
-    auto manifest = opf_doc.child("package").child("manifest");
-    for (pugi::xml_node item : manifest.children("item"))
+    pugi::xml_node package = childByLocalName(opf_doc, "package");
+    pugi::xml_node manifest = childByLocalName(package, "manifest");
+    for (pugi::xml_node item : manifest.children())
     {
+        if (!hasLocalName(item, "item"))
+            continue;
+
         std::string media_type = item.attribute("media-type").value();
         std::string id = item.attribute("id").value();
         if (media_type == "application/x-dtbncx+xml" || id == "ncx" || id == "nav")
@@ -154,9 +192,12 @@ std::string find_toc_href(const pugi::xml_document &opf_doc)
 void parse_navele_recursive(const pugi::xml_node &parent,
                             std::unordered_map<std::string, std::string> &href_to_label, std::string &nav_folder)
 {
-    for (pugi::xml_node li : parent.children("li"))
+    for (pugi::xml_node li : parent.children())
     {
-        pugi::xml_node a = li.child("a");
+        if (!hasLocalName(li, "li"))
+            continue;
+
+        pugi::xml_node a = childByLocalName(li, "a");
         if (a)
         {
             std::string href = a.attribute("href").as_string();
@@ -170,7 +211,7 @@ void parse_navele_recursive(const pugi::xml_node &parent,
                 href_to_label[join(nav_folder, href)] = label;
         }
 
-        if (pugi::xml_node sublist = li.child("ol"))
+        if (pugi::xml_node sublist = childByLocalName(li, "ol"))
         {
             parse_navele_recursive(sublist, href_to_label, nav_folder);
         }
@@ -185,11 +226,11 @@ void parse_nav_xhtml(const std::string &nav_path,
     if (!nav_doc.load_file(nav_path.c_str()))
         return;
 
-    for (pugi::xpath_node nav : nav_doc.select_nodes("//nav"))
+    std::vector<pugi::xml_node> nav_nodes;
+    collectDescendantsByLocalName(nav_doc, "nav", nav_nodes);
+    for (pugi::xml_node node : nav_nodes)
     {
-        pugi::xml_node node = nav.node();
-        std::string nav_type = node.attribute("epub:type").as_string();
-        pugi::xml_node ol = node.child("ol");
+        pugi::xml_node ol = childByLocalName(node, "ol");
         if (ol)
         {
             parse_navele_recursive(ol, path_to_label, nav_folder);
@@ -200,15 +241,19 @@ void parse_nav_xhtml(const std::string &nav_path,
 void parse_navpoint_recursive(const pugi::xml_node &navPoint,
                               std::unordered_map<std::string, std::string> &result, std::string &ncx_folder)
 {
-    for (pugi::xml_node point : navPoint.children("navPoint"))
+    for (pugi::xml_node point : navPoint.children())
     {
+        if (!hasLocalName(point, "navPoint"))
+            continue;
+
         std::string label;
-        pugi::xml_node labelNode = point.child("navLabel").child("text");
+        pugi::xml_node labelNode = childByLocalName(
+            childByLocalName(point, "navLabel"), "text");
         if (labelNode)
             label = labelNode.text().as_string();
 
         std::string src;
-        pugi::xml_node contentNode = point.child("content");
+        pugi::xml_node contentNode = childByLocalName(point, "content");
         if (contentNode)
             src = contentNode.attribute("src").as_string();
 
@@ -231,7 +276,8 @@ void parse_toc_ncx(const std::string &ncx_path, std::unordered_map<std::string, 
     if (!doc.load_file(ncx_path.c_str()))
         return;
 
-    pugi::xml_node navMap = doc.child("ncx").child("navMap");
+    pugi::xml_node navMap = childByLocalName(
+        childByLocalName(doc, "ncx"), "navMap");
     if (!navMap)
         return;
 
@@ -246,32 +292,30 @@ void parse_opf_from_folder(const std::string &base_dir,
     std::string opf_dir = getParentPath(opf_path);
     pugi::xml_document opf_doc;
     if (!opf_doc.load_file(opf_path.c_str()))
-        return;
-    std::string version;
-    pugi::xml_node package = opf_doc.child("package");
-    if (package)
-    {
-        version = package.attribute("version").as_string();
-    }
+        throw std::runtime_error("Failed to load EPUB package document");
+
+    pugi::xml_node package = childByLocalName(opf_doc, "package");
+    if (!package)
+        throw std::runtime_error("EPUB package document is missing package");
 
     std::unordered_map<std::string, std::string> path_to_label;
     std::string toc_href = find_toc_href(opf_doc);
-    if (toc_href.find("ncx") != std::string::npos)
+    if (!toc_href.empty() && toc_href.find("ncx") != std::string::npos)
     {
         std::string ncx_path = join(opf_dir, toc_href);
         parse_toc_ncx(ncx_path, path_to_label);
     }
-    else
+    else if (!toc_href.empty())
     {
         std::string nav_path = join(opf_dir, toc_href);
         parse_nav_xhtml(nav_path, path_to_label);
     }
 
-    auto metadata = opf_doc.child("package").child("metadata");
-    meta_out.name = metadata.child("dc:title").text().as_string();
-    meta_out.author = metadata.child("dc:creator").text().as_string();
-    meta_out.artist = metadata.child("dc:contributor").text().as_string();
-    meta_out.summary = metadata.child("dc:description").text().as_string();
+    pugi::xml_node metadata = childByLocalName(package, "metadata");
+    meta_out.name = childByLocalName(metadata, "title").text().as_string();
+    meta_out.author = childByLocalName(metadata, "creator").text().as_string();
+    meta_out.artist = childByLocalName(metadata, "contributor").text().as_string();
+    meta_out.summary = childByLocalName(metadata, "description").text().as_string();
 
     std::unordered_map<std::string, std::string> id_to_href;
     std::unordered_map<std::string, std::string> id_to_media_type;
@@ -279,8 +323,11 @@ void parse_opf_from_folder(const std::string &base_dir,
     std::string property_cover_id;
 
     std::string cover_id;
-    for (pugi::xml_node meta : metadata.children("meta"))
+    for (pugi::xml_node meta : metadata.children())
     {
+        if (!hasLocalName(meta, "meta"))
+            continue;
+
         if (std::string(meta.attribute("name").value()) == "cover")
         {
             cover_id = meta.attribute("content").value();
@@ -288,9 +335,15 @@ void parse_opf_from_folder(const std::string &base_dir,
         }
     }
 
-    auto manifest = opf_doc.child("package").child("manifest");
-    for (pugi::xml_node item : manifest.children("item"))
+    pugi::xml_node manifest = childByLocalName(package, "manifest");
+    if (!manifest)
+        throw std::runtime_error("EPUB package document is missing manifest");
+
+    for (pugi::xml_node item : manifest.children())
     {
+        if (!hasLocalName(item, "item"))
+            continue;
+
         std::string id = item.attribute("id").value();
         std::string href = item.attribute("href").value();
         std::string media_type = item.attribute("media-type").value();
@@ -334,11 +387,17 @@ void parse_opf_from_folder(const std::string &base_dir,
         meta_out.cover = findCoverImagePath(cover_document_path, image_paths);
     }
 
-    auto spine = opf_doc.child("package").child("spine");
+    pugi::xml_node spine = childByLocalName(package, "spine");
+    if (!spine)
+        throw std::runtime_error("EPUB package document is missing spine");
+
     std::string prev_name = "";
     int part = 2;
-    for (pugi::xml_node itemref : spine.children("itemref"))
+    for (pugi::xml_node itemref : spine.children())
     {
+        if (!hasLocalName(itemref, "itemref"))
+            continue;
+
         std::string idref = itemref.attribute("idref").value();
         if (id_to_href.count(idref))
         {
@@ -355,7 +414,7 @@ void parse_opf_from_folder(const std::string &base_dir,
             {
                 if (prev_name.empty())
                 {
-                    int start_pos = chapter_href.find_last_of("/");
+                    size_t start_pos = chapter_href.find_last_of("/");
                     if (start_pos == std::string::npos)
                     {
                         start_pos = 0;
@@ -381,7 +440,12 @@ void parse_opf_from_folder(const std::string &base_dir,
             meta_out.chapters.push_back(chapter);
         }
     }
+
+    if (meta_out.chapters.empty())
+        throw std::runtime_error("EPUB spine contains no readable chapters");
 }
+
+} // namespace
 
 EpubMetadata parseEpub(const std::string epub_path)
 {
@@ -391,11 +455,12 @@ EpubMetadata parseEpub(const std::string epub_path)
     if (!container_doc.load_file(container_path.c_str()))
         throw std::runtime_error("Failed to load container.xml");
 
-    std::string opf_path = container_doc.child("container")
-                               .child("rootfiles")
-                               .child("rootfile")
-                               .attribute("full-path")
-                               .value();
+    pugi::xml_node container = childByLocalName(container_doc, "container");
+    pugi::xml_node rootfiles = childByLocalName(container, "rootfiles");
+    pugi::xml_node rootfile = childByLocalName(rootfiles, "rootfile");
+    std::string opf_path = rootfile.attribute("full-path").value();
+    if (opf_path.empty())
+        throw std::runtime_error("container.xml is missing a package path");
 
     EpubMetadata metadata;
     parse_opf_from_folder(epub_path, opf_path, metadata);
