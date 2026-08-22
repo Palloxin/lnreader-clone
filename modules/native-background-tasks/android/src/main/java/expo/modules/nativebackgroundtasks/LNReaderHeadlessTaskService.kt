@@ -8,6 +8,7 @@ import com.facebook.react.jstasks.HeadlessJsTaskConfig
 class LNReaderHeadlessTaskService : HeadlessJsTaskService() {
     override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig? {
         val extras = intent?.extras ?: return null
+        if (!extras.containsKey(BackgroundTaskScheduler.TASK_ID)) return null
         return HeadlessJsTaskConfig(
             "LNReaderBackgroundTask",
             Arguments.fromBundle(extras),
