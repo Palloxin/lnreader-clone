@@ -128,7 +128,4 @@ export type QueuedBackgroundTask = {
 
 export type HeadlessBackgroundTaskData = {
   taskId: string;
-  type: BackgroundTask['name'];
-  payload: string;
-  checkpoint?: string;
 };

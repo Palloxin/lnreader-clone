@@ -13,8 +13,6 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 class NativeZipArchiveModule : Module() {
-  private val BUFFER_SIZE = 4096
-
   private fun zipProcess(sourceDirPath: String, zos: ZipOutputStream) {
     val sourceDir = File(sourceDirPath)
     sourceDir.walkBottomUp().filter { it.isFile }.forEach { file ->
@@ -23,10 +21,8 @@ class NativeZipArchiveModule : Module() {
       val entry = ZipEntry("$zipFileName${(if (file.isDirectory) "/" else "")}")
       zos.putNextEntry(entry)
       file.inputStream().use { fis ->
-        fis.copyTo(zos, BUFFER_SIZE)
-        fis.close()
+        fis.copyTo(zos, COPY_BUFFER_SIZE)
       }
-      Thread.yield()
     }
   }
 
@@ -41,9 +37,8 @@ class NativeZipArchiveModule : Module() {
               val newFile = File(distDirPath, zipEntry.name)
               newFile.parentFile?.mkdirs()
               zis.getInputStream(zipEntry).use { inputStream ->
-                FileOutputStream(newFile).use { fos -> inputStream.copyTo(fos, BUFFER_SIZE) }
+                FileOutputStream(newFile).use { fos -> inputStream.copyTo(fos, COPY_BUFFER_SIZE) }
               }
-              Thread.yield()
             }
           }
           promise.resolve(null)
@@ -80,8 +75,7 @@ class NativeZipArchiveModule : Module() {
               .forEach { zipEntry ->
                 val newFile = File(distDirPath, zipEntry.name)
                 newFile.parentFile?.mkdirs()
-                FileOutputStream(newFile).use { fos -> zis.copyTo(fos, BUFFER_SIZE) }
-                Thread.yield()
+                FileOutputStream(newFile).use { fos -> zis.copyTo(fos, COPY_BUFFER_SIZE) }
               }
           }
           if (connection.responseCode == 200) {
@@ -119,6 +113,10 @@ class NativeZipArchiveModule : Module() {
         }
       }.start()
     }
+  }
+
+  private companion object {
+    const val COPY_BUFFER_SIZE = 64 * 1024
   }
 
 }

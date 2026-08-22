@@ -57,24 +57,13 @@ class NativeBackgroundTasksModule : Module() {
 
         AsyncFunction("getTasks") {
             runBlocking(Dispatchers.IO) {
-                val result = mutableListOf<Map<String, Any?>>()
-                dao.getAll().forEach { task ->
-                    result.add(mapOf(
-                        "id" to task.id,
-                        "type" to task.type,
-                        "payload" to task.payload,
-                        "title" to task.title,
-                        "description" to task.description,
-                        "state" to task.state,
-                        "progress" to task.progress,
-                        "progressText" to task.progressText,
-                        "checkpoint" to task.checkpoint,
-                        "attempt" to task.attempt,
-                        "createdAt" to task.createdAt.toDouble(),
-                        "updatedAt" to task.updatedAt.toDouble(),
-                    ))
-                }
-                result
+                dao.getAll().map(::toRecord)
+            }
+        }
+
+        AsyncFunction("getTask") { taskId: String ->
+            runBlocking(Dispatchers.IO) {
+                dao.get(taskId)?.let(::toRecord)
             }
         }
 
@@ -187,6 +176,21 @@ class NativeBackgroundTasksModule : Module() {
 
     private suspend fun requireTask(taskId: String): BackgroundTaskEntity =
         dao.get(taskId) ?: throw IllegalArgumentException("Unknown background task: $taskId")
+
+    private fun toRecord(task: BackgroundTaskEntity): Map<String, Any?> = mapOf(
+        "id" to task.id,
+        "type" to task.type,
+        "payload" to task.payload,
+        "title" to task.title,
+        "description" to task.description,
+        "state" to task.state,
+        "progress" to task.progress,
+        "progressText" to task.progressText,
+        "checkpoint" to task.checkpoint,
+        "attempt" to task.attempt,
+        "createdAt" to task.createdAt.toDouble(),
+        "updatedAt" to task.updatedAt.toDouble(),
+    )
 
     companion object {
         @Volatile
