@@ -286,7 +286,7 @@ export function useStableLineModels(value: string): LineModel[] {
 
   return useMemo(() => {
     const newLines = value
-      .replace(/\r\n|\r/g, '\n')
+      .replace(/\r\n?/g, '\n')
       .split('\n');
     const previous = previousRef.current;
 
