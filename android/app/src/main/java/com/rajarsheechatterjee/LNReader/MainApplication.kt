@@ -1,4 +1,4 @@
-package com.rajarsheechatterjee.LNReaderr
+package com.rajarsheechatterjee.LNReader2
 
 import android.app.Application
 import android.content.res.Configuration
