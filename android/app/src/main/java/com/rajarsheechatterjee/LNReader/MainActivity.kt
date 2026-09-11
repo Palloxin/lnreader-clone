@@ -1,4 +1,4 @@
-package com.rajarsheechatterjee.LNReader2
+package com.rajarsheechatterjee.LNReader
 
 import android.graphics.Color
 import android.os.Build
