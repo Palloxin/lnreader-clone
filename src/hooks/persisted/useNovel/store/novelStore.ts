@@ -21,8 +21,9 @@ export const createNovelSlice = ({
   initialLastRead,
 }: CreateNovelStoreParams) => {
   return {
-    loading: false,
-    fetching: false,
+    loading: true,
+    fetching: true,
+    error: undefined,
     pluginId,
     novelPath,
     novel,

@@ -24,6 +24,7 @@ import {
   deleteCategoryById,
   updateCategoryOrderInDb,
   getAllNovelCategories,
+  _restoreCategory,
 } from '../CategoryQueries';
 import { showToast } from '@utils/showToast';
 
@@ -56,6 +57,89 @@ describe('CategoryQueries', () => {
     });
   });
 
+  describe('_restoreCategory', () => {
+    it('preserves the default name and adds restored memberships', async () => {
+      const testDb = getTestDb();
+      const existingNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+      });
+      const restoredNovelId = await insertTestNovel(testDb, {
+        inLibrary: true,
+      });
+      await insertTestNovelCategory(testDb, existingNovelId, 1);
+
+      await _restoreCategory({
+        id: 1,
+        name: '   ',
+        sort: 1,
+        novelIds: [restoredNovelId],
+      });
+
+      const categories = await getCategoriesFromDb();
+      expect(categories.find(category => category.id === 1)?.name).toBe(
+        'Default',
+      );
+      const memberships = await getAllNovelCategories();
+      expect(
+        memberships
+          .filter(membership => membership.categoryId === 1)
+          .map(membership => membership.novelId),
+      ).toEqual(expect.arrayContaining([existingNovelId, restoredNovelId]));
+    });
+
+    it('does not overwrite a custom category with a colliding backup ID', async () => {
+      const testDb = getTestDb();
+      const existingCategoryId = await insertTestCategory(testDb, {
+        name: 'Existing Category',
+      });
+
+      const restoredCategoryId = await _restoreCategory({
+        id: existingCategoryId,
+        name: 'Restored Category',
+        sort: 3,
+        novelIds: [],
+      });
+
+      expect(restoredCategoryId).not.toBe(existingCategoryId);
+      const categories = await getCategoriesFromDb();
+      expect(
+        categories.find(category => category.id === existingCategoryId)?.name,
+      ).toBe('Existing Category');
+      expect(
+        categories.find(category => category.id === restoredCategoryId)?.name,
+      ).toBe('Restored Category');
+    });
+
+    it('does not treat a legacy category with ID 2 as the Local category', async () => {
+      const restoredCategoryId = await _restoreCategory({
+        id: 2,
+        name: 'Legacy user category',
+        sort: 2,
+        novelIds: [],
+      });
+
+      expect(restoredCategoryId).not.toBe(2);
+      const categories = await getCategoriesFromDb();
+      expect(categories.find(category => category.id === 2)?.name).toBe(
+        'Local',
+      );
+      expect(
+        categories.find(category => category.id === restoredCategoryId)?.name,
+      ).toBe('Legacy user category');
+    });
+
+    it('rejects a restored user category with an empty name', async () => {
+      await expect(
+        _restoreCategory({
+          id: 3,
+          name: '  ',
+          sort: 3,
+          novelIds: [],
+        }),
+      ).rejects.toThrow('Category name cannot be empty');
+    });
+  });
+
   describe('createCategory', () => {
     it('should create a new category', async () => {
       const result = await createCategory('New Category');
@@ -70,6 +154,18 @@ describe('CategoryQueries', () => {
       const cat2 = await createCategory('Category 2');
 
       expect(cat2.sort).toBeGreaterThan(cat1.sort!);
+    });
+
+    it('trims category names', async () => {
+      const category = await createCategory('  New Category  ');
+
+      expect(category.name).toBe('New Category');
+    });
+
+    it('rejects an empty category name', async () => {
+      await expect(createCategory('   ')).rejects.toThrow(
+        'Category name cannot be empty',
+      );
     });
   });
 
@@ -102,6 +198,38 @@ describe('CategoryQueries', () => {
       const categories = await getCategoriesFromDb();
       const updated = categories.find(c => c.id === categoryId);
       expect(updated?.name).toBe('New Name');
+    });
+
+    it('trims the updated category name', async () => {
+      const categoryId = await insertTestCategory(getTestDb(), {
+        name: 'Old Name',
+      });
+
+      await updateCategory(categoryId, '  New Name  ');
+
+      const categories = await getCategoriesFromDb();
+      expect(
+        categories.find(category => category.id === categoryId)?.name,
+      ).toBe('New Name');
+    });
+
+    it('rejects an empty updated category name', async () => {
+      const categoryId = await insertTestCategory(getTestDb(), {
+        name: 'Old Name',
+      });
+
+      await expect(updateCategory(categoryId, '   ')).rejects.toThrow(
+        'Category name cannot be empty',
+      );
+    });
+
+    it('does not rename the default category', async () => {
+      await updateCategory(1, 'Renamed Default');
+
+      const categories = await getCategoriesFromDb();
+      expect(categories.find(category => category.id === 1)?.name).toBe(
+        'Default',
+      );
     });
   });
 

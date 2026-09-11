@@ -383,6 +383,12 @@
     "pluginNotFound": "Plugin not found!",
     "removeDownloadsWarning": "Are you sure? All downloaded chapters will be deleted."
   },
+  "taskQueue": {
+    "cancelTaskAction": "Cancel task",
+    "cancelTaskTitle": "Cancel task?",
+    "cancelTaskConfirmation": "Are you sure you want to cancel %{task}?",
+    "keepTaskAction": "Keep task"
+  },
   "errorBoundary": {
     "title": "An Unexpected Error Occurred",
     "description": "The application ran into an unexpected error. Please copy the stack trace below and share it on our Discord support channel.",
@@ -450,7 +456,10 @@
   },
   "globalSearch": {
     "allSources": "all sources",
-    "searchIn": "Search a novel in"
+    "searchIn": "Search a novel in",
+    "openNovel": "Open novel",
+    "openCopiedNovel": "Open copied novel",
+    "noSourceForUrl": "No source found for this URL"
   },
   "history": "History",
   "historyScreen": {
@@ -600,9 +609,11 @@
       "searchByName": "Search by Chapter Name",
       "searchByNameDescription": "Turn off to search by chapter number."
     },
+    "loadFailed": "Unable to load novel",
     "migrate": "Migrate",
     "noSummary": "No summary",
     "noCoverFound": "No cover found",
+    "notFound": "Novel not found on the source",
     "progress": "Progress %{progress} %",
     "readChaptersDeleted": "Read chapters deleted",
     "startReadingChapters": "Start reading %{name}",
@@ -789,7 +800,7 @@
       "other": "%{count} days"
     }
   },
-"customCodeSettings": {
+  "customCodeSettings": {
     "textManipulation": "Text Manipulation",
     "codeSnippets": "Code Snippets",
     "cssSnippets": "CSS Snippets",

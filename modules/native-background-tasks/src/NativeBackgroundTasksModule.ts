@@ -25,6 +25,7 @@ type NativeBackgroundTasksModule = {
     queueName: string,
   ): Promise<string>;
   getTasks(): Promise<NativeBackgroundTaskRecord[]>;
+  getTask(taskId: string): Promise<NativeBackgroundTaskRecord | null>;
   pause(taskId: string): Promise<void>;
   resume(taskId: string): Promise<void>;
   cancel(taskId: string): Promise<void>;
