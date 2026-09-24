@@ -5,7 +5,7 @@ import {
   getMissingRestorePluginIds,
   getRestoreCompletionText,
   type RestoreResult,
-} from '../restoreResult';
+} from '../result';
 
 jest.mock('@i18n/translations', () => ({
   getString: (key: string, options?: Record<string, string | number>) => {

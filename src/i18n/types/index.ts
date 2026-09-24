@@ -169,9 +169,11 @@ export interface StringMap {
   'backupScreen.remoteBackup': 'string';
   'backupScreen.restoreBackup': 'string';
   'backupScreen.restoreBackupDesc': 'string';
+  'backupScreen.restoreMayBePartial': 'string';
   'backupScreen.restorinBackup': 'string';
   'backupScreen.restoringData': 'string';
   'backupScreen.restoringSelectedFiles': 'string';
+  'backupScreen.restoringNovelFilesProgress': 'string';
   'backupScreen.selfHost': 'string';
   'backupScreen.selfHostDesc': 'string';
   'backupScreen.uploadingData': 'string';

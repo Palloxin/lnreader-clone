@@ -83,10 +83,38 @@ class NativeZipArchiveModule : Module() {
 
     AsyncFunction("unzip") { sourceFilePath: String, distDirPath: String, promise: Promise ->
       Thread {
+        val unzipStartedAtNanos = System.nanoTime()
         try {
           val createdDirectories = mutableSetOf<String>()
+          val stats = mutableMapOf(
+            "fileCount" to 0L,
+            "compressedBytes" to 0L,
+            "uncompressedBytes" to 0L,
+            "largestUncompressedEntryBytes" to 0L,
+          )
+          val categories = listOf("NovelAndChapters", "Covers", "NovelFiles", "other")
+            .associateWith {
+              mutableMapOf(
+                "fileCount" to 0L,
+                "compressedBytes" to 0L,
+                "uncompressedBytes" to 0L,
+              )
+            }
           ZipFile(sourceFilePath).use { zis ->
             zis.entries().asSequence().filterNot { it.isDirectory }.forEach { zipEntry ->
+              val uncompressedBytes = zipEntry.size.coerceAtLeast(0)
+              val compressedBytes = zipEntry.compressedSize.coerceAtLeast(0)
+              val firstPathSegment = zipEntry.name.substringBefore('/')
+              val category = categories[firstPathSegment] ?: categories.getValue("other")
+              stats["fileCount"] = stats.getValue("fileCount") + 1
+              stats["compressedBytes"] = stats.getValue("compressedBytes") + compressedBytes
+              stats["uncompressedBytes"] = stats.getValue("uncompressedBytes") + uncompressedBytes
+              stats["largestUncompressedEntryBytes"] =
+                maxOf(stats.getValue("largestUncompressedEntryBytes"), uncompressedBytes)
+              category["fileCount"] = category.getValue("fileCount") + 1
+              category["compressedBytes"] = category.getValue("compressedBytes") + compressedBytes
+              category["uncompressedBytes"] = category.getValue("uncompressedBytes") + uncompressedBytes
+
               val newFile = resolveZipEntry(File(distDirPath), zipEntry.name)
               ensureParentDirectory(newFile, createdDirectories)
               zis.getInputStream(zipEntry).use { inputStream ->
@@ -94,7 +122,12 @@ class NativeZipArchiveModule : Module() {
               }
             }
           }
-          promise.resolve(null)
+          val result = mutableMapOf<String, Any>()
+          result.putAll(stats)
+          result["categories"] = categories
+          result["elapsedMs"] =
+            (System.nanoTime() - unzipStartedAtNanos) / 1_000_000.0
+          promise.resolve(result)
         } catch (e: Exception) {
           promise.reject("UNZIP_FAILED", e.message ?: "Unzip failed", e)
         }

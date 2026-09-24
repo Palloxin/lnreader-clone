@@ -91,6 +91,65 @@ export type RestoreNovelOptions = {
   restoreRunId?: string;
 };
 
+export type RestoreNovelMetrics = {
+  novelUpsertCalls: number;
+  novelUpsertRowsAttempted: number;
+  novelUpsertMs: number;
+  novelIdentityLookupCalls: number;
+  novelIdentityLookupRowsReturned: number;
+  novelIdentityLookupMs: number;
+  chapterWriteChunkCalls: number;
+  chapterWriteRowsAttempted: number;
+  chapterWriteMs: number;
+  chapterMappingRowsAttempted: number;
+  statsRefreshCalls: number;
+  statsRefreshNovels: number;
+  statsRefreshMs: number;
+  novelBatchFallbacks: number;
+  novelFallbackRowsAttempted: number;
+  chapterBatchFallbacks: number;
+  chapterFallbackRowsAttempted: number;
+  fallbackCauses: { name: string; message: string }[];
+};
+
+export const recordRestoreFallback = (
+  metrics: RestoreNovelMetrics | undefined,
+  error: unknown,
+) => {
+  if (!metrics || metrics.fallbackCauses.length >= 5) {
+    return;
+  }
+
+  const errorName =
+    error instanceof Error &&
+    [
+      'AggregateError',
+      'DatabaseError',
+      'Error',
+      'EvalError',
+      'ReferenceError',
+      'RangeError',
+      'SQLiteError',
+      'SqliteError',
+      'SyntaxError',
+      'TypeError',
+      'URIError',
+    ].includes(error.name)
+      ? error.name
+      : 'Error';
+  const message =
+    error instanceof Error && /constraint/i.test(error.message)
+      ? 'Database constraint failed'
+      : error instanceof Error && /locked|busy/i.test(error.message)
+      ? 'Database is busy'
+      : error instanceof Error && /no such table/i.test(error.message)
+      ? 'Database table missing'
+      : error instanceof Error && /no such column/i.test(error.message)
+      ? 'Database column missing'
+      : 'Database operation failed';
+  metrics.fallbackCauses.push({ name: errorName, message });
+};
+
 const NOVEL_UPSERT_SQL = `
   INSERT INTO Novel (
     path, pluginId, name, cover, summary, author, artist, status, genres,
@@ -134,6 +193,7 @@ const restoreNovelValues = (novel: BackupNovel): Scalar[] => [
 
 const restoreNovelChunk = async (
   backupNovels: BackupNovel[],
+  metrics?: RestoreNovelMetrics,
 ): Promise<RestoredNovelMapping[]> => {
   const commands: SQLBatchTuple[] = [
     [NOVEL_UPSERT_SQL, backupNovels.map(restoreNovelValues)],
@@ -152,26 +212,51 @@ const restoreNovelChunk = async (
   if (storedCovers.length > 0) {
     commands.push([NOVEL_COVER_UPDATE_SQL, storedCovers]);
   }
-  await dbManager.executeBatch(commands);
+  const upsertStartedAt = metrics ? performance.now() : 0;
+  if (metrics) {
+    metrics.novelUpsertCalls++;
+    metrics.novelUpsertRowsAttempted += backupNovels.length;
+  }
+  try {
+    await dbManager.executeBatch(commands);
+  } finally {
+    if (metrics) {
+      metrics.novelUpsertMs += performance.now() - upsertStartedAt;
+    }
+  }
 
-  const rows = await dbManager
-    .select({
-      id: novelSchema.id,
-      path: novelSchema.path,
-      pluginId: novelSchema.pluginId,
-    })
-    .from(novelSchema)
-    .where(
-      or(
-        ...backupNovels.map(novel =>
-          and(
-            eq(novelSchema.pluginId, novel.pluginId),
-            eq(novelSchema.path, novel.path),
+  if (metrics) {
+    metrics.novelIdentityLookupCalls++;
+  }
+  const lookupStartedAt = metrics ? performance.now() : 0;
+  let rows;
+  try {
+    rows = await dbManager
+      .select({
+        id: novelSchema.id,
+        path: novelSchema.path,
+        pluginId: novelSchema.pluginId,
+      })
+      .from(novelSchema)
+      .where(
+        or(
+          ...backupNovels.map(novel =>
+            and(
+              eq(novelSchema.pluginId, novel.pluginId),
+              eq(novelSchema.path, novel.path),
+            ),
           ),
         ),
-      ),
-    )
-    .all();
+      )
+      .all();
+    if (metrics) {
+      metrics.novelIdentityLookupRowsReturned += rows.length;
+    }
+  } finally {
+    if (metrics) {
+      metrics.novelIdentityLookupMs += performance.now() - lookupStartedAt;
+    }
+  }
   const rowsByIdentity = new Map(
     rows.map(row => [`${row.pluginId}\u0000${row.path}`, row]),
   );
@@ -192,23 +277,32 @@ const restoreNovelChunk = async (
 
 const restoreNovelChunkWithRetry = async (
   backupNovels: BackupNovel[],
+  metrics?: RestoreNovelMetrics,
 ): Promise<RestoredNovelMapping[]> => {
   try {
-    return await restoreNovelChunk(backupNovels);
-  } catch {
+    return await restoreNovelChunk(backupNovels, metrics);
+  } catch (error) {
+    if (metrics) {
+      metrics.novelBatchFallbacks++;
+    }
+    recordRestoreFallback(metrics, error);
     const mappings: RestoredNovelMapping[] = [];
     let failed = false;
     for (const backupNovel of backupNovels) {
+      if (metrics) {
+        metrics.novelFallbackRowsAttempted++;
+      }
       try {
         mappings.push(
-          await restoreNovelChunk([backupNovel]).then(([mapping]) => {
+          await restoreNovelChunk([backupNovel], metrics).then(([mapping]) => {
             if (!mapping) {
               throw new Error('Failed to restore novel');
             }
             return mapping;
           }),
         );
-      } catch {
+      } catch (rowError) {
+        recordRestoreFallback(metrics, rowError);
         failed = true;
       }
     }
@@ -288,6 +382,7 @@ const restoreChapterChunk = async (
   records: ChapterRestoreRecord[],
   includeChapterMappings: boolean,
   restoreRunId: string | undefined,
+  metrics?: RestoreNovelMetrics,
 ) => {
   if (records.length === 0) {
     return;
@@ -328,26 +423,55 @@ const restoreChapterChunk = async (
     [createNovelTriggerQueryDelete],
     [createNovelTriggerQueryUpdate],
   );
-  await dbManager.executeBatch(commands);
+  if (metrics) {
+    metrics.chapterWriteChunkCalls++;
+    metrics.chapterWriteRowsAttempted += records.length;
+    if (includeChapterMappings) {
+      metrics.chapterMappingRowsAttempted += records.length;
+    }
+  }
+  const chapterWriteStartedAt = metrics ? performance.now() : 0;
+  try {
+    await dbManager.executeBatch(commands);
+  } finally {
+    if (metrics) {
+      metrics.chapterWriteMs += performance.now() - chapterWriteStartedAt;
+    }
+  }
 };
 
 const restoreChapterChunkWithRetry = async (
   records: ChapterRestoreRecord[],
   includeChapterMappings: boolean,
   restoreRunId: string | undefined,
+  metrics?: RestoreNovelMetrics,
 ) => {
   try {
-    await restoreChapterChunk(records, includeChapterMappings, restoreRunId);
-  } catch {
+    await restoreChapterChunk(
+      records,
+      includeChapterMappings,
+      restoreRunId,
+      metrics,
+    );
+  } catch (error) {
+    if (metrics) {
+      metrics.chapterBatchFallbacks++;
+    }
+    recordRestoreFallback(metrics, error);
     let failed = false;
     for (const record of records) {
+      if (metrics) {
+        metrics.chapterFallbackRowsAttempted++;
+      }
       try {
         await restoreChapterChunk(
           [record],
           includeChapterMappings,
           restoreRunId,
+          metrics,
         );
-      } catch {
+      } catch (rowError) {
+        recordRestoreFallback(metrics, rowError);
         failed = true;
       }
     }
@@ -390,18 +514,33 @@ const NOVEL_STATS_UPDATE_SQL = `
   WHERE Novel.id = ?
 `;
 
-const refreshRestoredNovelStats = async (novelIds: number[]) => {
+const refreshRestoredNovelStats = async (
+  novelIds: number[],
+  metrics?: RestoreNovelMetrics,
+) => {
   if (novelIds.length === 0) {
     return;
   }
-  await dbManager.executeBatch([
-    [NOVEL_STATS_UPDATE_SQL, novelIds.map(id => [id] as Scalar[])],
-  ]);
+  if (metrics) {
+    metrics.statsRefreshCalls++;
+    metrics.statsRefreshNovels += novelIds.length;
+  }
+  const statsRefreshStartedAt = metrics ? performance.now() : 0;
+  try {
+    await dbManager.executeBatch([
+      [NOVEL_STATS_UPDATE_SQL, novelIds.map(id => [id] as Scalar[])],
+    ]);
+  } finally {
+    if (metrics) {
+      metrics.statsRefreshMs += performance.now() - statsRefreshStartedAt;
+    }
+  }
 };
 
 export const _restoreNovelsAndChapters = async (
   backupNovels: BackupNovel[],
   options: RestoreNovelOptions = {},
+  metrics?: RestoreNovelMetrics,
 ): Promise<RestoredNovelMapping[]> => {
   if (backupNovels.length === 0) {
     return [];
@@ -420,6 +559,7 @@ export const _restoreNovelsAndChapters = async (
     mappings.push(
       ...(await restoreNovelChunkWithRetry(
         backupNovels.slice(start, start + RESTORE_NOVEL_BATCH_SIZE),
+        metrics,
       )),
     );
   }
@@ -445,6 +585,7 @@ export const _restoreNovelsAndChapters = async (
           chapterChunk,
           includeChapterMappings,
           options.restoreRunId,
+          metrics,
         );
         chapterChunk.length = 0;
       }
@@ -455,9 +596,10 @@ export const _restoreNovelsAndChapters = async (
       chapterChunk,
       includeChapterMappings,
       options.restoreRunId,
+      metrics,
     );
   }
-  await refreshRestoredNovelStats([...restoredNovelIds.values()]);
+  await refreshRestoredNovelStats([...restoredNovelIds.values()], metrics);
   return mappings;
 };
 
@@ -467,8 +609,13 @@ export const _restoreNovelsAndChapters = async (
 export const _restoreNovelAndChapters = async (
   backupNovel: BackupNovel,
   options: RestoreNovelOptions = {},
+  metrics?: RestoreNovelMetrics,
 ): Promise<RestoredNovelMapping> => {
-  const [mapping] = await _restoreNovelsAndChapters([backupNovel], options);
+  const [mapping] = await _restoreNovelsAndChapters(
+    [backupNovel],
+    options,
+    metrics,
+  );
   if (!mapping) {
     throw new Error('Failed to restore novel');
   }
