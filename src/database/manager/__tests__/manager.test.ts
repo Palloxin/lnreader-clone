@@ -44,7 +44,9 @@ describe('DbManager.executeBatch', () => {
         ['INSERT INTO BatchTest (value) VALUES (?)', [['rolled back']]],
         ['INSERT INTO MissingBatchTable (value) VALUES (?)', [['failure']]],
       ]),
-    ).rejects.toThrow('MissingBatchTable');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('MissingBatchTable'),
+    });
 
     expect(flushPendingReactiveQueries).not.toHaveBeenCalled();
     expect(testDb.sqlite.executeSync('SELECT * FROM BatchTest').rows).toEqual(
