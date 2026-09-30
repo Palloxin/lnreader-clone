@@ -3,6 +3,8 @@ import { setupTestDatabase, getTestDb, teardownTestDatabase } from './setup';
 import { insertTestNovel, insertTestChapter, clearAllTables } from './testData';
 import { chapterSchema, novelSchema } from '@database/schema';
 import { and, eq } from 'drizzle-orm';
+import type { SQLBatchTuple } from '@op-engineering/op-sqlite';
+import type { BackupNovel, ChapterInfo } from '../../types';
 
 import { getNovelByPath } from '../NovelQueries';
 import {
@@ -18,6 +20,53 @@ const mockGetLibraryDefaultCategoryId = jest.fn<number | undefined, []>();
 jest.mock('@hooks/persisted/useSettings', () => ({
   getLibraryDefaultCategoryId: () => mockGetLibraryDefaultCategoryId(),
 }));
+
+const createBackupChapter = (
+  id: number,
+  novelId: number,
+  path: string,
+  values: Partial<ChapterInfo> = {},
+): ChapterInfo => ({
+  id,
+  novelId,
+  path,
+  name: `Chapter ${id}`,
+  releaseTime: null,
+  readTime: null,
+  bookmark: false,
+  unread: true,
+  isDownloaded: false,
+  updatedTime: null,
+  chapterNumber: 1,
+  page: '1',
+  progress: null,
+  position: 0,
+  scanlator: null,
+  timeSpent: 0,
+  ...values,
+});
+
+const createBackupNovel = (
+  id: number,
+  path: string,
+  chapters: ChapterInfo[] = [],
+  pluginId = 'restore-plugin',
+): BackupNovel => ({
+  id,
+  path,
+  pluginId,
+  name: `Novel ${id}`,
+  cover: null,
+  summary: null,
+  author: null,
+  artist: null,
+  status: 'Unknown',
+  genres: null,
+  inLibrary: true,
+  isLocal: false,
+  totalPages: 0,
+  chapters,
+});
 
 describe('NovelRestoreQueries', () => {
   beforeEach(() => {
@@ -164,6 +213,244 @@ describe('NovelRestoreQueries', () => {
       expect(await getNovelByPath('/bulk/two', 'bulk-plugin')).toEqual(
         expect.objectContaining({ name: 'Bulk Two' }),
       );
+    });
+    it('restores 101 novels across a full statement and tail', async () => {
+      const testDb = getTestDb();
+      const unrelatedNovelId = await insertTestNovel(testDb, {
+        path: '/collision/unrelated',
+        pluginId: 'unrelated-plugin',
+        name: 'Unrelated Novel',
+      });
+      const matchingNovelId = await insertTestNovel(testDb, {
+        path: '/bulk/novel-1',
+        pluginId: 'restore-plugin',
+        name: 'Before Restore',
+      });
+      const firstNovelChapters = [
+        createBackupChapter(51_001, 1, '/bulk/chapter-1-1', {
+          updatedTime: '2024-02-01T00:00:00.000Z',
+        }),
+        createBackupChapter(51_002, 1, '/bulk/chapter-1-2', {
+          updatedTime: '2024-02-01 01:00:00',
+        }),
+      ];
+      const backupNovels = Array.from({ length: 101 }, (_, index) =>
+        createBackupNovel(
+          index + 1,
+          `/bulk/novel-${index + 1}`,
+          index === 0 ? firstNovelChapters : [],
+        ),
+      );
+
+      const mappings = await _restoreNovelsAndChapters(backupNovels, {
+        restoreRunId: 'restore-101-novels',
+      });
+
+      expect(mappings.map(mapping => mapping.backupNovelId)).toEqual(
+        Array.from({ length: 101 }, (_, index) => index + 1),
+      );
+      expect(mappings[0].restoredNovelId).toBe(matchingNovelId);
+      expect(mappings[0].restoredNovelId).not.toBe(unrelatedNovelId);
+      const restoredNovels = await testDb.drizzleDb
+        .select()
+        .from(novelSchema)
+        .all();
+      const restoredIdsByIdentity = new Map(
+        restoredNovels.map(novel => [
+          `${novel.pluginId}\u0000${novel.path}`,
+          novel.id,
+        ]),
+      );
+      expect(
+        mappings.map(mapping =>
+          restoredIdsByIdentity.get(
+            `restore-plugin\u0000/bulk/novel-${mapping.backupNovelId}`,
+          ),
+        ),
+      ).toEqual(mappings.map(mapping => mapping.restoredNovelId));
+      expect(
+        await getNovelByPath('/collision/unrelated', 'unrelated-plugin'),
+      ).toEqual(
+        expect.objectContaining({
+          id: unrelatedNovelId,
+          name: 'Unrelated Novel',
+        }),
+      );
+      expect(await getNovelByPath('/bulk/novel-1', 'restore-plugin')).toEqual(
+        expect.objectContaining({
+          totalChapters: 2,
+          lastUpdatedAt: '2024-02-01 01:00:00',
+        }),
+      );
+      expect(await getNovelByPath('/bulk/novel-101', 'restore-plugin')).toEqual(
+        expect.objectContaining({ totalChapters: 0 }),
+      );
+    });
+    it('restores 201 chapters with stable identities and ordered mappings', async () => {
+      const testDb = getTestDb();
+      const restoredNovelId = await insertTestNovel(testDb, {
+        path: '/restore/large',
+        pluginId: 'large-plugin',
+        name: 'Before Restore',
+      });
+      const stableChapterId = await insertTestChapter(testDb, restoredNovelId, {
+        path: '/restore/large/chapter-0',
+        name: 'Before Chapter',
+        readTime: '2023-01-01T00:00:00.000Z',
+        updatedTime: '2022-01-01T00:00:00.000Z',
+      });
+      const existingOnlyChapterId = await insertTestChapter(
+        testDb,
+        restoredNovelId,
+        {
+          path: '/restore/large/existing-only',
+          name: 'Existing Only',
+          readTime: '2024-01-01T00:00:00.000Z',
+          updatedTime: '2023-01-01T00:00:00.000Z',
+        },
+      );
+      const chapters = Array.from({ length: 201 }, (_, index) => {
+        const backupChapterId =
+          index === 1 || index === 2
+            ? 7000
+            : index === 99 || index === 100
+            ? 8000
+            : 10_000 + index;
+        return createBackupChapter(
+          backupChapterId,
+          999,
+          `/restore/large/chapter-${index}`,
+          {
+            unread: index % 2 === 0,
+            isDownloaded: index % 3 === 0,
+            ...(index === 0
+              ? {
+                  name: 'Restored Chapter',
+                  releaseTime: '2024-03-01T00:00:00.000Z',
+                  readTime: '2025-01-01T00:00:00.000Z',
+                  bookmark: true,
+                  updatedTime: '2024-02-01T00:00:00.000Z',
+                  chapterNumber: 10,
+                  page: '8',
+                  progress: 45,
+                  position: 7,
+                  scanlator: 'Backup Scanlator',
+                  timeSpent: 12,
+                }
+              : {}),
+            ...(index === 1 ? { updatedTime: '2024-02-01 01:00:00' } : {}),
+            ...(index === 2 ? { name: 'Same Statement Last' } : {}),
+            ...(index === 100 ? { name: 'Across Boundary Last' } : {}),
+          },
+        );
+      });
+      const backupNovel = createBackupNovel(
+        999,
+        '/restore/large',
+        chapters,
+        'large-plugin',
+      );
+      const options = {
+        restoreRunId: 'restore-large',
+        includeChapterMappings: true,
+      };
+
+      const firstMapping = await _restoreNovelAndChapters(backupNovel, options);
+      expect(firstMapping.restoredNovelId).toBe(restoredNovelId);
+
+      const restoredChapters = await testDb.drizzleDb
+        .select()
+        .from(chapterSchema)
+        .where(eq(chapterSchema.novelId, restoredNovelId))
+        .all();
+      expect(restoredChapters).toHaveLength(202);
+      const chaptersByPath = new Map(
+        restoredChapters.map(chapter => [chapter.path, chapter]),
+      );
+      expect(chaptersByPath.get('/restore/large/chapter-0')).toEqual(
+        expect.objectContaining({
+          id: stableChapterId,
+          name: 'Restored Chapter',
+          releaseTime: '2024-03-01T00:00:00.000Z',
+          readTime: '2025-01-01T00:00:00.000Z',
+          bookmark: true,
+          unread: true,
+          isDownloaded: true,
+          updatedTime: '2024-02-01T00:00:00.000Z',
+          chapterNumber: 10,
+          page: '8',
+          progress: 45,
+          position: 7,
+          scanlator: 'Backup Scanlator',
+          timeSpent: 12,
+        }),
+      );
+      expect(chaptersByPath.get('/restore/large/existing-only')).toEqual(
+        expect.objectContaining({
+          id: existingOnlyChapterId,
+          name: 'Existing Only',
+        }),
+      );
+      const mappingRows = await getRestoreChapterMappings(
+        'restore-large',
+        999,
+        [10_000, 7000, 8000],
+      );
+      expect(mappingRows).toHaveLength(3);
+      const mappingsByBackupId = new Map(
+        mappingRows.map(row => [row.backupChapterId, row]),
+      );
+      expect(mappingsByBackupId.get(10_000)?.restoredChapterId).toBe(
+        stableChapterId,
+      );
+      expect(mappingsByBackupId.get(7000)?.restoredChapterId).toBe(
+        chaptersByPath.get('/restore/large/chapter-2')?.id,
+      );
+      expect(mappingsByBackupId.get(8000)?.restoredChapterId).toBe(
+        chaptersByPath.get('/restore/large/chapter-100')?.id,
+      );
+      expect(await getNovelByPath('/restore/large', 'large-plugin')).toEqual(
+        expect.objectContaining({
+          totalChapters: 202,
+          chaptersDownloaded: 67,
+          chaptersUnread: 102,
+          lastReadAt: '2025-01-01T00:00:00.000Z',
+          lastUpdatedAt: '2024-02-01 01:00:00',
+        }),
+      );
+
+      await _restoreNovelAndChapters(backupNovel, options);
+
+      const chaptersAfterReplay = await testDb.drizzleDb
+        .select()
+        .from(chapterSchema)
+        .where(eq(chapterSchema.novelId, restoredNovelId))
+        .all();
+      expect(chaptersAfterReplay).toHaveLength(202);
+      expect(
+        chaptersAfterReplay.map(chapter => chapter.id).sort((a, b) => a - b),
+      ).toEqual(
+        restoredChapters.map(chapter => chapter.id).sort((a, b) => a - b),
+      );
+      expect(
+        await getRestoreChapterMappings('restore-large', 999, [7000, 8000]),
+      ).toEqual(
+        expect.arrayContaining([
+          {
+            backupChapterId: 7000,
+            restoredChapterId: chaptersByPath.get('/restore/large/chapter-2')
+              ?.id,
+          },
+          {
+            backupChapterId: 8000,
+            restoredChapterId: chaptersByPath.get('/restore/large/chapter-100')
+              ?.id,
+          },
+        ]),
+      );
+      expect(
+        testDb.sqlite.executeSync('PRAGMA foreign_key_check').rows,
+      ).toEqual([]);
     });
     it('preserves mappings and aggregate stats for multiple novels', async () => {
       await _restoreNovelsAndChapters(
@@ -332,6 +619,114 @@ describe('NovelRestoreQueries', () => {
       expect(
         await getRestoreChapterMappings('without-mappings', 2, [20]),
       ).toEqual([]);
+    });
+    it('requires a run ID when chapter mappings are enabled', async () => {
+      const backupNovel = createBackupNovel(1, '/restore/missing-run', [
+        createBackupChapter(10, 1, '/restore/missing-run/chapter'),
+      ]);
+
+      await expect(_restoreNovelAndChapters(backupNovel)).rejects.toThrow(
+        'Restore run ID is required for chapter mappings',
+      );
+      expect(
+        await getNovelByPath('/restore/missing-run', 'restore-plugin'),
+      ).toBeUndefined();
+    });
+    it('falls back after a failed chapter batch and restores triggers', async () => {
+      const testDb = getTestDb();
+      const restoredNovelId = await insertTestNovel(testDb, {
+        path: '/restore/fallback',
+        pluginId: 'fallback-plugin',
+        name: 'Before Restore',
+      });
+      const existingChapterId = await insertTestChapter(
+        testDb,
+        restoredNovelId,
+        {
+          path: '/restore/fallback/existing',
+          name: 'Before Existing',
+        },
+      );
+      const backupNovel = createBackupNovel(
+        40,
+        '/restore/fallback',
+        [
+          createBackupChapter(4001, 40, '/restore/fallback/existing', {
+            name: 'Restored Existing',
+          }),
+          createBackupChapter(4002, 40, '/restore/fallback/new', {
+            name: 'New Chapter',
+          }),
+        ],
+        'fallback-plugin',
+      );
+      const executeBatch = testDb.dbManager.executeBatch.bind(testDb.dbManager);
+      let batchFailureInjected = false;
+      let triggersRestoredAfterRollback = false;
+      const executeBatchSpy = jest
+        .spyOn(testDb.dbManager, 'executeBatch')
+        .mockImplementation(async commands => {
+          if (
+            !batchFailureInjected &&
+            commands.some(([sql]) =>
+              sql.includes('DROP TRIGGER IF EXISTS update_novel_stats'),
+            )
+          ) {
+            batchFailureInjected = true;
+            const failedCommands = commands.slice();
+            failedCommands.splice(3, 0, [
+              'INSERT INTO MissingRestoreTable VALUES (1)',
+            ] as SQLBatchTuple);
+            try {
+              return await executeBatch(failedCommands);
+            } catch (error) {
+              const triggerRows = testDb.sqlite.executeSync(
+                `SELECT name FROM sqlite_master
+                 WHERE type = 'trigger'
+                   AND name IN (
+                     'update_novel_stats',
+                     'update_novel_stats_on_update',
+                     'update_novel_stats_on_delete'
+                   )`,
+              ).rows;
+              triggersRestoredAfterRollback = triggerRows.length === 3;
+              throw error;
+            }
+          }
+          return executeBatch(commands);
+        });
+
+      try {
+        await _restoreNovelAndChapters(backupNovel, {
+          restoreRunId: 'restore-fallback',
+        });
+      } finally {
+        executeBatchSpy.mockRestore();
+      }
+
+      expect(batchFailureInjected).toBe(true);
+      expect(triggersRestoredAfterRollback).toBe(true);
+      const restoredChapters = await testDb.drizzleDb
+        .select()
+        .from(chapterSchema)
+        .where(eq(chapterSchema.novelId, restoredNovelId))
+        .all();
+      expect(restoredChapters).toHaveLength(2);
+      expect(
+        restoredChapters.find(
+          chapter => chapter.path === '/restore/fallback/existing',
+        )?.id,
+      ).toBe(existingChapterId);
+      expect(
+        await getRestoreChapterMappings('restore-fallback', 40, [4001, 4002]),
+      ).toHaveLength(2);
+
+      await insertTestChapter(testDb, restoredNovelId, {
+        path: '/restore/fallback/trigger-check',
+      });
+      expect(
+        await getNovelByPath('/restore/fallback', 'fallback-plugin'),
+      ).toEqual(expect.objectContaining({ totalChapters: 3 }));
     });
     it('merges restored identities without replacing existing rows', async () => {
       const testDb = getTestDb();

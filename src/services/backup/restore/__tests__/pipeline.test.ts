@@ -203,7 +203,15 @@ describe('bounded novel restore pipeline', () => {
     configureFiles(files);
 
     const firstWrite = createDeferred<RestoredNovelMapping[]>();
-    const secondFileValidated = createDeferred<void>();
+    const secondFileRead = createDeferred<void>();
+    const readFile = jest.mocked(NativeFile.readFile);
+    const readFileImplementation = readFile.getMockImplementation()!;
+    readFile.mockImplementation(async path => {
+      if (path.endsWith('batch-000002.json')) {
+        secondFileRead.resolve(undefined);
+      }
+      return readFileImplementation(path);
+    });
     let writeCount = 0;
     jest.mocked(_restoreNovelsAndChapters).mockImplementation(async novels => {
       writeCount++;
@@ -223,15 +231,10 @@ describe('bounded novel restore pipeline', () => {
       if (next.progressText) {
         progressTexts.push(next.progressText);
       }
-      if (
-        next.progressText === 'backupScreen.restoringNovelFilesProgress:2/3'
-      ) {
-        secondFileValidated.resolve(undefined);
-      }
     };
 
     const restorePromise = restoreData('/cache', setMeta);
-    await secondFileValidated.promise;
+    await secondFileRead.promise;
 
     expect(getNovelReadPaths()).toEqual([
       '/cache/NovelAndChapters/batch-000001.json',
@@ -243,15 +246,15 @@ describe('bounded novel restore pipeline', () => {
       firstFileNovels,
       { includeChapterMappings: true, restoreRunId: expect.any(String) },
     );
-    expect(progressTexts).toContain(
-      'backupScreen.restoringNovelFilesProgress:1/3',
-    );
-    expect(progressTexts).toContain(
-      'backupScreen.restoringNovelFilesProgress:2/3',
-    );
+    expect(progressTexts).toEqual([
+      'backupScreen.restoringNovelFilesProgress:0/3',
+    ]);
 
     firstWrite.resolve(makeMappings(firstFileNovels));
     const result = await restorePromise;
+    expect(progressTexts).toContain(
+      'backupScreen.restoringNovelFilesProgress:1/3',
+    );
     expect(progressTexts).toContain(
       'backupScreen.restoringNovelFilesProgress:3/3',
     );
@@ -290,6 +293,41 @@ describe('bounded novel restore pipeline', () => {
     expect(restoredNovelIdMap.get(100)).toBe(10_100);
     expect(restoredNovelIdMap.get(200)).toBe(10_200);
   });
+  it('reports completion for empty and invalid files without novel writes', async () => {
+    configureFiles({
+      'empty.json': JSON.stringify(encodeNovelBatch([])),
+      'invalid.json': '{',
+    });
+    const progressTexts: string[] = [];
+    const result = await restoreNovels(
+      '/cache',
+      {
+        appVersion: '2.1.3',
+        formatVersion: 2,
+        novelDataFormat: 2,
+        sections: options,
+      },
+      'restore-run',
+      transform => {
+        const next = transform({
+          name: 'LOCAL_RESTORE',
+          isRunning: true,
+          progress: undefined,
+          progressText: undefined,
+        });
+        if (next.progressText) {
+          progressTexts.push(next.progressText);
+        }
+      },
+    );
+
+    expect(_restoreNovelsAndChapters).not.toHaveBeenCalled();
+    expect(progressTexts).toEqual([
+      'backupScreen.restoringNovelFilesProgress:0/2',
+      'backupScreen.restoringNovelFilesProgress:2/2',
+    ]);
+    expect(result).toMatchObject({ novelCount: 0, failedNovelCount: 1 });
+  });
 
   it('settles the active write before interrupted restore cleanup', async () => {
     const firstFileNovels = Array.from({ length: 100 }, (_, index) =>
@@ -310,7 +348,15 @@ describe('bounded novel restore pipeline', () => {
     jest
       .mocked(_restoreNovelsAndChapters)
       .mockImplementation(async () => writePromise);
-    const secondFileInterrupted = createDeferred<void>();
+    const secondFileRead = createDeferred<void>();
+    const readFile = jest.mocked(NativeFile.readFile);
+    const readFileImplementation = readFile.getMockImplementation()!;
+    readFile.mockImplementation(async path => {
+      if (path.endsWith('batch-000002.json')) {
+        secondFileRead.resolve(undefined);
+      }
+      return readFileImplementation(path);
+    });
     const interruption = new Error('restore interrupted');
     const setMeta: TaskProgressUpdater = transform => {
       const next = transform({
@@ -320,15 +366,14 @@ describe('bounded novel restore pipeline', () => {
         progressText: undefined,
       });
       if (
-        next.progressText === 'backupScreen.restoringNovelFilesProgress:2/2'
+        next.progressText === 'backupScreen.restoringNovelFilesProgress:1/2'
       ) {
-        secondFileInterrupted.resolve(undefined);
         throw interruption;
       }
     };
 
     const restorePromise = restoreData('/cache', setMeta);
-    await secondFileInterrupted.promise;
+    await secondFileRead.promise;
     expect(_restoreNovelsAndChapters).toHaveBeenCalledTimes(1);
     expect(clearRestoreChapterMappings).not.toHaveBeenCalled();
 

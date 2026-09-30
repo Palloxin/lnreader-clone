@@ -150,11 +150,17 @@ export const recordRestoreFallback = (
   metrics.fallbackCauses.push({ name: errorName, message });
 };
 
-const NOVEL_UPSERT_SQL = `
+const createPlaceholderRows = (rowCount: number, valuesPerRow: number) =>
+  Array.from(
+    { length: rowCount },
+    () => `(${Array(valuesPerRow).fill('?').join(', ')})`,
+  ).join(',\n');
+
+const buildNovelUpsertSql = (rowCount: number) => `
   INSERT INTO Novel (
     path, pluginId, name, cover, summary, author, artist, status, genres,
     inLibrary, isLocal, totalPages
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES ${createPlaceholderRows(rowCount, 12)}
   ON CONFLICT(path, pluginId) DO UPDATE SET
     path = excluded.path,
     pluginId = excluded.pluginId,
@@ -169,6 +175,8 @@ const NOVEL_UPSERT_SQL = `
     isLocal = excluded.isLocal,
     totalPages = excluded.totalPages
 `;
+
+const NOVEL_UPSERT_SQL = buildNovelUpsertSql(RESTORE_NOVEL_BATCH_SIZE);
 
 const NOVEL_COVER_UPDATE_SQL = `
   UPDATE Novel
@@ -196,7 +204,12 @@ const restoreNovelChunk = async (
   metrics?: RestoreNovelMetrics,
 ): Promise<RestoredNovelMapping[]> => {
   const commands: SQLBatchTuple[] = [
-    [NOVEL_UPSERT_SQL, backupNovels.map(restoreNovelValues)],
+    [
+      backupNovels.length === RESTORE_NOVEL_BATCH_SIZE
+        ? NOVEL_UPSERT_SQL
+        : buildNovelUpsertSql(backupNovels.length),
+      backupNovels.flatMap(restoreNovelValues),
+    ],
   ];
   const storedCovers = backupNovels
     .filter(novel => novel.cover?.startsWith(`file://${NOVEL_STORAGE}/`))
@@ -313,26 +326,29 @@ const restoreNovelChunkWithRetry = async (
   }
 };
 
-const restoreChapterValues = (
+const appendRestoreChapterValues = (
+  values: Scalar[],
   chapter: BackupNovel['chapters'][number],
   restoredNovelId: number,
-): Scalar[] => [
-  restoredNovelId,
-  chapter.path,
-  chapter.name,
-  chapter.releaseTime ?? null,
-  sqliteBoolean(chapter.bookmark),
-  sqliteBoolean(chapter.unread),
-  chapter.readTime ?? null,
-  sqliteBoolean(chapter.isDownloaded),
-  chapter.updatedTime ?? null,
-  chapter.chapterNumber ?? null,
-  chapter.page ?? null,
-  chapter.position ?? null,
-  chapter.progress ?? null,
-  chapter.scanlator ?? null,
-  chapter.timeSpent ?? null,
-];
+) => {
+  values.push(
+    restoredNovelId,
+    chapter.path,
+    chapter.name,
+    chapter.releaseTime ?? null,
+    sqliteBoolean(chapter.bookmark),
+    sqliteBoolean(chapter.unread),
+    chapter.readTime ?? null,
+    sqliteBoolean(chapter.isDownloaded),
+    chapter.updatedTime ?? null,
+    chapter.chapterNumber ?? null,
+    chapter.page ?? null,
+    chapter.position ?? null,
+    chapter.progress ?? null,
+    chapter.scanlator ?? null,
+    chapter.timeSpent ?? null,
+  );
+};
 
 type ChapterRestoreRecord = {
   backupNovelId: number;
@@ -341,12 +357,14 @@ type ChapterRestoreRecord = {
   chapter: BackupNovel['chapters'][number];
 };
 
-const CHAPTER_UPSERT_SQL = `
+const RESTORE_CHAPTER_STATEMENT_SIZE = 100;
+
+const buildChapterUpsertSql = (rowCount: number) => `
   INSERT INTO Chapter (
     novelId, path, name, releaseTime, bookmark, unread, readTime,
     isDownloaded, updatedTime, chapterNumber, page, position, progress,
     scanlator, timeSpent
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES ${createPlaceholderRows(rowCount, 15)}
   ON CONFLICT(novelId, path) DO UPDATE SET
     novelId = excluded.novelId,
     path = excluded.path,
@@ -365,18 +383,43 @@ const CHAPTER_UPSERT_SQL = `
     timeSpent = excluded.timeSpent
 `;
 
-const RESTORE_CHAPTER_MAPPING_INSERT_SQL = `
+const CHAPTER_UPSERT_SQL = buildChapterUpsertSql(
+  RESTORE_CHAPTER_STATEMENT_SIZE,
+);
+
+const buildRestoreChapterMappingInsertSql = (rowCount: number) => `
+  WITH restoreInputs(
+    ordinal, restoreRunId, backupNovelId, backupChapterId,
+    restoredNovelId, chapterPath
+  ) AS (
+    VALUES ${Array.from(
+      { length: rowCount },
+      (_, ordinal) => `(${ordinal}, ?, ?, ?, ?, ?)`,
+    ).join(',\n')}
+  )
   INSERT INTO RestoreChapterMapping (
     restoreRunId, backupNovelId, backupChapterId,
     restoredNovelId, restoredChapterId
   )
-  SELECT ?, ?, ?, ?, id
-  FROM Chapter
-  WHERE novelId = ? AND path = ?
+  SELECT
+    restoreInputs.restoreRunId,
+    restoreInputs.backupNovelId,
+    restoreInputs.backupChapterId,
+    restoreInputs.restoredNovelId,
+    chapter.id
+  FROM restoreInputs
+  JOIN Chapter AS chapter
+    ON chapter.novelId = restoreInputs.restoredNovelId
+    AND chapter.path = restoreInputs.chapterPath
+  WHERE 1
+  ORDER BY restoreInputs.ordinal
   ON CONFLICT(restoreRunId, backupNovelId, backupChapterId) DO UPDATE SET
     restoredNovelId = excluded.restoredNovelId,
     restoredChapterId = excluded.restoredChapterId
 `;
+const RESTORE_CHAPTER_MAPPING_INSERT_SQL = buildRestoreChapterMappingInsertSql(
+  RESTORE_CHAPTER_STATEMENT_SIZE,
+);
 
 const restoreChapterChunk = async (
   records: ChapterRestoreRecord[],
@@ -395,28 +438,58 @@ const restoreChapterChunk = async (
     ['DROP TRIGGER IF EXISTS update_novel_stats'],
     ['DROP TRIGGER IF EXISTS update_novel_stats_on_update'],
     ['DROP TRIGGER IF EXISTS update_novel_stats_on_delete'],
-    [
-      CHAPTER_UPSERT_SQL,
-      records.map(record =>
-        restoreChapterValues(record.chapter, record.restoredNovelId),
-      ),
-    ],
   ];
+  for (
+    let start = 0;
+    start < records.length;
+    start += RESTORE_CHAPTER_STATEMENT_SIZE
+  ) {
+    const rowCount = Math.min(
+      RESTORE_CHAPTER_STATEMENT_SIZE,
+      records.length - start,
+    );
+    const values: Scalar[] = [];
+    for (let index = start; index < start + rowCount; index++) {
+      const record = records[index];
+      appendRestoreChapterValues(
+        values,
+        record.chapter,
+        record.restoredNovelId,
+      );
+    }
+    const chapterUpsertSql =
+      rowCount === RESTORE_CHAPTER_STATEMENT_SIZE
+        ? CHAPTER_UPSERT_SQL
+        : buildChapterUpsertSql(rowCount);
+    commands.push([chapterUpsertSql, values]);
+  }
   if (includeChapterMappings) {
-    commands.push([
-      RESTORE_CHAPTER_MAPPING_INSERT_SQL,
-      records.map(
-        record =>
-          [
-            restoreRunId,
-            record.backupNovelId,
-            record.backupChapterId,
-            record.restoredNovelId,
-            record.restoredNovelId,
-            record.chapter.path,
-          ] as Scalar[],
-      ),
-    ]);
+    for (
+      let start = 0;
+      start < records.length;
+      start += RESTORE_CHAPTER_STATEMENT_SIZE
+    ) {
+      const rowCount = Math.min(
+        RESTORE_CHAPTER_STATEMENT_SIZE,
+        records.length - start,
+      );
+      const values: Scalar[] = [];
+      for (let index = start; index < start + rowCount; index++) {
+        const record = records[index];
+        values.push(
+          restoreRunId as string,
+          record.backupNovelId,
+          record.backupChapterId,
+          record.restoredNovelId,
+          record.chapter.path,
+        );
+      }
+      const mappingInsertSql =
+        rowCount === RESTORE_CHAPTER_STATEMENT_SIZE
+          ? RESTORE_CHAPTER_MAPPING_INSERT_SQL
+          : buildRestoreChapterMappingInsertSql(rowCount);
+      commands.push([mappingInsertSql, values]);
+    }
   }
   commands.push(
     [createNovelTriggerQueryInsert],

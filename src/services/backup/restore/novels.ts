@@ -95,6 +95,20 @@ const restoreNovelsWithTelemetry = async (
   const pluginIds = new Set<string>();
   const pendingNovels: BackupNovel[] = [];
   let filesProcessed = 0;
+  let lastReportedFilesProcessed = -1;
+  const publishProgress = (count: number) => {
+    if (count === lastReportedFilesProcessed) {
+      return;
+    }
+    updateRestoreProgress(
+      setMeta,
+      getString('backupScreen.restoringNovelFilesProgress', {
+        current: count,
+        total: items.length,
+      }),
+    );
+    lastReportedFilesProcessed = count;
+  };
   let readMs = 0;
   let parseMs = 0;
   let databaseMs = 0;
@@ -141,20 +155,15 @@ const restoreNovelsWithTelemetry = async (
     }
 
     filesProcessed++;
-    updateRestoreProgress(
-      setMeta,
-      getString('backupScreen.restoringNovelFilesProgress', {
-        current: filesProcessed,
-        total: items.length,
-      }),
-    );
   };
+  publishProgress(0);
 
   const restoreNovelBatch = async () => {
     if (pendingNovels.length === 0) {
       return;
     }
     const batch = pendingNovels.splice(0, pendingNovels.length);
+    const processedFilesAtBatchStart = filesProcessed;
     const restoreOptions = {
       includeChapterMappings: manifest.sections.downloadedFiles,
       ...(manifest.sections.downloadedFiles ? { restoreRunId } : {}),
@@ -255,6 +264,7 @@ const restoreNovelsWithTelemetry = async (
       summary.novelIdMap.set(backupNovel.id, novelMapping.restoredNovelId);
       summary.novelCount++;
     }
+    publishProgress(processedFilesAtBatchStart);
   };
 
   let nextFileIndex = 0;
@@ -286,6 +296,7 @@ const restoreNovelsWithTelemetry = async (
 
     await restoreNovelBatch();
   }
+  publishProgress(filesProcessed);
 
   benchmarkLog?.(`restoreData:novels:pipeline:done total=${filesProcessed}`);
   benchmarkLog?.(
