@@ -388,3 +388,155 @@ Notes
 
 - Compared with the preceding v2 backup restore run, this run was 22.019% faster overall.
 - Its manifest-to-novels section was 16.597% faster.
+
+User-supplied Metro benchmark runs
+==================================
+These summaries preserve the user-provided runs from the comparison conversation.
+All total times are `local:start` to `local:finalize:done` unless marked otherwise.
+
+Consolidated comparison of runs supplied in the conversation
+------------------------------------------------------------
+Times are seconds except archive sizes in bytes. Percentages beside total and
+novel-pipeline durations compare with the Restore-perf v2, before-integration
+baseline (155.09 s total; 100.62 s novel pipeline). A positive percentage means
+slower than baseline; a negative percentage means faster. The four-part novel-stage
+cell is read / parse / database / covers. The final stage cell is manifest /
+categories / settings / plugins / selected-archive unzip / finalization, in
+milliseconds. `—` means the log did not provide the value. Matching archive
+metadata is not proof that archive contents are identical.
+
+| Run | Backup format | Image variant | Code path | Archive compressed / uncompressed bytes | Total / novel pipeline (s, delta vs baseline) | Copy / outer unzip (s) | Read / parse / DB / covers (s) | Manifest / categories / settings / plugins / selected unzip / finalization (ms) | statsRefreshCalls |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|
+| Optimize Import v3, before integration, standard images | v3 | Standard | Optimize Import v3, before integration | 1,487,128,327 / 1,891,673,000 | 185.75 [+19.77%] / 156.00 [+55.04%] | 6.37 / 20.55 | 9.600 / 16.387 / 137.420 / 17.955 | 232.16 / 1,449.59 / 207.27 / 383.56 / 223.22 / 321.31 | — |
+| Optimize Import v3, before integration, optimized images | v3 | Optimized | Optimize Import v3, before integration | 358,723,347 / 754,040,852 | 167.06 [+7.72%] / 143.83 [+42.94%] | 2.06 / 18.45 | 8.726 / 16.026 / 134.689 / 8.553 | 231.22 / 1,448.99 / 194.07 / 382.88 / 218.02 / 249.68 | — |
+| Restore-perf v3, earlier run | v3 | Not provided | Restore-perf v3 | — | 173.95 [+12.16%] / 113.62 [+12.92%] | 11.49 / 46.88 | — / — / — / — | 239.68 / 460.17 / 232.98 / 549.35 / — / 247.51 | — |
+| Optimize Import v2, earlier run | v2 | Standard | Optimize Import v2 | 1,493,783,823 / 2,369,830,658 | 363.75 [+134.54%] / 310.91 [+208.99%] | 10.75 / 39.31 | 133.648 / 23.260 / 134.773 / 19.029 | 241.98 / 1,443.00 / 207.46 / 547.96 / 30.58 / 305.31 | — |
+| Optimize Import v2, later run | v2 | Standard | Optimize Import v2 | 1,493,783,823 / 2,369,830,658 | 147.80 [-4.70%] / 95.90 [-4.69%] | 7.36 / 42.85 | 22.843 / 23.021 / 35.557 / 14.435 | 227.77 / 417.66 / 203.48 / 567.60 / 29.95 / 229.16 | — |
+| Restore-perf v2, before integration, baseline | v2 | Standard | Restore-perf v2, before integration | 1,493,783,823 / 2,369,830,658 | 155.09 [baseline] / 100.62 [baseline] | 11.02 / 41.50 | 28.496 / 4.846 / 52.377 / 14.256 | 245.45 / 408.16 / 202.08 / 549.77 / 234.96 / 304.31 | — |
+| Integrated Optimize Import v3, optimized images | v3 | Optimized | Integrated Optimize Import v3 | 358,723,347 / 754,040,852 | 88.44 [-42.98%] / 66.27 [-34.14%] | 1.66 / 18.76 | 9.028 / 16.620 / 54.760 / 10.853 | 245.18 / 422.20 / 215.95 / 414.38 / 230.08 / 210.54 | — |
+| Integrated Optimize Import v3, standard images | v3 | Standard | Integrated Optimize Import v3 | 1,487,128,327 / 1,891,673,000 | 103.78 [-33.08%] / 68.77 [-31.65%] | 11.55 / 21.84 | 8.929 / 16.616 / 55.260 / 12.842 | 228.36 / 417.60 / 196.67 / 385.62 / 179.38 / 210.54 | — |
+| Optimize Import v2, validation duplication | v2 | Standard | Optimize Import v2, validation duplication enabled | 1,493,783,823 / 2,369,830,658 | 140.07 [-9.68%] / 92.87 [-7.70%] | 5.62 / 39.84 | 24.999 / 15.510 / 36.369 / 15.908 | 237.98 / 304.15 / 196.92 / 652.86 / 28.75 / 290.18 | — |
+| Optimize Import v3, latest run | v3 | Not provided | Optimize Import branch, v3 import | 1,487,128,327 / 1,891,673,000 | 96.45 [-37.81%] / 65.55 [-34.85%] | 8.91 / 20.32 | 13.143 / 12.800 / 49.803 / 14.627 | 217.75 / 403.71 / 205.80 / 418.95 / 175.18 / 238.62 | 74 |
+
+2026-10-01 Optimize Import v3, standard images, before restore-perf integration
+------------------------------------------------------------------------------
+- Input: v3 backup, 7,323 novels, 2,699,763 chapters
+- Archive: 7,250 entries, 1,487,128,327 compressed bytes, 1,891,673,000 uncompressed bytes
+- Total 185.75 s; novel pipeline 156.00 s; restoreData span 158.05 s (timestamp-derived: manifest 236993.28 -> restoreData:done 395042.22)
+- Novel timings: read 9.600 s; parse 16.387 s; database 137.420 s; covers 17.955 s
+- Copy 6.37 s; outer unzip 20.55 s; manifest event 232.16 ms
+- Categories 1,449.59 ms; settings 207.27 ms; plugins 383.56 ms
+- Selected archive unzip 223.22 ms; finalization 321.31 ms
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+- Covers: 7,171 candidates, 7,171 found/copied, none missing
+
+2026-10-01 Optimize Import v3, optimized images, before restore-perf integration
+--------------------------------------------------------------------------------
+- Input: v3 backup, 7,323 novels, 2,699,763 chapters
+- Archive: 7,248 entries, 358,723,347 compressed bytes, 754,040,852 uncompressed bytes
+- Total 167.06 s; novel pipeline 143.83 s; restoreData span 145.85 s (timestamp-derived: manifest 5347841.41 -> restoreData:done 5493694.08)
+- Novel timings: read 8.726 s; parse 16.026 s; database 134.689 s; covers 8.553 s
+- Copy 2.06 s; outer unzip 18.45 s; manifest event 231.22 ms
+- Categories 1,448.99 ms; settings 194.07 ms; plugins 382.88 ms
+- Selected archive unzip 218.02 ms; finalization 249.68 ms
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+- Covers: 7,171 candidates, 7,169 found/copied, 2 missing
+
+2026-10-01 Restore-perf v3, earlier run, archive variant unknown
+---------------------------------------------------------------
+- Input: v3 backup, 7,323 novels; archive size and image variant not provided
+- Total 173.95 s; novel pipeline 113.62 s; restoreData span 114.87 s (timestamp-derived: manifest 2132844.19 -> restoreData:done 2247710.55)
+- Copy 11.49 s; outer unzip 46.88 s; manifest event 239.68 ms
+- Categories 460.17 ms; settings 232.98 ms; plugins 549.35 ms
+- Selected-file restore 228.30 ms; finalization 247.51 ms
+- 7,323 restored, 0 failed
+
+2026-10-01 Optimize Import v2, earlier run
+------------------------------------------
+- Input: v2 backup, 7,323 novels, 2,699,763 chapters
+- Archive: 14,499 entries, 1,493,783,823 compressed bytes, 2,369,830,658 uncompressed bytes
+- Total 363.75 s; novel pipeline 310.91 s
+- Novel timings: read 133.648 s; parse 23.260 s; database 134.773 s; covers 19.029 s
+- Copy 10.75 s; outer unzip 39.31 s; manifest event 241.98 ms
+- Categories 1,443.00 ms; settings 207.46 ms; plugins 547.96 ms
+- Selected archive unzip 30.58 ms; finalization 305.31 ms
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+
+2026-10-01 Optimize Import v2, later run
+----------------------------------------
+- Input: v2 backup, 7,323 novels, 2,699,763 chapters
+- Archive metadata: same reported entry count and byte counts as the earlier v2 run
+- Total 147.80 s; novel pipeline 95.90 s
+- Novel timings: read 22.843 s; parse 23.021 s; database 35.557 s; covers 14.435 s
+- Copy 7.36 s; outer unzip 42.85 s; manifest event 227.77 ms
+- Categories 417.66 ms; settings 203.48 ms; plugins 567.60 ms
+- Selected archive unzip 29.95 ms; finalization 229.16 ms
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+
+2026-10-01 Restore-perf v2, before integration
+----------------------------------------------
+- Input: v2 backup, 7,323 novels, 2,699,763 chapters
+- Archive metadata: same reported entry count and byte counts as Optimize Import v2
+- Total 155.09 s; novel pipeline 100.62 s
+- Novel timings: read 28.496 s; parse 4.846 s; database 52.377 s; covers 14.256 s
+- Copy 11.02 s; outer unzip 41.50 s; manifest event 245.45 ms
+- Categories 408.16 ms; settings 202.08 ms; plugins 549.77 ms
+- Selected archive unzip 234.96 ms; finalization 304.31 ms
+- Database: 485 batches; 7,323 upserts and identity lookups; 30,682 chapter writes;
+  2,699,763 chapter rows; no restore failures
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+
+2026-10-01 Integrated Optimize Import v3, optimized images
+---------------------------------------------------------
+- Input: v3 backup, 7,323 novels, 2,699,763 chapters
+- Archive: 7,248 entries, 358,723,347 compressed bytes, 754,040,852 uncompressed bytes
+- Total 88.44 s; novel pipeline 66.27 s; restoreData span 67.33 s (timestamp-derived: manifest 1927462.25 -> restoreData:done 1994794.15)
+- Novel timings: read 9.028 s; parse 16.620 s; database 54.760 s; covers 10.853 s
+- Copy 1.66 s; outer unzip 18.76 s; manifest event 245.18 ms
+- Categories 422.20 ms; settings 215.95 ms; plugins 414.38 ms
+- Selected archive unzip 230.08 ms; finalization 210.54 ms
+- Database: 74 upserts; 305 chapter-write chunks; 2,699,763 chapter rows;
+  no restore failures
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+- Covers: 7,171 candidates, 7,169 found/copied, 2 missing
+
+2026-10-01 Integrated Optimize Import v3, standard images
+--------------------------------------------------------
+- Input: v3 backup, 7,323 novels, 2,699,763 chapters
+- Archive: 7,250 entries, 1,487,128,327 compressed bytes, 1,891,673,000 uncompressed bytes
+- Total 103.78 s; novel pipeline 68.77 s; restoreData span 69.78 s (timestamp-derived: manifest 1749439.53 -> restoreData:done 1819216.57)
+- Novel timings: read 8.929 s; parse 16.616 s; database 55.260 s; covers 12.842 s
+- Copy 11.55 s; outer unzip 21.84 s; manifest event 228.36 ms
+- Categories 417.60 ms; settings 196.67 ms; plugins 385.62 ms
+- Selected archive unzip 179.38 ms; finalization 210.54 ms
+- Database: 74 upserts; 305 chapter-write chunks; 2,699,763 chapter rows;
+  no restore failures
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+- Covers: 7,171 candidates, all found/copied, none missing
+
+2026-10-01 Optimize Import v2, validation duplication enabled
+------------------------------------------------------------
+- Input: v2 backup, 7,323 novels, 2,699,763 chapters
+- Archive metadata: same reported entry count and byte counts as other Optimize Import v2 runs
+- Total 140.07 s; novel pipeline 92.87 s
+- Novel timings: read 24.999 s; parse 15.510 s; database 36.369 s; covers 15.908 s
+- Copy 5.62 s; outer unzip 39.84 s; manifest event 237.98 ms
+- Categories 304.15 ms; settings 196.92 ms; plugins 652.86 ms
+- Selected archive unzip 28.75 ms; finalization 290.18 ms
+- 7,323 restored, 0 failed; 9 categories; 14 plugins
+
+Latest user-supplied Optimize Import branch v3 import, standard image
+------------------------------------------------------------------------------
+- Input: v3 backup; 7,323 restored novels, 2,699,763 unique input chapters; novel pipeline total=74
+- Archive: 7,250 entries, 1,487,128,327 compressed bytes, 1,891,673,000 uncompressed bytes; largest entry 13,982,357 bytes
+- Archive metadata matches the reported standard-image v3 runs; that does not establish identical archive contents
+- Total 96.45 s; novel pipeline 65.55 s; restoreData span 66.58 s (timestamp-derived: manifest 57951638.26 -> restoreData:done 58018221.85)
+- Novel timings: read 13.143 s; parse 12.800 s; database 49.803 s; covers 14.627 s
+- Copy 8.91 s; outer unzip 20.32 s; manifest event 217.75 ms
+- Validation-start event followed the preceding log event by 3.41 ms; validation runtime was not separately measured
+- Categories 403.71 ms; settings 205.80 ms; plugins 418.95 ms
+- Selected archive unzip 175.18 ms (15 entries; 78,448 compressed bytes, 237,698 uncompressed bytes); finalization 238.62 ms
+- Database counters: 74 novel upsert calls / 7,323 rows; 74 identity lookup calls / 7,323 rows; 305 chapter-write chunks / 2,699,763 rows; 0 chapter-mapping rows; 74 stats refresh calls for 7,323 novels; 0 novel and chapter batch fallbacks
+- Database operation timings: novel upserts 2.693 s; identity lookups 2.282 s; chapter writes 37.246 s; stats refresh 5.222 s
+- 7,323 restored, 0 failed; 9 categories, 0 failed; 14 plugins
+- Covers: 7,171 candidates, all found/copied; none missing; 0 cover-processing failures
