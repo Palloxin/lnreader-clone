@@ -82,6 +82,7 @@ export const prepareBackupData = async (
     if (!options.downloadedFiles) {
       await NativeFile.mkdir(coversDirPath);
     }
+    let backedUpNovelCount = 0;
     const novels = await getAllNovels();
     for (
       let start = 0;
@@ -172,6 +173,7 @@ export const prepareBackupData = async (
             batchPath,
             JSON.stringify(encodeNovelBatch(preparedNovels)),
           );
+          backedUpNovelCount += preparedNovels.length;
         } catch {
           failedNovelCount += preparedNovels.length;
           try {
@@ -182,6 +184,11 @@ export const prepareBackupData = async (
         }
       }
     }
+    manifest.novelCount = backedUpNovelCount;
+    await NativeFile.writeFile(
+      cacheDirPath + '/' + BackupEntryName.VERSION,
+      JSON.stringify(manifest),
+    );
 
     // categories
     try {

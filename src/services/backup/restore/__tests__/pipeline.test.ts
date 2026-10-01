@@ -267,6 +267,7 @@ describe('bounded novel restore pipeline', () => {
       appVersion: '2.1.3',
       formatVersion: 3,
       novelDataFormat: 2,
+      novelCount: 25,
       sections: options,
     });
     configureFiles(
@@ -302,13 +303,95 @@ describe('bounded novel restore pipeline', () => {
     );
   });
 
+  it('uses the v2 novel file count before any mappings persist', async () => {
+    const novels = [makeTestNovel(1), makeTestNovel(2), makeTestNovel(3)];
+    const v2Manifest = JSON.stringify({
+      appVersion: '2.1.3',
+      formatVersion: 2,
+      sections: options,
+    });
+    configureFiles(
+      Object.fromEntries(
+        novels.map(novel => [`novel-${novel.id}.json`, JSON.stringify(novel)]),
+      ),
+      v2Manifest,
+    );
+    jest
+      .mocked(_restoreNovelsAndChapters)
+      .mockImplementation(async batch => makeMappings(batch));
+    const firstProgress = createDeferred<string>();
+    const progressTexts: string[] = [];
+    const restorePromise = restoreData('/cache', (phase, _fraction, text) => {
+      if (phase !== 'novels') {
+        return;
+      }
+      progressTexts.push(text);
+      if (text.startsWith('backupScreen.restoringNovelsProgress:')) {
+        firstProgress.resolve(text);
+      }
+    });
+
+    await expect(firstProgress.promise).resolves.toBe(
+      'backupScreen.restoringNovelsProgress:0/3',
+    );
+    const result = await restorePromise;
+
+    expect(result.novelCount).toBe(3);
+    expect(progressTexts).toContain('backupScreen.restoringNovelsProgress:3/3');
+  });
+
+  it('restores compact v2 batches using their total novel count', async () => {
+    const firstBatch = Array.from({ length: 100 }, (_, index) =>
+      makeTestNovel(index + 1),
+    );
+    const lastNovel = makeTestNovel(101);
+    const v2Manifest = JSON.stringify({
+      appVersion: '2.1.3',
+      formatVersion: 2,
+      novelDataFormat: 2,
+      novelCount: 101,
+      sections: options,
+    });
+    configureFiles(
+      {
+        'batch-000001.json': JSON.stringify(encodeNovelBatch(firstBatch)),
+        'batch-000002.json': JSON.stringify(encodeNovelBatch([lastNovel])),
+      },
+      v2Manifest,
+    );
+    jest
+      .mocked(_restoreNovelsAndChapters)
+      .mockImplementation(async batch => makeMappings(batch));
+    const capture = createProgressCapture();
+
+    const result = await restoreData('/cache', capture.reporter);
+
+    expect(result.novelCount).toBe(101);
+    expect(capture.progressTexts).toContain(
+      'backupScreen.restoringNovelsProgress:0/101',
+    );
+    expect(capture.progressTexts).toContain(
+      'backupScreen.restoringNovelsProgress:101/101',
+    );
+  });
+
   it('restores successful novels after a failed three-novel batch', async () => {
     const novels = Array.from({ length: 3 }, (_, index) =>
       makeTestNovel(index + 1),
     );
-    configureFiles({
-      'batch-000001.json': JSON.stringify(encodeNovelBatch(novels)),
+    const v3Manifest = JSON.stringify({
+      appVersion: '2.1.3',
+      formatVersion: 3,
+      novelDataFormat: 2,
+      novelCount: 3,
+      sections: options,
     });
+    configureFiles(
+      {
+        'batch-000001.json': JSON.stringify(encodeNovelBatch(novels)),
+      },
+      v3Manifest,
+    );
     jest
       .mocked(_restoreNovelsAndChapters)
       .mockRejectedValueOnce(new Error('batch restore failed'));
@@ -349,8 +432,14 @@ describe('bounded novel restore pipeline', () => {
       'batch-000002.json': JSON.stringify(encodeNovelBatch([secondFileNovel])),
       'batch-000003.json': JSON.stringify(encodeNovelBatch([duplicateNovel])),
     };
-    configureFiles(files);
-
+    const v3Manifest = JSON.stringify({
+      appVersion: '2.1.3',
+      formatVersion: 3,
+      novelDataFormat: 2,
+      novelCount: 101,
+      sections: options,
+    });
+    configureFiles(files, v3Manifest);
     const firstWrite = createDeferred<RestoredNovelMapping[]>();
     const secondFileRead = createDeferred<void>();
     const readFile = jest.mocked(NativeFile.readFile);
@@ -395,19 +484,19 @@ describe('bounded novel restore pipeline', () => {
       }),
     );
     expect(capture.progressTexts).toContain(
-      'backupScreen.restoringNovelsCount:0',
+      'backupScreen.restoringNovelsProgress:0/101',
     );
     expect(capture.progressTexts).not.toContain(
-      'backupScreen.restoringNovelsCount:100',
+      'backupScreen.restoringNovelsProgress:100/101',
     );
 
     firstWrite.resolve(makeMappings(firstFileNovels));
     const result = await restorePromise;
     expect(capture.progressTexts).toContain(
-      'backupScreen.restoringNovelsCount:100',
+      'backupScreen.restoringNovelsProgress:100/101',
     );
     expect(capture.progressTexts).toContain(
-      'backupScreen.restoringNovelsProgress:101/102',
+      'backupScreen.restoringNovelsProgress:101/101',
     );
 
     expect(_restoreNovelsAndChapters).toHaveBeenCalledTimes(2);
@@ -467,9 +556,6 @@ describe('bounded novel restore pipeline', () => {
 
     expect(_restoreNovelsAndChapters).not.toHaveBeenCalled();
     expect(capture.progressTexts).toContain(
-      'backupScreen.restoringNovelsCount:0',
-    );
-    expect(capture.progressTexts).toContain(
       'backupScreen.restoringNovelsProgress:0/1',
     );
     expect(result).toMatchObject({ novelCount: 0, failedNovelCount: 1 });
@@ -480,11 +566,20 @@ describe('bounded novel restore pipeline', () => {
       makeTestNovel(index + 1),
     );
     const nextFileNovel = makeTestNovel(200);
-    configureFiles({
-      'batch-000001.json': JSON.stringify(encodeNovelBatch(firstFileNovels)),
-      'batch-000002.json': JSON.stringify(encodeNovelBatch([nextFileNovel])),
+    const v3Manifest = JSON.stringify({
+      appVersion: '2.1.3',
+      formatVersion: 3,
+      novelDataFormat: 2,
+      novelCount: 101,
+      sections: options,
     });
-
+    configureFiles(
+      {
+        'batch-000001.json': JSON.stringify(encodeNovelBatch(firstFileNovels)),
+        'batch-000002.json': JSON.stringify(encodeNovelBatch([nextFileNovel])),
+      },
+      v3Manifest,
+    );
     const firstWrite = createDeferred<RestoredNovelMapping[]>();
     let firstWriteSettled = false;
     const writePromise = firstWrite.promise.then(mappings => {
@@ -536,15 +631,17 @@ describe('bounded novel restore pipeline', () => {
     expect(_restoreNovelsAndChapters).toHaveBeenCalledTimes(1);
     expect(_restoreNovelAndChapters).not.toHaveBeenCalled();
     expect(clearRestoreChapterMappings).not.toHaveBeenCalled();
-    expect(progressTexts).toContain('backupScreen.restoringNovelsCount:0');
+    expect(progressTexts).toContain(
+      'backupScreen.restoringNovelsProgress:0/101',
+    );
     expect(progressTexts).not.toContain(
-      'backupScreen.restoringNovelsCount:100',
+      'backupScreen.restoringNovelsProgress:100/101',
     );
 
     firstWrite.resolve(makeMappings(firstFileNovels));
     await expect(restorePromise).rejects.toBe(interruption);
     expect(progressTexts).not.toContain(
-      'backupScreen.restoringNovelsCount:100',
+      'backupScreen.restoringNovelsProgress:100/101',
     );
     expect(_restoreNovelAndChapters).not.toHaveBeenCalled();
 

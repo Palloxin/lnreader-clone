@@ -56,10 +56,20 @@ const getBackupManifest = async (
         data.novelDataFormat === 1 || data.novelDataFormat === 2
           ? data.novelDataFormat
           : undefined;
+      const novelCount =
+        typeof data.novelCount === 'number' &&
+        Number.isSafeInteger(data.novelCount) &&
+        data.novelCount >= 0
+          ? data.novelCount
+          : undefined;
       return {
         appVersion: data.appVersion ?? data.version ?? '',
         formatVersion: data.formatVersion,
         ...(novelDataFormat === undefined ? {} : { novelDataFormat }),
+        ...((data.formatVersion === 3 || novelDataFormat === 2) &&
+        novelCount !== undefined
+          ? { novelCount }
+          : {}),
         sections: resolveBackupOptions(data.sections),
       };
     }

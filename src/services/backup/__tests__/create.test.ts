@@ -131,6 +131,89 @@ describe('selective backup creation', () => {
       '[]',
     );
   });
+  it('stores the total novel count in the v3 manifest', async () => {
+    const novels = [makeTestNovel(1), makeTestNovel(2), makeTestNovel(3)];
+    jest.mocked(getAllNovels).mockResolvedValueOnce(novels);
+
+    await prepareBackupData(
+      '/cache',
+      {
+        library: true,
+        settings: false,
+        plugins: false,
+        downloadedFiles: false,
+      },
+      3,
+    );
+
+    const manifestWrites = jest
+      .mocked(NativeFile.writeFile)
+      .mock.calls.filter(([path]) => path.endsWith('/Version.json'));
+    expect(
+      JSON.parse(manifestWrites[manifestWrites.length - 1][1] ?? '{}'),
+    ).toMatchObject({
+      formatVersion: 3,
+      novelCount: 3,
+    });
+  });
+
+  it('counts only validated novels in the v3 manifest', async () => {
+    const novels = [
+      makeTestNovel(1),
+      { ...makeTestNovel(2), name: 2 as unknown as string },
+    ];
+    jest.mocked(getAllNovels).mockResolvedValueOnce(novels);
+
+    const result = await prepareBackupData(
+      '/cache',
+      {
+        library: true,
+        settings: false,
+        plugins: false,
+        downloadedFiles: false,
+      },
+      3,
+    );
+
+    const manifestWrites = jest
+      .mocked(NativeFile.writeFile)
+      .mock.calls.filter(([path]) => path.endsWith('/Version.json'));
+    expect(
+      JSON.parse(manifestWrites[manifestWrites.length - 1][1]).novelCount,
+    ).toBe(1);
+    expect(result.failedNovelCount).toBe(1);
+  });
+
+  it('does not count novels from a failed batch write', async () => {
+    jest
+      .mocked(getAllNovels)
+      .mockResolvedValueOnce([makeTestNovel(1), makeTestNovel(2)]);
+    jest.mocked(NativeFile.writeFile).mockImplementation(async path => {
+      if (path.includes('/NovelAndChapters/batch-')) {
+        throw new Error('Novel batch write failed');
+      }
+    });
+
+    const result = await prepareBackupData(
+      '/cache',
+      {
+        library: true,
+        settings: false,
+        plugins: false,
+        downloadedFiles: false,
+      },
+      3,
+    );
+
+    const manifestWrites = jest
+      .mocked(NativeFile.writeFile)
+      .mock.calls.filter(([path]) => path.endsWith('/Version.json'));
+    expect(
+      JSON.parse(manifestWrites[manifestWrites.length - 1][1] ?? '{}')
+        .novelCount,
+    ).toBe(0);
+    expect(result.failedNovelCount).toBe(2);
+  });
 
   it('includes stored covers with library data when downloads are omitted', async () => {
     jest.mocked(getAllNovels).mockResolvedValueOnce([
@@ -403,12 +486,15 @@ describe('selective backup creation', () => {
       ),
     ).toBe(true);
 
-    const manifestWrite = jest
+    const manifestWrites = jest
       .mocked(NativeFile.writeFile)
-      .mock.calls.find(([path]) => path.endsWith('/Version.json'));
-    expect(JSON.parse(manifestWrite?.[1] ?? '{}')).toMatchObject({
+      .mock.calls.filter(([path]) => path.endsWith('/Version.json'));
+    expect(
+      JSON.parse(manifestWrites[manifestWrites.length - 1][1] ?? '{}'),
+    ).toMatchObject({
       formatVersion: 2,
       novelDataFormat: 2,
+      novelCount: 101,
     });
   });
 

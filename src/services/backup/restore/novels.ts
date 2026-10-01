@@ -107,6 +107,11 @@ const restoreNovelsWithTelemetry = async (
   let filesProcessed = 0;
   let inputRecordCount = 0;
   let persistedNovelCount = 0;
+  const totalNovelCount =
+    manifest.formatVersion === 3 ||
+    (manifest.formatVersion === 2 && manifest.novelDataFormat === 2)
+      ? manifest.novelCount
+      : items.length;
   let completedFileWork = 0;
   let pendingFileWork = 0;
   let activeFileWork = 0;
@@ -125,14 +130,10 @@ const restoreNovelsWithTelemetry = async (
   let coverProcessingFailures = 0;
 
   const getNovelCountText = () =>
-    filesProcessed < items.length
-      ? getString('backupScreen.restoringNovelsCount', {
-          current: persistedNovelCount,
-        })
-      : getString('backupScreen.restoringNovelsProgress', {
-          current: persistedNovelCount,
-          total: inputRecordCount,
-        });
+    getString('backupScreen.restoringNovelsProgress', {
+      current: persistedNovelCount,
+      total: totalNovelCount ?? inputRecordCount,
+    });
   const getNovelPhaseFraction = () => {
     if (items.length === 0) {
       return 1;

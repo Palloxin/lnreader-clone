@@ -21,6 +21,7 @@ export type BackupManifest = {
   appVersion: string;
   formatVersion: 2 | 3;
   novelDataFormat?: 1 | 2;
+  novelCount?: number;
   sections: BackupOptions;
 };
 
