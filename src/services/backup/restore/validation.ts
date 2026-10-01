@@ -1,10 +1,6 @@
 import type { BackupNovel } from '@database/types';
 import { ROOT_STORAGE } from '@utils/Storages';
-import {
-  decodeNovelBatch,
-  normalizeLegacyNovel,
-  validateBackupNovel,
-} from '../novelPayload';
+import { decodeNovelBatch, normalizeLegacyNovel } from '../novelPayload';
 import type { ResolvedBackupManifest } from '../types';
 
 const APP_STORAGE_URI = 'file://' + ROOT_STORAGE;
@@ -34,7 +30,7 @@ export const decodeRestoreNovelFile = (
       totalChapters: _totalChapters,
       lastReadAt: _lastReadAt,
       lastUpdatedAt: _lastUpdatedAt,
-      ...withoutAggregates
+      ...normalized
     } = novel as BackupNovel & {
       chaptersDownloaded?: number | null;
       chaptersUnread?: number | null;
@@ -42,7 +38,6 @@ export const decodeRestoreNovelFile = (
       lastReadAt?: string | null;
       lastUpdatedAt?: string | null;
     };
-    const normalized = validateBackupNovel(withoutAggregates);
     return normalized.cover && !normalized.cover.startsWith('http')
       ? { ...normalized, cover: APP_STORAGE_URI + normalized.cover }
       : normalized;

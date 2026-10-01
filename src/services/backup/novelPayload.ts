@@ -73,6 +73,7 @@ const NOVEL_KEYS = [
   'lr',
   'lu',
 ] as const;
+const EXPECTED_NOVEL_KEYS = [...NOVEL_KEYS].sort();
 
 const isNullable = <T>(
   value: unknown,
@@ -262,12 +263,12 @@ export const normalizeLegacyNovel = (value: unknown): BackupNovel => {
       normalizeLegacyChapter(chapter, novelId),
     ),
   };
-  return validateBackupNovel(novel);
+  return novel;
 };
 
 const assertNovelKeys = (novel: Record<string, unknown>) => {
   const keys = Object.keys(novel).sort();
-  const expected = [...NOVEL_KEYS].sort();
+  const expected = EXPECTED_NOVEL_KEYS;
   if (
     keys.length !== expected.length ||
     keys.some((key, index) => key !== expected[index])
@@ -300,7 +301,9 @@ const isCompactChapter = (value: unknown): value is CompactChapter => {
   );
 };
 
-const isCompactNovel = (value: unknown): value is CompactNovel => {
+type CompactNovelHeader = Omit<CompactNovel, 'c'> & { c: unknown[] };
+
+const isCompactNovelHeader = (value: unknown): value is CompactNovelHeader => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
@@ -308,7 +311,6 @@ const isCompactNovel = (value: unknown): value is CompactNovel => {
   assertNovelKeys(novel);
   return (
     Array.isArray(novel.c) &&
-    novel.c.every(isCompactChapter) &&
     isId(novel.id) &&
     nonEmptyString(novel.p) &&
     nonEmptyString(novel.pi) &&
@@ -375,7 +377,7 @@ const encodeNovel = (novel: BackupNovel): CompactNovel => {
   };
 };
 
-const decodeNovel = (novel: CompactNovel): BackupNovel => {
+const decodeNovel = (novel: CompactNovelHeader): BackupNovel => {
   const decoded: BackupNovelWithAggregates = {
     id: novel.id,
     path: novel.p,
@@ -395,24 +397,29 @@ const decodeNovel = (novel: CompactNovel): BackupNovel => {
     totalChapters: novel.tc,
     lastReadAt: novel.lr,
     lastUpdatedAt: novel.lu,
-    chapters: novel.c.map(chapter => ({
-      id: chapter[0],
-      novelId: novel.id,
-      path: chapter[1],
-      name: chapter[2],
-      releaseTime: chapter[3],
-      bookmark: chapter[4],
-      unread: chapter[5],
-      readTime: chapter[6],
-      isDownloaded: chapter[7],
-      updatedTime: chapter[8],
-      chapterNumber: chapter[9],
-      page: chapter[10],
-      position: chapter[11],
-      progress: chapter[12],
-      scanlator: chapter[13],
-      timeSpent: chapter[14],
-    })),
+    chapters: novel.c.map(chapter => {
+      if (!isCompactChapter(chapter)) {
+        throw new Error('Invalid compact novel record');
+      }
+      return {
+        id: chapter[0],
+        novelId: novel.id,
+        path: chapter[1],
+        name: chapter[2],
+        releaseTime: chapter[3],
+        bookmark: chapter[4],
+        unread: chapter[5],
+        isDownloaded: chapter[7],
+        updatedTime: chapter[8],
+        chapterNumber: chapter[9],
+        page: chapter[10],
+        position: chapter[11],
+        progress: chapter[12],
+        scanlator: chapter[13],
+        timeSpent: chapter[14],
+        readTime: chapter[6],
+      };
+    }),
   };
   return decoded;
 };
@@ -429,7 +436,7 @@ export const decodeNovelBatch = (payload: unknown): BackupNovel[] => {
     throw new Error('Invalid compact novel batch');
   }
   return payload.map(value => {
-    if (!isCompactNovel(value)) {
+    if (!isCompactNovelHeader(value)) {
       throw new Error('Invalid compact novel record');
     }
     return decodeNovel(value);
