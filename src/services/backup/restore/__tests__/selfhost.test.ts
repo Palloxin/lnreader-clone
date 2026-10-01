@@ -5,6 +5,7 @@ import type {
 } from '@services/backgroundTasks/contracts';
 import { CACHE_DIR_PATH, clearBackupCache } from '../../cache';
 import { ZipBackupName } from '../../types';
+import { restoreLegacyFiles, restoreNovelFiles } from '../files';
 import { selfHostRestore } from '../selfhost';
 
 import { restoreData } from '../index';
@@ -44,25 +45,30 @@ jest.mock('@utils/Storages', () => ({
 
 const backupFolder = 'backup-folder';
 const host = 'https://example.invalid';
-const restoreDataFor = (plugins: boolean): RestoreResult => ({
+const restoreDataFor = (
+  plugins: boolean,
+  downloadedFiles = false,
+  formatVersion: 1 | 2 | 3 = 3,
+  novelMappings: RestoreResult['novelMappings'] = [],
+): RestoreResult => ({
   novelCount: 0,
   failedNovelCount: 0,
   categoryCount: 0,
   failedCategoryCount: 0,
   settingsRestored: true,
   failedSectionCount: 0,
-  pluginIds: [],
-  novelMappings: [],
+  pluginIds: plugins ? ['restored-plugin'] : [],
+  novelMappings,
   restoreRunId: 'selfhost-restore-run',
   manifest: {
     appVersion: '2.1.3',
-    formatVersion: 3,
+    formatVersion,
     novelDataFormat: 2,
     sections: {
-      library: false,
+      library: downloadedFiles,
       settings: false,
       plugins,
-      downloadedFiles: false,
+      downloadedFiles,
     },
   },
 });
@@ -132,13 +138,16 @@ describe('self-host restore progress', () => {
   });
 
   it('does not report completion when a selected archive download fails', async () => {
-    const result = restoreDataFor(true);
+    const mappings = [
+      { pluginId: 'plugin-a', backupNovelId: 12, restoredNovelId: 42 },
+    ];
+    const result = restoreDataFor(true, true, 2, mappings);
     jest.mocked(restoreData).mockImplementationOnce(async (_path, reporter) => {
       reportRestoreStages(reporter);
       return result;
     });
     jest.mocked(download).mockImplementation(async (_host, _folder, name) => {
-      if (name === ZipBackupName.PLUGINS) {
+      if (name === ZipBackupName.NOVEL_FILES) {
         throw new Error('selected archive download failed');
       }
       return '';
@@ -149,9 +158,101 @@ describe('self-host restore progress', () => {
       selfHostRestore({ host, backupFolder }, capture.setMeta),
     ).rejects.toThrow('selected archive download failed');
 
+    expect(download).toHaveBeenCalledWith(
+      host,
+      backupFolder,
+      ZipBackupName.NOVEL_FILES,
+      '/cache/novel-files',
+    );
+    expect(restoreNovelFiles).not.toHaveBeenCalled();
     expect(capture.progressValues.length).toBeGreaterThan(0);
     expect(Math.max(...capture.progressValues)).toBeLessThan(1);
     expect(finalizeRestoredPlugins).not.toHaveBeenCalled();
     expect(getRestoreCompletionText).not.toHaveBeenCalled();
+  });
+
+  it('restores selected format-2 archives before finalizing plugins', async () => {
+    const mappings = [
+      { pluginId: 'plugin-a', backupNovelId: 12, restoredNovelId: 42 },
+    ];
+    const result = restoreDataFor(true, true, 2, mappings);
+    jest.mocked(restoreData).mockImplementationOnce(async (_path, reporter) => {
+      reportRestoreStages(reporter);
+      return result;
+    });
+    const capture = createProgressCapture();
+
+    await selfHostRestore({ host, backupFolder }, capture.setMeta);
+
+    expect(download).toHaveBeenCalledWith(
+      host,
+      backupFolder,
+      ZipBackupName.PLUGINS,
+      '/storage/Plugins',
+    );
+    expect(download).toHaveBeenCalledWith(
+      host,
+      backupFolder,
+      ZipBackupName.NOVEL_FILES,
+      '/cache/novel-files',
+    );
+    expect(restoreNovelFiles).toHaveBeenCalledWith(
+      '/cache/novel-files',
+      mappings,
+      result.restoreRunId,
+      expect.any(Function),
+    );
+    expect(
+      jest.mocked(restoreNovelFiles).mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      Math.max(...jest.mocked(download).mock.invocationCallOrder),
+    );
+    expect(finalizeRestoredPlugins).toHaveBeenCalledWith(result);
+    expect(
+      jest.mocked(finalizeRestoredPlugins).mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      Math.max(...jest.mocked(download).mock.invocationCallOrder),
+    );
+    expect(
+      jest.mocked(finalizeRestoredPlugins).mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      jest.mocked(restoreNovelFiles).mock.invocationCallOrder[0],
+    );
+    expect(
+      jest.mocked(getRestoreCompletionText).mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      jest.mocked(finalizeRestoredPlugins).mock.invocationCallOrder[0],
+    );
+    expect(capture.getMetadata().isRunning).toBe(false);
+    expect(capture.getMetadata().completionText).toBe('completed');
+  });
+
+  it('restores format-1 downloads from the legacy staging path', async () => {
+    const mappings = [
+      { pluginId: 'plugin-a', backupNovelId: 12, restoredNovelId: 42 },
+    ];
+    const result = restoreDataFor(false, true, 1, mappings);
+    jest.mocked(restoreData).mockImplementationOnce(async (_path, reporter) => {
+      reportRestoreStages(reporter);
+      return result;
+    });
+    const capture = createProgressCapture();
+
+    await selfHostRestore({ host, backupFolder }, capture.setMeta);
+
+    expect(download).toHaveBeenCalledWith(
+      host,
+      backupFolder,
+      ZipBackupName.DOWNLOAD,
+      '/cache/legacy-files',
+    );
+    expect(restoreLegacyFiles).toHaveBeenCalledWith(
+      '/cache/legacy-files',
+      mappings,
+      result.restoreRunId,
+      expect.any(Function),
+    );
+    expect(restoreNovelFiles).not.toHaveBeenCalled();
+    expect(capture.getMetadata().completionText).toBe('completed');
   });
 });
