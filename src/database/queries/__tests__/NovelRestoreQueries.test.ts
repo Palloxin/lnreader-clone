@@ -181,6 +181,31 @@ describe('NovelRestoreQueries', () => {
       expect(restoredChapters).toHaveLength(1);
       expect(restoredChapters[0].path).toBe('/restored/chapter-1');
     });
+    it('reports a completed chapter checkpoint for a batch with no chapters', async () => {
+      const progress: {
+        stage: 'novels' | 'chapters' | 'stats';
+        completed: number;
+        total: number;
+      }[] = [];
+      const mappings = await _restoreNovelsAndChapters(
+        [
+          createBackupNovel(1, '/empty/one'),
+          createBackupNovel(2, '/empty/two'),
+        ],
+        {
+          includeChapterMappings: false,
+          onProgress: checkpoint => progress.push(checkpoint),
+        },
+      );
+
+      expect(mappings).toHaveLength(2);
+      expect(progress).toEqual([
+        { stage: 'novels', completed: 2, total: 2 },
+        { stage: 'chapters', completed: 0, total: 0 },
+        { stage: 'stats', completed: 0, total: 2 },
+        { stage: 'stats', completed: 2, total: 2 },
+      ]);
+    });
     it('restores multiple novels in one batch', async () => {
       const mappings = await _restoreNovelsAndChapters(
         [
@@ -242,9 +267,26 @@ describe('NovelRestoreQueries', () => {
         ),
       );
 
+      const progress: {
+        stage: 'novels' | 'chapters' | 'stats';
+        completed: number;
+        total: number;
+      }[] = [];
       const mappings = await _restoreNovelsAndChapters(backupNovels, {
         restoreRunId: 'restore-101-novels',
+        onProgress: checkpoint => progress.push(checkpoint),
       });
+      expect(progress.filter(({ stage }) => stage === 'novels')).toEqual([
+        { stage: 'novels', completed: 100, total: 101 },
+        { stage: 'novels', completed: 101, total: 101 },
+      ]);
+      expect(progress.filter(({ stage }) => stage === 'chapters')).toEqual([
+        { stage: 'chapters', completed: 2, total: 2 },
+      ]);
+      expect(progress.filter(({ stage }) => stage === 'stats')).toEqual([
+        { stage: 'stats', completed: 0, total: 101 },
+        { stage: 'stats', completed: 101, total: 101 },
+      ]);
 
       expect(mappings.map(mapping => mapping.backupNovelId)).toEqual(
         Array.from({ length: 101 }, (_, index) => index + 1),
@@ -285,6 +327,42 @@ describe('NovelRestoreQueries', () => {
       expect(await getNovelByPath('/bulk/novel-101', 'restore-plugin')).toEqual(
         expect.objectContaining({ totalChapters: 0 }),
       );
+    });
+    it('reports each completed 10,000-chapter database chunk', async () => {
+      const progress: {
+        stage: 'novels' | 'chapters' | 'stats';
+        completed: number;
+        total: number;
+      }[] = [];
+      const chapters = Array.from({ length: 10_001 }, (_, index) =>
+        createBackupChapter(
+          index + 1,
+          1,
+          `/restore/checkpoints/chapter-${index + 1}`,
+        ),
+      );
+
+      const [mapping] = await _restoreNovelsAndChapters(
+        [createBackupNovel(1, '/restore/checkpoints', chapters)],
+        {
+          includeChapterMappings: false,
+          onProgress: checkpoint => progress.push(checkpoint),
+        },
+      );
+
+      expect(progress.filter(({ stage }) => stage === 'chapters')).toEqual([
+        { stage: 'chapters', completed: 10_000, total: 10_001 },
+        { stage: 'chapters', completed: 10_001, total: 10_001 },
+      ]);
+      expect(
+        await getNovelByPath('/restore/checkpoints', 'restore-plugin'),
+      ).toEqual(expect.objectContaining({ totalChapters: 10_001 }));
+      const persistedChapters = await getTestDb()
+        .drizzleDb.select()
+        .from(chapterSchema)
+        .where(eq(chapterSchema.novelId, mapping.restoredNovelId))
+        .all();
+      expect(persistedChapters).toHaveLength(10_001);
     });
     it('restores 201 chapters with stable identities and ordered mappings', async () => {
       const testDb = getTestDb();
@@ -350,12 +428,25 @@ describe('NovelRestoreQueries', () => {
         chapters,
         'large-plugin',
       );
+      const progress: {
+        stage: 'novels' | 'chapters' | 'stats';
+        completed: number;
+        total: number;
+      }[] = [];
       const options = {
         restoreRunId: 'restore-large',
         includeChapterMappings: true,
+        onProgress: (checkpoint: (typeof progress)[number]) =>
+          progress.push(checkpoint),
       };
 
       const firstMapping = await _restoreNovelAndChapters(backupNovel, options);
+      expect(progress).toEqual([
+        { stage: 'novels', completed: 1, total: 1 },
+        { stage: 'chapters', completed: 201, total: 201 },
+        { stage: 'stats', completed: 0, total: 1 },
+        { stage: 'stats', completed: 1, total: 1 },
+      ]);
       expect(firstMapping.restoredNovelId).toBe(restoredNovelId);
 
       const restoredChapters = await testDb.drizzleDb

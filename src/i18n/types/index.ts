@@ -109,9 +109,12 @@ export interface StringMap {
   'backupScreen.categoryFileWriteFailed': 'string';
   'backupScreen.createBackup': 'string';
   'backupScreen.createBackupDesc': 'string';
+  'backupScreen.copyingBackup': 'string';
   'backupScreen.downloadingData': 'string';
   'backupScreen.downloadingDownloadedFiles': 'string';
+  'backupScreen.extractingBackup': 'string';
   'backupScreen.failed': 'string';
+  'backupScreen.finalizingRestore': 'string';
   'backupScreen.novelsRestored': 'string';
   'backupScreen.novelsRestoredWithErrors': 'string';
   'backupScreen.novelsBackupFailedSummary.one': 'string';
@@ -128,6 +131,8 @@ export interface StringMap {
   'backupScreen.validatingNovelsProgress': 'string';
   'backupScreen.restoringNovels': 'string';
   'backupScreen.restoringNovelsProgress': 'string';
+  'backupScreen.restoringNovelsCount': 'string';
+  'backupScreen.restoringPlugins': 'string';
   'backupScreen.restoringSettings': 'string';
   'backupScreen.missingPluginsAfterRestore': 'string';
   'backupScreen.sectionsRestoreFailedSummary.one': 'string';
@@ -173,7 +178,6 @@ export interface StringMap {
   'backupScreen.restorinBackup': 'string';
   'backupScreen.restoringData': 'string';
   'backupScreen.restoringSelectedFiles': 'string';
-  'backupScreen.restoringNovelFilesProgress': 'string';
   'backupScreen.selfHost': 'string';
   'backupScreen.selfHostDesc': 'string';
   'backupScreen.uploadingData': 'string';

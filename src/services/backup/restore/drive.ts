@@ -1,5 +1,4 @@
 import { DriveFile } from '@api/drive/types';
-import { sleep } from '@utils/sleep';
 import { exists } from '@api/drive';
 import { getString } from '@i18n/translations';
 import { CACHE_DIR_PATH, clearBackupCache } from '../cache';
@@ -19,19 +18,24 @@ import {
   restoreNovelFiles,
 } from './files';
 import { getSelectedBackupFileSections } from '../fileSections';
-
+import { createRestoreProgressReporter } from './progress';
 export const driveRestore = async (
   backupFolder: DriveFile,
   setMeta: TaskProgressUpdater,
 ) => {
+  const progressReporter = createRestoreProgressReporter(setMeta, 'remote');
   let restoreResult: RestoreResult | undefined;
   try {
     setMeta(meta => ({
       ...meta,
       isRunning: true,
-      progress: 0 / 3,
-      progressText: getString('backupScreen.downloadingData'),
     }));
+    progressReporter?.(
+      'source',
+      0,
+      getString('backupScreen.downloadingData'),
+      true,
+    );
 
     const zipDataFile = await exists(
       ZipBackupName.DATA,
@@ -44,22 +48,32 @@ export const driveRestore = async (
 
     await clearBackupCache();
     await download(zipDataFile, CACHE_DIR_PATH);
-    await sleep(500);
+    progressReporter?.(
+      'source',
+      1,
+      getString('backupScreen.downloadingData'),
+      true,
+    );
+    progressReporter?.(
+      'extract',
+      1,
+      getString('backupScreen.downloadingData'),
+      true,
+    );
 
-    setMeta(meta => ({
-      ...meta,
-      progress: 1 / 3,
-      progressText: getString('backupScreen.restoringData'),
-    }));
+    restoreResult = await restoreData(CACHE_DIR_PATH, progressReporter);
 
-    restoreResult = await restoreData(CACHE_DIR_PATH, setMeta);
-    await sleep(500);
-
-    setMeta(meta => ({
-      ...meta,
-      progress: 2 / 3,
-      progressText: getString('backupScreen.restoringSelectedFiles'),
-    }));
+    const selectedFilesText = getString('backupScreen.restoringSelectedFiles');
+    const publishSelectedFilesProgress = (fraction: number, force = false) => {
+      progressReporter?.('selectedFiles', fraction, selectedFilesText, force);
+    };
+    const reportSelectedFileMoves = (completed: number, total: number) => {
+      publishSelectedFilesProgress(
+        0.5 + 0.5 * (total > 0 ? completed / total : 1),
+        completed >= total,
+      );
+    };
+    progressReporter?.('selectedFiles', 0, selectedFilesText, true);
 
     if (restoreResult.manifest.formatVersion === 1) {
       const legacyFile = await exists(
@@ -72,17 +86,23 @@ export const driveRestore = async (
       }
       const legacyFilesRestorePath = getLegacyFilesRestorePath(CACHE_DIR_PATH);
       await download(legacyFile, legacyFilesRestorePath);
+      publishSelectedFilesProgress(0.5, true);
       await restoreLegacyFiles(
         legacyFilesRestorePath,
         restoreResult.novelMappings,
         restoreResult.restoreRunId,
+        reportSelectedFileMoves,
       );
     } else {
       const novelFilesRestorePath = getNovelFilesRestorePath(CACHE_DIR_PATH);
-      for (const section of getSelectedBackupFileSections(
+      const sections = getSelectedBackupFileSections(
         restoreResult.manifest.sections,
         2,
-      )) {
+      );
+      if (sections.length === 0) {
+        publishSelectedFilesProgress(0.5, true);
+      }
+      for (const [index, section] of sections.entries()) {
         const file = await exists(section.archiveName, false, backupFolder.id);
         if (!file) {
           throw new Error(getString('backupScreen.invalidBackupFolder'));
@@ -93,24 +113,38 @@ export const driveRestore = async (
             ? novelFilesRestorePath
             : section.storagePath,
         );
+        publishSelectedFilesProgress(
+          0.5 * ((index + 1) / sections.length),
+          index + 1 === sections.length,
+        );
       }
       if (restoreResult.manifest.sections.downloadedFiles) {
         await restoreNovelFiles(
           novelFilesRestorePath,
           restoreResult.novelMappings,
           restoreResult.restoreRunId,
+          reportSelectedFileMoves,
         );
+      } else {
+        publishSelectedFilesProgress(1, true);
       }
     }
+
+    progressReporter?.(
+      'finalize',
+      0,
+      getString('backupScreen.finalizingRestore'),
+      true,
+    );
     const missingPluginIds = await finalizeRestoredPlugins(restoreResult);
     const completionText = getRestoreCompletionText(
       restoreResult,
       missingPluginIds,
     );
+    progressReporter?.('finalize', 1, completionText, true);
 
     setMeta(meta => ({
       ...meta,
-      progress: 3 / 3,
       isRunning: false,
       progressText: completionText,
       completionText,

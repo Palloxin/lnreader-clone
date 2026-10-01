@@ -5,8 +5,28 @@ import { restoreBackup } from '../local';
 import * as fileSections from '../files';
 import { finalizeRestoredPlugins, getRestoreCompletionText } from '../result';
 import { restoreData } from '../index';
-import type { TaskProgressUpdater } from '@services/backgroundTasks/contracts';
+import type {
+  BackgroundTaskMetadata,
+  TaskProgressUpdater,
+} from '@services/backgroundTasks/contracts';
 import type { UnzipStats } from '@modules/native-zip-archive/src/NativeZipArchiveModule';
+
+const createProgressCapture = () => {
+  let metadata: BackgroundTaskMetadata = {
+    name: 'LOCAL_RESTORE',
+    isRunning: true,
+    progress: undefined,
+    progressText: undefined,
+  };
+  const progressValues: number[] = [];
+  const setMeta: TaskProgressUpdater = transform => {
+    metadata = transform(metadata);
+    if (metadata.progress !== undefined) {
+      progressValues.push(metadata.progress);
+    }
+  };
+  return { progressValues, setMeta };
+};
 
 const unzipStats: UnzipStats = {
   fileCount: 7,
@@ -67,10 +87,6 @@ jest.mock('@utils/Storages', () => ({
   NOVEL_STORAGE: '/storage/Novels',
   PLUGIN_STORAGE: '/storage/Plugins',
   ROOT_STORAGE: '/storage',
-}));
-
-jest.mock('@utils/sleep', () => ({
-  sleep: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@i18n/translations', () => ({
@@ -134,14 +150,25 @@ describe('local backup restore', () => {
         },
       },
     };
-    jest.mocked(restoreData).mockResolvedValueOnce(restoreResult);
+    jest
+      .mocked(restoreData)
+      .mockImplementationOnce(async (_cacheDirPath, reporter) => {
+        reporter?.('manifest', 1, 'manifest', true);
+        reporter?.('novels', 0.25, 'novels', true);
+        reporter?.('novels', 0.75, 'novels', true);
+        reporter?.('categories', 1, 'categories', true);
+        reporter?.('settings', 1, 'settings', true);
+        reporter?.('plugins', 1, 'plugins', true);
+        return restoreResult;
+      });
     jest.mocked(NativeFile.exists).mockResolvedValue(true);
     jest.mocked(NativeFile.copyFile).mockResolvedValue(undefined);
     jest.mocked(NativeZipArchive.unzip).mockResolvedValue(unzipStats);
     jest.mocked(finalizeRestoredPlugins).mockResolvedValueOnce([]);
 
+    const capture = createProgressCapture();
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    await restoreBackup({ sourceUri: 'content://backup.zip' });
+    await restoreBackup({ sourceUri: 'content://backup.zip' }, capture.setMeta);
 
     expect(NativeZipArchive.unzip).toHaveBeenCalledWith(
       '/cache/BackupData/plugins.zip',
@@ -153,6 +180,17 @@ describe('local backup restore', () => {
         `local:outer-unzip:done ${JSON.stringify(unzipStats)}`,
       ),
     );
+    expect(
+      capture.progressValues.some(value => Math.abs(value - 0.09) < 0.000001),
+    ).toBe(true);
+    expect(
+      capture.progressValues.some(value => Math.abs(value - 0.3) < 0.000001),
+    ).toBe(true);
+    const novelProgress = capture.progressValues.filter(
+      value => value > 0.302 && value < 0.982,
+    );
+    expect(new Set(novelProgress).size).toBeGreaterThan(1);
+    expect(capture.progressValues[capture.progressValues.length - 1]).toBe(1);
     logSpy.mockRestore();
     expect(clearRestoreChapterMappings).toHaveBeenCalledWith(
       restoreResult.restoreRunId,
@@ -286,6 +324,7 @@ describe('local backup restore', () => {
       '/cache/BackupData/RestoredLegacyFiles',
       restoreResult.novelMappings,
       restoreResult.restoreRunId,
+      expect.any(Function),
     );
     expect(clearRestoreChapterMappings).toHaveBeenCalledWith(
       restoreResult.restoreRunId,
@@ -330,6 +369,7 @@ describe('local backup restore', () => {
       '/cache/BackupData/RestoredNovelFiles',
       restoreResult.novelMappings,
       restoreResult.restoreRunId,
+      expect.any(Function),
     );
     expect(clearRestoreChapterMappings).toHaveBeenCalledWith(
       restoreResult.restoreRunId,
@@ -379,6 +419,7 @@ describe('local backup restore', () => {
       '/cache/BackupData/NovelFiles',
       restoreResult.novelMappings,
       restoreResult.restoreRunId,
+      expect.any(Function),
     );
     expect(clearRestoreChapterMappings).toHaveBeenCalledWith(
       restoreResult.restoreRunId,
@@ -414,15 +455,52 @@ describe('local backup restore', () => {
       );
     jest.mocked(NativeFile.copyFile).mockResolvedValue(undefined);
     jest.mocked(NativeZipArchive.unzip).mockResolvedValue(unzipStats);
+    const capture = createProgressCapture();
 
     await expect(
-      restoreBackup({ sourceUri: 'content://backup.zip' }),
+      restoreBackup({ sourceUri: 'content://backup.zip' }, capture.setMeta),
     ).rejects.toThrow('backupScreen.invalidBackupFolder');
+    expect(capture.progressValues.every(value => value < 1)).toBe(true);
     expect(finalizeRestoredPlugins).not.toHaveBeenCalled();
     expect(clearRestoreChapterMappings).toHaveBeenCalledWith(
       restoreResult.restoreRunId,
     );
   });
+  it('does not report completion when plugin finalization fails', async () => {
+    const restoreResult = {
+      novelCount: 0,
+      failedNovelCount: 0,
+      categoryCount: 0,
+      failedCategoryCount: 0,
+      settingsRestored: true,
+      failedSectionCount: 0,
+      pluginIds: [],
+      novelMappings: [],
+      restoreRunId: 'restore-run-finalization-failure',
+      manifest: {
+        appVersion: '2.1.3',
+        formatVersion: 3 as const,
+        sections: {
+          library: false,
+          settings: false,
+          plugins: false,
+          downloadedFiles: false,
+        },
+      },
+    };
+    const failure = new Error('plugin finalization failed');
+    jest.mocked(restoreData).mockResolvedValueOnce(restoreResult);
+    jest.mocked(finalizeRestoredPlugins).mockRejectedValueOnce(failure);
+    const capture = createProgressCapture();
+
+    await expect(
+      restoreBackup({ sourceUri: 'content://backup.zip' }, capture.setMeta),
+    ).rejects.toBe(failure);
+
+    expect(capture.progressValues.every(value => value < 1)).toBe(true);
+    expect(getRestoreCompletionText).not.toHaveBeenCalled();
+  });
+
   it('does not report success when the restore pipeline fails and resets benchmark timing before a retry', async () => {
     const interruption = new Error('restore interrupted');
     let completionUpdateCount = 0;

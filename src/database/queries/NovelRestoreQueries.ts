@@ -86,9 +86,16 @@ const sqliteBoolean = (value: boolean | null | undefined): Scalar =>
 const RESTORE_NOVEL_BATCH_SIZE = 100;
 const RESTORE_CHAPTER_BATCH_SIZE = 10_000;
 
+export type RestoreNovelProgress = {
+  stage: 'novels' | 'chapters' | 'stats';
+  completed: number;
+  total: number;
+};
+
 export type RestoreNovelOptions = {
   includeChapterMappings?: boolean;
   restoreRunId?: string;
+  onProgress?: (progress: RestoreNovelProgress) => void;
 };
 
 export type RestoreNovelMetrics = {
@@ -629,17 +636,26 @@ export const _restoreNovelsAndChapters = async (
     start < backupNovels.length;
     start += RESTORE_NOVEL_BATCH_SIZE
   ) {
-    mappings.push(
-      ...(await restoreNovelChunkWithRetry(
-        backupNovels.slice(start, start + RESTORE_NOVEL_BATCH_SIZE),
-        metrics,
-      )),
+    const chunkMappings = await restoreNovelChunkWithRetry(
+      backupNovels.slice(start, start + RESTORE_NOVEL_BATCH_SIZE),
+      metrics,
     );
+    mappings.push(...chunkMappings);
+    options.onProgress?.({
+      stage: 'novels',
+      completed: mappings.length,
+      total: backupNovels.length,
+    });
   }
 
   const restoredNovelIds = new Map(
     mappings.map(mapping => [mapping.backupNovelId, mapping.restoredNovelId]),
   );
+  const totalChapters = backupNovels.reduce(
+    (total, novel) => total + novel.chapters.length,
+    0,
+  );
+  let completedChapters = 0;
   const chapterChunk: ChapterRestoreRecord[] = [];
   for (const backupNovel of backupNovels) {
     const restoredNovelId = restoredNovelIds.get(backupNovel.id);
@@ -660,7 +676,13 @@ export const _restoreNovelsAndChapters = async (
           options.restoreRunId,
           metrics,
         );
+        completedChapters += chapterChunk.length;
         chapterChunk.length = 0;
+        options.onProgress?.({
+          stage: 'chapters',
+          completed: completedChapters,
+          total: totalChapters,
+        });
       }
     }
   }
@@ -671,8 +693,31 @@ export const _restoreNovelsAndChapters = async (
       options.restoreRunId,
       metrics,
     );
+    completedChapters += chapterChunk.length;
+    options.onProgress?.({
+      stage: 'chapters',
+      completed: completedChapters,
+      total: totalChapters,
+    });
+  } else if (totalChapters === 0) {
+    options.onProgress?.({
+      stage: 'chapters',
+      completed: 0,
+      total: 0,
+    });
   }
-  await refreshRestoredNovelStats([...restoredNovelIds.values()], metrics);
+  const restoredIds = [...restoredNovelIds.values()];
+  options.onProgress?.({
+    stage: 'stats',
+    completed: 0,
+    total: restoredIds.length,
+  });
+  await refreshRestoredNovelStats(restoredIds, metrics);
+  options.onProgress?.({
+    stage: 'stats',
+    completed: restoredIds.length,
+    total: restoredIds.length,
+  });
   return mappings;
 };
 

@@ -69,6 +69,7 @@ describe('restore file sections', () => {
             })),
       );
 
+    const progress: { completed: number; total: number }[] = [];
     await restoreNovelFiles(
       '/staging',
       [
@@ -79,6 +80,7 @@ describe('restore file sections', () => {
         },
       ],
       'restore-run-1',
+      (completed, total) => progress.push({ completed, total }),
     );
 
     expect(getRestoreChapterMappings).toHaveBeenCalledTimes(2);
@@ -111,6 +113,63 @@ describe('restore file sections', () => {
       expect.any(String),
     );
     expect(NativeFile.unlink).toHaveBeenCalledWith('/staging');
+    expect(progress).toEqual([
+      { completed: 1, total: 2 },
+      { completed: 2, total: 2 },
+    ]);
+  });
+
+  it('counts missing novel directories and only completes after staging cleanup', async () => {
+    jest.mocked(NativeFile.exists).mockImplementation(async path => {
+      if (path === '/staging') {
+        return true;
+      }
+      return false;
+    });
+    jest
+      .mocked(NativeFile.unlink)
+      .mockRejectedValue(new Error('staging cleanup failed'));
+    const progress: { completed: number; total: number }[] = [];
+
+    await expect(
+      restoreNovelFiles(
+        '/staging',
+        [
+          {
+            pluginId: 'source',
+            backupNovelId: 1,
+            restoredNovelId: 7,
+          },
+        ],
+        'restore-run',
+        (completed, total) => progress.push({ completed, total }),
+      ),
+    ).rejects.toThrow('staging cleanup failed');
+
+    expect(progress).toEqual([{ completed: 1, total: 2 }]);
+  });
+
+  it('reports the staging cleanup for an empty mapping set', async () => {
+    const events: string[] = [];
+    jest.mocked(NativeFile.exists).mockResolvedValue(true);
+    jest.mocked(NativeFile.unlink).mockImplementation(async () => {
+      events.push('cleanup');
+    });
+    const progress: { completed: number; total: number }[] = [];
+
+    await restoreNovelFiles(
+      '/staging',
+      [],
+      'restore-run',
+      (completed, total) => {
+        progress.push({ completed, total });
+        events.push(`progress:${completed}/${total}`);
+      },
+    );
+
+    expect(NativeFile.unlink).toHaveBeenCalledWith('/staging');
+    expect(progress).toEqual([{ completed: 1, total: 1 }]);
+    expect(events).toEqual(['cleanup', 'progress:1/1']);
   });
 
   it('passes the restore run ID through legacy file restoration', async () => {
@@ -134,6 +193,7 @@ describe('restore file sections', () => {
       .mocked(getRestoreChapterMappings)
       .mockResolvedValue([{ backupChapterId: 10, restoredChapterId: 99 }]);
 
+    const progress: { completed: number; total: number }[] = [];
     await restoreLegacyFiles(
       '/legacy',
       [
@@ -144,11 +204,17 @@ describe('restore file sections', () => {
         },
       ],
       'legacy-run',
+      (completed, total) => progress.push({ completed, total }),
     );
 
     expect(getRestoreChapterMappings).toHaveBeenCalledWith('legacy-run', 1, [
       10,
     ]);
     expect(NativeFile.unlink).toHaveBeenCalledWith('/legacy');
+    expect(progress).toEqual([
+      { completed: 1, total: 3 },
+      { completed: 2, total: 3 },
+      { completed: 3, total: 3 },
+    ]);
   });
 });

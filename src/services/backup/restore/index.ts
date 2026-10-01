@@ -1,7 +1,7 @@
 import { clearRestoreChapterMappings } from '@database/queries/NovelRestoreQueries';
 import { _restoreCategory } from '@database/queries/CategoryQueries';
 import type { BackupCategory } from '@database/types';
-import type { TaskProgressUpdater } from '@services/backgroundTasks/contracts';
+import type { RestoreProgressReporter } from './progress';
 import NativeFile from '@modules/native-file';
 import { getString } from '@i18n/translations';
 import { MMKVStorage } from '@utils/mmkv/mmkv';
@@ -80,32 +80,34 @@ const getBackupManifest = async (
 const createRestoreRunId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-const updateRestoreProgress = (
-  setMeta: TaskProgressUpdater | undefined,
-  progressText: string,
-) => {
-  setMeta?.(meta => ({
-    ...meta,
-    progressText,
-  }));
-};
-
 type RestoreBenchmarkLogger = (message: string) => void;
 
 const restoreDataInternal = async (
   cacheDirPath: string,
-  setMeta: TaskProgressUpdater | undefined,
+  progressReporter: RestoreProgressReporter | undefined,
   benchmarkLog: RestoreBenchmarkLogger | undefined,
   restoreRunId: string,
 ): Promise<RestoreResult> => {
+  progressReporter?.(
+    'manifest',
+    0,
+    getString('backupScreen.restoringData'),
+    true,
+  );
   const manifest = await getBackupManifest(cacheDirPath);
   benchmarkLog?.('restoreData:manifest:loaded');
+  progressReporter?.(
+    'manifest',
+    1,
+    getString('backupScreen.restoringData'),
+    true,
+  );
   const novelSummary = manifest.sections.library
     ? await restoreNovels(
         cacheDirPath,
         manifest,
         restoreRunId,
-        setMeta,
+        progressReporter,
         benchmarkLog,
       )
     : {
@@ -116,6 +118,14 @@ const restoreDataInternal = async (
         novelMappings: [],
         novelIdMap: new Map<number, number>(),
       };
+  if (!manifest.sections.library) {
+    progressReporter?.(
+      'novels',
+      1,
+      getString('backupScreen.restoringNovels'),
+      true,
+    );
+  }
   let failedSectionCount = novelSummary.failedSectionCount;
   const novelIdMap = novelSummary.novelIdMap;
   const installedPluginsBeforeRestore = (() => {
@@ -130,33 +140,32 @@ const restoreDataInternal = async (
   let pluginsFromSettings: PluginItem[] = [];
 
   benchmarkLog?.('restoreData:categories:start');
-  if (manifest.sections.library) {
-    updateRestoreProgress(
-      setMeta,
-      getString('backupScreen.restoringCategories'),
-    );
-  }
-  const categoryFilePath = cacheDirPath + '/' + BackupEntryName.CATEGORY;
+  const categoriesProgressText = getString('backupScreen.restoringCategories');
   let categoryCount = 0;
   let failedCategoryCount = 0;
-
   if (!manifest.sections.library) {
-    // Intentionally omitted from this backup.
-  } else if (!(await NativeFile.exists(categoryFilePath))) {
-    failedSectionCount++;
+    progressReporter?.('categories', 1, categoriesProgressText, true);
   } else {
-    try {
-      const fileContent = await NativeFile.readFile(categoryFilePath);
-      const categories: BackupCategory[] = JSON.parse(fileContent);
+    progressReporter?.('categories', 0, categoriesProgressText, true);
+    const categoryFilePath = cacheDirPath + '/' + BackupEntryName.CATEGORY;
+    let categories: BackupCategory[] | undefined;
+    if (!(await NativeFile.exists(categoryFilePath))) {
+      failedSectionCount++;
+    } else {
+      try {
+        const fileContent = await NativeFile.readFile(categoryFilePath);
+        const parsed: unknown = JSON.parse(fileContent);
+        if (!Array.isArray(parsed)) {
+          throw new Error('Invalid backup categories');
+        }
+        categories = parsed as BackupCategory[];
+      } catch {
+        failedSectionCount++;
+      }
+    }
 
+    if (categories) {
       for (const [index, category] of categories.entries()) {
-        updateRestoreProgress(
-          setMeta,
-          getString('backupScreen.restoringCategoriesProgress', {
-            current: index + 1,
-            total: categories.length,
-          }),
-        );
         try {
           await _restoreCategory(
             {
@@ -171,47 +180,61 @@ const restoreDataInternal = async (
         } catch {
           failedCategoryCount++;
         }
+        progressReporter?.(
+          'categories',
+          (index + 1) / Math.max(1, categories.length),
+          getString('backupScreen.restoringCategoriesProgress', {
+            current: index + 1,
+            total: categories.length,
+          }),
+          index + 1 === categories.length,
+        );
       }
-    } catch {
-      failedSectionCount++;
     }
+    progressReporter?.('categories', 1, categoriesProgressText, true);
   }
   benchmarkLog?.(
     `restoreData:categories:done count=${categoryCount} failed=${failedCategoryCount}`,
   );
 
   benchmarkLog?.('restoreData:settings:start');
-  if (manifest.sections.settings) {
-    updateRestoreProgress(setMeta, getString('backupScreen.restoringSettings'));
-  }
+  const settingsProgressText = getString('backupScreen.restoringSettings');
   const settingsFilePath = cacheDirPath + '/' + BackupEntryName.SETTING;
   let settingsRestored = !manifest.sections.settings;
 
   if (!manifest.sections.settings) {
-    // Intentionally omitted from this backup.
-  } else if (!(await NativeFile.exists(settingsFilePath))) {
-    // Reported as a settings warning in the completion summary.
+    progressReporter?.('settings', 1, settingsProgressText, true);
   } else {
-    try {
-      const fileContent = await NativeFile.readFile(settingsFilePath);
-      const settingsData: Record<string, unknown> = JSON.parse(fileContent);
-      if (INSTALLED_PLUGINS_KEY in settingsData) {
-        pluginsFromSettings = parsePluginList(
-          settingsData[INSTALLED_PLUGINS_KEY],
-        );
-        delete settingsData[INSTALLED_PLUGINS_KEY];
+    progressReporter?.('settings', 0, settingsProgressText, true);
+    if (!(await NativeFile.exists(settingsFilePath))) {
+      // Reported as a settings warning in the completion summary.
+    } else {
+      try {
+        const fileContent = await NativeFile.readFile(settingsFilePath);
+        const settingsData: Record<string, unknown> = JSON.parse(fileContent);
+        if (INSTALLED_PLUGINS_KEY in settingsData) {
+          pluginsFromSettings = parsePluginList(
+            settingsData[INSTALLED_PLUGINS_KEY],
+          );
+          delete settingsData[INSTALLED_PLUGINS_KEY];
+        }
+        restoreMMKVData(settingsData);
+        settingsRestored = true;
+      } catch {
+        // Included in the completion warning below.
       }
-      restoreMMKVData(settingsData);
-      settingsRestored = true;
-    } catch {
-      // Included in the completion warning below.
     }
+    progressReporter?.('settings', 1, settingsProgressText, true);
   }
   benchmarkLog?.(`restoreData:settings:done restored=${settingsRestored}`);
 
   benchmarkLog?.('restoreData:plugins:start');
   let restoredPlugins = pluginsFromSettings;
-  if (manifest.sections.plugins) {
+  const pluginsProgressText = getString('backupScreen.restoringPlugins');
+  if (!manifest.sections.plugins) {
+    progressReporter?.('plugins', 1, pluginsProgressText, true);
+  } else {
+    progressReporter?.('plugins', 0, pluginsProgressText, true);
     if (manifest.formatVersion === 2 || manifest.formatVersion === 3) {
       const pluginMetadataPath =
         cacheDirPath + '/' + BackupEntryName.PLUGIN_METADATA;
@@ -236,6 +259,7 @@ const restoreDataInternal = async (
       ).values(),
     ];
     MMKVStorage.set(INSTALLED_PLUGINS_KEY, JSON.stringify(mergedPlugins));
+    progressReporter?.('plugins', 1, pluginsProgressText, true);
   }
   benchmarkLog?.(`restoreData:plugins:done count=${restoredPlugins.length}`);
   benchmarkLog?.('restoreData:done');
@@ -266,14 +290,14 @@ export const clearRestoreChapterMappingsSafely = async (
 
 export const restoreData = async (
   cacheDirPath: string,
-  setMeta?: TaskProgressUpdater,
+  progressReporter?: RestoreProgressReporter,
   benchmarkLog?: RestoreBenchmarkLogger,
 ): Promise<RestoreResult> => {
   const restoreRunId = createRestoreRunId();
   try {
     return await restoreDataInternal(
       cacheDirPath,
-      setMeta,
+      progressReporter,
       benchmarkLog,
       restoreRunId,
     );

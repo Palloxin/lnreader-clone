@@ -3,12 +3,14 @@ import {
   _restoreNovelsAndChapters,
   recordRestoreFallback,
   type RestoreNovelMetrics,
+  type RestoreNovelOptions,
+  type RestoreNovelProgress,
 } from '@database/queries/NovelRestoreQueries';
 import type { BackupNovel, RestoredNovelMapping } from '@database/types';
 import NativeFile from '@modules/native-file';
 import { getString } from '@i18n/translations';
 import { NOVEL_STORAGE, ROOT_STORAGE } from '@utils/Storages';
-import type { TaskProgressUpdater } from '@services/backgroundTasks/contracts';
+import type { RestoreProgressReporter } from './progress';
 import { BackupEntryName, type ResolvedBackupManifest } from '../types';
 import {
   NovelFileValidationError,
@@ -41,21 +43,11 @@ export type NovelRestoreSummary = {
   novelIdMap: Map<number, number>;
 };
 
-const updateRestoreProgress = (
-  setMeta: TaskProgressUpdater | undefined,
-  progressText: string,
-) => {
-  setMeta?.(meta => ({
-    ...meta,
-    progressText,
-  }));
-};
-
 const restoreNovelsWithTelemetry = async (
   cacheDirPath: string,
   manifest: ResolvedBackupManifest,
   restoreRunId: string,
-  setMeta: TaskProgressUpdater | undefined,
+  progressReporter: RestoreProgressReporter | undefined,
   benchmarkLog: RestoreBenchmarkLogger | undefined,
   telemetry: RestoreNovelTelemetry,
 ): Promise<NovelRestoreSummary> => {
@@ -71,8 +63,20 @@ const restoreNovelsWithTelemetry = async (
   };
 
   benchmarkLog?.('restoreData:novels:validation:start');
+  progressReporter?.(
+    'novels',
+    0,
+    getString('backupScreen.validatingNovels'),
+    true,
+  );
   if (!(await NativeFile.exists(novelDirPath))) {
     summary.failedSectionCount++;
+    progressReporter?.(
+      'novels',
+      1,
+      getString('backupScreen.restoringNovels'),
+      true,
+    );
     return summary;
   }
 
@@ -86,6 +90,12 @@ const restoreNovelsWithTelemetry = async (
       .map(item => ({ name: item.name, path: item.path }));
   } catch {
     summary.failedSectionCount++;
+    progressReporter?.(
+      'novels',
+      1,
+      getString('backupScreen.restoringNovels'),
+      true,
+    );
     return summary;
   }
 
@@ -95,20 +105,15 @@ const restoreNovelsWithTelemetry = async (
   const pluginIds = new Set<string>();
   const pendingNovels: BackupNovel[] = [];
   let filesProcessed = 0;
-  let lastReportedFilesProcessed = -1;
-  const publishProgress = (count: number) => {
-    if (count === lastReportedFilesProcessed) {
-      return;
-    }
-    updateRestoreProgress(
-      setMeta,
-      getString('backupScreen.restoringNovelFilesProgress', {
-        current: count,
-        total: items.length,
-      }),
-    );
-    lastReportedFilesProcessed = count;
-  };
+  let inputRecordCount = 0;
+  let persistedNovelCount = 0;
+  let completedFileWork = 0;
+  let pendingFileWork = 0;
+  let activeFileWork = 0;
+  let activeWorkFraction = 0;
+  let activeDatabaseStage: RestoreNovelProgress['stage'] | undefined;
+  let progressInterruptionLatched = false;
+  let progressInterruption: unknown;
   let readMs = 0;
   let parseMs = 0;
   let databaseMs = 0;
@@ -118,6 +123,45 @@ const restoreNovelsWithTelemetry = async (
   let coverFilesMissing = 0;
   let coverFilesCopied = 0;
   let coverProcessingFailures = 0;
+
+  const getNovelCountText = () =>
+    filesProcessed < items.length
+      ? getString('backupScreen.restoringNovelsCount', {
+          current: persistedNovelCount,
+        })
+      : getString('backupScreen.restoringNovelsProgress', {
+          current: persistedNovelCount,
+          total: inputRecordCount,
+        });
+  const getNovelPhaseFraction = () => {
+    if (items.length === 0) {
+      return 1;
+    }
+    return (
+      (0.25 * filesProcessed +
+        0.75 * (completedFileWork + activeFileWork * activeWorkFraction)) /
+      items.length
+    );
+  };
+  const publishNovelProgress = (force = false) => {
+    if (progressInterruptionLatched) {
+      return;
+    }
+    try {
+      progressReporter?.(
+        'novels',
+        getNovelPhaseFraction(),
+        getNovelCountText(),
+        force,
+      );
+    } catch (error) {
+      if (!progressInterruptionLatched) {
+        progressInterruptionLatched = true;
+        progressInterruption = error;
+      }
+      throw error;
+    }
+  };
   const processFile = async (item: BackupNovelFileDescriptor) => {
     const readStartedAt = performance.now();
     let fileContent: string | undefined;
@@ -129,7 +173,10 @@ const restoreNovelsWithTelemetry = async (
       readMs += performance.now() - readStartedAt;
     }
 
-    if (fileContent !== undefined) {
+    if (fileContent === undefined) {
+      inputRecordCount++;
+      completedFileWork++;
+    } else {
       const parseStartedAt = performance.now();
       try {
         const novels = decodeAndValidateNovelFile(
@@ -139,6 +186,12 @@ const restoreNovelsWithTelemetry = async (
           seenNovelIdentities,
           seenChapterIdentities,
         );
+        inputRecordCount += novels.length;
+        if (novels.length === 0) {
+          completedFileWork++;
+        } else {
+          pendingFileWork++;
+        }
         for (const novel of novels) {
           pluginIds.add(novel.pluginId);
           pendingNovels.push(novel);
@@ -147,26 +200,78 @@ const restoreNovelsWithTelemetry = async (
           telemetry.uniqueInputChapterCount = seenChapterIdentities.size;
         }
       } catch (error) {
-        summary.failedNovelCount +=
+        const rejectedRecordCount =
           error instanceof NovelFileValidationError ? error.recordCount : 1;
+        summary.failedNovelCount += rejectedRecordCount;
+        inputRecordCount += rejectedRecordCount;
+        completedFileWork++;
       } finally {
         parseMs += performance.now() - parseStartedAt;
       }
     }
 
     filesProcessed++;
+    publishNovelProgress();
   };
-  publishProgress(0);
+
+  publishNovelProgress(true);
 
   const restoreNovelBatch = async () => {
     if (pendingNovels.length === 0) {
       return;
     }
     const batch = pendingNovels.splice(0, pendingNovels.length);
-    const processedFilesAtBatchStart = filesProcessed;
-    const restoreOptions = {
+    const fileWorkForBatch = pendingFileWork;
+    pendingFileWork = 0;
+    activeFileWork = fileWorkForBatch;
+    activeWorkFraction = 0;
+    activeDatabaseStage = undefined;
+
+    const reportDatabaseCheckpoint = (
+      progress: RestoreNovelProgress,
+      fallbackIndex?: number,
+    ) => {
+      if (progressInterruptionLatched) {
+        return;
+      }
+      try {
+        const stageFraction =
+          progress.total > 0
+            ? Math.max(0, Math.min(1, progress.completed / progress.total))
+            : 1;
+        let databaseFraction: number;
+        if (progress.stage === 'novels') {
+          databaseFraction = 0.1 * stageFraction;
+        } else if (progress.stage === 'chapters') {
+          databaseFraction = 0.1 + 0.8 * stageFraction;
+        } else {
+          databaseFraction = 0.9 + 0.1 * stageFraction;
+        }
+        if (fallbackIndex !== undefined) {
+          databaseFraction = (fallbackIndex + databaseFraction) / batch.length;
+        }
+        activeWorkFraction = Math.max(
+          activeWorkFraction,
+          0.8 * databaseFraction,
+        );
+        const stageChanged = activeDatabaseStage !== progress.stage;
+        activeDatabaseStage = progress.stage;
+        const stageCompleted =
+          progress.total <= 0 || progress.completed >= progress.total;
+        publishNovelProgress(stageChanged || stageCompleted);
+      } catch (error) {
+        if (!progressInterruptionLatched) {
+          progressInterruptionLatched = true;
+          progressInterruption = error;
+        }
+      }
+    };
+    const onBatchProgress = (progress: RestoreNovelProgress) =>
+      reportDatabaseCheckpoint(progress);
+    const restoreOptions: RestoreNovelOptions = {
       includeChapterMappings: manifest.sections.downloadedFiles,
       ...(manifest.sections.downloadedFiles ? { restoreRunId } : {}),
+      ...(progressReporter ? { onProgress: onBatchProgress } : {}),
     };
     let restoredNovels: {
       backupNovel: BackupNovel;
@@ -174,97 +279,138 @@ const restoreNovelsWithTelemetry = async (
     }[] = [];
     const databaseStartedAt = performance.now();
     try {
-      const mappings = telemetry.collectDatabaseMetrics
-        ? await _restoreNovelsAndChapters(
-            batch,
-            restoreOptions,
-            telemetry.database,
-          )
-        : await _restoreNovelsAndChapters(batch, restoreOptions);
-      if (mappings.length !== batch.length) {
-        throw new Error('Restore returned incomplete novel mappings');
-      }
-      restoredNovels = batch.map((backupNovel, index) => ({
-        backupNovel,
-        mapping: mappings[index],
-      }));
-    } catch (error) {
-      if (telemetry.collectDatabaseMetrics) {
-        telemetry.database.novelBatchFallbacks++;
-        recordRestoreFallback(telemetry.database, error);
-      }
-      for (const backupNovel of batch) {
-        if (telemetry.collectDatabaseMetrics) {
-          telemetry.database.novelFallbackRowsAttempted++;
+      try {
+        const mappings = telemetry.collectDatabaseMetrics
+          ? await _restoreNovelsAndChapters(
+              batch,
+              restoreOptions,
+              telemetry.database,
+            )
+          : await _restoreNovelsAndChapters(batch, restoreOptions);
+        if (mappings.length !== batch.length) {
+          throw new Error('Restore returned incomplete novel mappings');
         }
-        try {
-          restoredNovels.push({
-            backupNovel,
-            mapping: telemetry.collectDatabaseMetrics
+        restoredNovels = batch.map((backupNovel, index) => ({
+          backupNovel,
+          mapping: mappings[index],
+        }));
+        persistedNovelCount += batch.length;
+      } catch (databaseError) {
+        if (progressInterruptionLatched) {
+          throw progressInterruption;
+        }
+        if (telemetry.collectDatabaseMetrics) {
+          telemetry.database.novelBatchFallbacks++;
+          recordRestoreFallback(telemetry.database, databaseError);
+        }
+        for (const [index, backupNovel] of batch.entries()) {
+          if (telemetry.collectDatabaseMetrics) {
+            telemetry.database.novelFallbackRowsAttempted++;
+          }
+          const fallbackOptions: RestoreNovelOptions = progressReporter
+            ? {
+                ...restoreOptions,
+                onProgress: progress =>
+                  reportDatabaseCheckpoint(progress, index),
+              }
+            : restoreOptions;
+          let mapping: RestoredNovelMapping;
+          try {
+            mapping = telemetry.collectDatabaseMetrics
               ? await _restoreNovelAndChapters(
                   backupNovel,
-                  restoreOptions,
+                  fallbackOptions,
                   telemetry.database,
                 )
-              : await _restoreNovelAndChapters(backupNovel, restoreOptions),
-          });
-        } catch (novelError) {
-          if (telemetry.collectDatabaseMetrics) {
-            recordRestoreFallback(telemetry.database, novelError);
+              : await _restoreNovelAndChapters(backupNovel, fallbackOptions);
+          } catch (fallbackError) {
+            if (progressInterruptionLatched) {
+              throw progressInterruption;
+            }
+            if (telemetry.collectDatabaseMetrics) {
+              recordRestoreFallback(telemetry.database, fallbackError);
+            }
+            summary.failedNovelCount++;
+            continue;
           }
-          summary.failedNovelCount++;
+          restoredNovels.push({ backupNovel, mapping });
+          persistedNovelCount++;
+          if (progressInterruptionLatched) {
+            throw progressInterruption;
+          }
+          publishNovelProgress(true);
         }
       }
     } finally {
       databaseMs += performance.now() - databaseStartedAt;
     }
 
+    if (progressInterruptionLatched) {
+      throw progressInterruption;
+    }
+    activeWorkFraction = 0.8;
+    activeDatabaseStage = undefined;
+    publishNovelProgress(true);
+
+    const shouldRestoreCover = (backupNovel: BackupNovel) =>
+      !manifest.sections.downloadedFiles &&
+      backupNovel.cover?.startsWith(APP_STORAGE_URI);
+    const hasCoverWork = restoredNovels.some(({ backupNovel }) =>
+      shouldRestoreCover(backupNovel),
+    );
     const coverStartedAt = performance.now();
-    for (
-      let start = 0;
-      start < restoredNovels.length;
-      start += BACKUP_FILE_CONCURRENCY
-    ) {
-      const coverBatch = restoredNovels.slice(
-        start,
-        start + BACKUP_FILE_CONCURRENCY,
-      );
-      await Promise.all(
-        coverBatch.map(async ({ backupNovel, mapping: novelMapping }) => {
-          try {
-            if (
-              !manifest.sections.downloadedFiles &&
-              backupNovel.cover?.startsWith(APP_STORAGE_URI)
-            ) {
-              coverCandidates++;
-              const coverBackupPath = coversDirPath + '/' + backupNovel.id;
-              if (await NativeFile.exists(coverBackupPath)) {
-                coverFilesFound++;
-                const coverPath = `${NOVEL_STORAGE}/${backupNovel.pluginId}/${novelMapping.restoredNovelId}/cover.png`;
-                await NativeFile.mkdir(
-                  coverPath.slice(0, Math.max(0, coverPath.lastIndexOf('/'))),
-                );
-                await NativeFile.copyFile(coverBackupPath, coverPath);
-                coverFilesCopied++;
-              } else {
-                coverFilesMissing++;
+    if (hasCoverWork) {
+      let attemptedCoverRecords = 0;
+      for (
+        let start = 0;
+        start < restoredNovels.length;
+        start += BACKUP_FILE_CONCURRENCY
+      ) {
+        const coverBatch = restoredNovels.slice(
+          start,
+          start + BACKUP_FILE_CONCURRENCY,
+        );
+        await Promise.all(
+          coverBatch.map(async ({ backupNovel, mapping: novelMapping }) => {
+            try {
+              if (shouldRestoreCover(backupNovel)) {
+                coverCandidates++;
+                const coverBackupPath = coversDirPath + '/' + backupNovel.id;
+                if (await NativeFile.exists(coverBackupPath)) {
+                  coverFilesFound++;
+                  const coverPath = `${NOVEL_STORAGE}/${backupNovel.pluginId}/${novelMapping.restoredNovelId}/cover.png`;
+                  await NativeFile.mkdir(
+                    coverPath.slice(0, Math.max(0, coverPath.lastIndexOf('/'))),
+                  );
+                  await NativeFile.copyFile(coverBackupPath, coverPath);
+                  coverFilesCopied++;
+                } else {
+                  coverFilesMissing++;
+                }
               }
+            } catch {
+              coverProcessingFailures++;
+              summary.failedNovelCount++;
             }
-          } catch {
-            coverProcessingFailures++;
-            summary.failedNovelCount++;
-          }
-        }),
-      );
+          }),
+        );
+        attemptedCoverRecords += coverBatch.length;
+        activeWorkFraction =
+          0.8 + (0.2 * attemptedCoverRecords) / restoredNovels.length;
+        publishNovelProgress(attemptedCoverRecords === restoredNovels.length);
+      }
     }
     coverProcessingMs += performance.now() - coverStartedAt;
+    completedFileWork += activeFileWork;
+    activeFileWork = 0;
+    activeWorkFraction = 0;
+    publishNovelProgress(true);
 
     for (const { backupNovel, mapping: novelMapping } of restoredNovels) {
       summary.novelMappings.push(novelMapping);
       summary.novelIdMap.set(backupNovel.id, novelMapping.restoredNovelId);
       summary.novelCount++;
     }
-    publishProgress(processedFilesAtBatchStart);
   };
 
   let nextFileIndex = 0;
@@ -296,7 +442,7 @@ const restoreNovelsWithTelemetry = async (
 
     await restoreNovelBatch();
   }
-  publishProgress(filesProcessed);
+  publishNovelProgress(true);
 
   benchmarkLog?.(`restoreData:novels:pipeline:done total=${filesProcessed}`);
   benchmarkLog?.(
@@ -319,7 +465,7 @@ export const restoreNovels = async (
   cacheDirPath: string,
   manifest: ResolvedBackupManifest,
   restoreRunId: string,
-  setMeta?: TaskProgressUpdater,
+  progressReporter?: RestoreProgressReporter,
   benchmarkLog?: RestoreBenchmarkLogger,
 ): Promise<NovelRestoreSummary> => {
   const telemetry: RestoreNovelTelemetry = {
@@ -351,7 +497,7 @@ export const restoreNovels = async (
       cacheDirPath,
       manifest,
       restoreRunId,
-      setMeta,
+      progressReporter,
       benchmarkLog,
       telemetry,
     );

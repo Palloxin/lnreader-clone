@@ -30,10 +30,13 @@ export const restoreNovelFiles = async (
   stagingPath: string,
   novelMappings: RestoredNovelMapping[],
   restoreRunId: string,
+  onProgress?: (completed: number, total: number) => void,
 ) => {
-  for (const mapping of novelMappings) {
+  const total = novelMappings.length + 1;
+  for (const [index, mapping] of novelMappings.entries()) {
     const sourceNovelPath = `${stagingPath}/${mapping.pluginId}/${mapping.backupNovelId}`;
     if (!(await NativeFile.exists(sourceNovelPath))) {
+      onProgress?.(index + 1, total);
       continue;
     }
 
@@ -83,21 +86,31 @@ export const restoreNovelFiles = async (
         }
       }
     }
+    onProgress?.(index + 1, total);
   }
 
   if (await NativeFile.exists(stagingPath)) {
     await NativeFile.unlink(stagingPath);
   }
+  onProgress?.(total, total);
 };
 
 export const restoreLegacyFiles = async (
   stagingPath: string,
   novelMappings: RestoredNovelMapping[],
   restoreRunId: string,
+  onProgress?: (completed: number, total: number) => void,
 ) => {
+  const total = novelMappings.length + 2;
   await moveDirectoryContents(`${stagingPath}/Plugins`, PLUGIN_STORAGE);
-  await restoreNovelFiles(`${stagingPath}/Novels`, novelMappings, restoreRunId);
+  await restoreNovelFiles(
+    `${stagingPath}/Novels`,
+    novelMappings,
+    restoreRunId,
+    onProgress ? completed => onProgress(completed, total) : undefined,
+  );
   if (await NativeFile.exists(stagingPath)) {
     await NativeFile.unlink(stagingPath);
   }
+  onProgress?.(total, total);
 };

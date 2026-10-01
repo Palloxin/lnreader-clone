@@ -228,6 +228,108 @@ describe('selective backup data', () => {
       ]),
     );
   });
+  it.each(['{}', 'null'])(
+    'isolates malformed category payload %s from other restore sections',
+    async categoryPayload => {
+      const options: BackupOptions = {
+        library: true,
+        settings: true,
+        plugins: true,
+        downloadedFiles: false,
+      };
+      jest
+        .mocked(NativeFile.exists)
+        .mockImplementation(async path =>
+          [
+            '/cache/Version.json',
+            '/cache/NovelAndChapters',
+            '/cache/Category.json',
+            '/cache/Setting.json',
+            '/cache/Plugins.json',
+          ].includes(path),
+        );
+      jest.mocked(NativeFile.readDir).mockResolvedValue([]);
+      jest.mocked(NativeFile.readFile).mockImplementation(async path => {
+        if (path.endsWith('/Version.json')) {
+          return JSON.stringify({
+            appVersion: '2.1.0',
+            formatVersion: 3,
+            sections: options,
+          });
+        }
+        if (path.endsWith('/Category.json')) {
+          return categoryPayload;
+        }
+        if (path.endsWith('/Setting.json')) {
+          return JSON.stringify({ reviewSetting: true });
+        }
+        return JSON.stringify([{ id: 'review-plugin', name: 'Review plugin' }]);
+      });
+
+      const result = await restoreData('/cache');
+
+      expect(result).toMatchObject({
+        failedSectionCount: 1,
+        categoryCount: 0,
+        failedCategoryCount: 0,
+        settingsRestored: true,
+      });
+      expect(_restoreCategory).not.toHaveBeenCalled();
+      expect(MMKVStorage.set).toHaveBeenCalledWith('reviewSetting', true);
+      expect(MMKVStorage.set).toHaveBeenCalledWith(
+        'INSTALL_PLUGINS',
+        JSON.stringify([{ id: 'review-plugin', name: 'Review plugin' }]),
+      );
+    },
+  );
+
+  it('propagates category progress interruptions before restoring settings', async () => {
+    const options: BackupOptions = {
+      library: true,
+      settings: true,
+      plugins: true,
+      downloadedFiles: false,
+    };
+    const interruption = new Error('category progress interrupted');
+    jest
+      .mocked(NativeFile.exists)
+      .mockImplementation(async path =>
+        [
+          '/cache/Version.json',
+          '/cache/NovelAndChapters',
+          '/cache/Category.json',
+          '/cache/Setting.json',
+          '/cache/Plugins.json',
+        ].includes(path),
+      );
+    jest.mocked(NativeFile.readDir).mockResolvedValue([]);
+    jest.mocked(NativeFile.readFile).mockImplementation(async path => {
+      if (path.endsWith('/Version.json')) {
+        return JSON.stringify({
+          appVersion: '2.1.0',
+          formatVersion: 3,
+          sections: options,
+        });
+      }
+      if (path.endsWith('/Category.json')) {
+        return '[]';
+      }
+      if (path.endsWith('/Setting.json')) {
+        return JSON.stringify({ reviewSetting: true });
+      }
+      return '[]';
+    });
+    const progressReporter = jest.fn((phase: string) => {
+      if (phase === 'categories') {
+        throw interruption;
+      }
+    });
+
+    await expect(restoreData('/cache', progressReporter)).rejects.toBe(
+      interruption,
+    );
+    expect(MMKVStorage.set).not.toHaveBeenCalledWith('reviewSetting', true);
+  });
 
   it('merges the plugin registry from legacy settings', async () => {
     jest

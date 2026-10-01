@@ -10,7 +10,6 @@ import { BackupEntryName, ZipBackupName } from '../types';
 import NativeFile from '@modules/native-file';
 import { getString } from '@i18n/translations';
 import type { TaskProgressUpdater } from '@services/backgroundTasks/contracts';
-import { sleep } from '@utils/sleep';
 import {
   getLegacyFilesRestorePath,
   getNovelFilesRestorePath,
@@ -18,7 +17,7 @@ import {
   restoreNovelFiles,
 } from './files';
 import { getSelectedBackupFileSections } from '../fileSections';
-
+import { createRestoreProgressReporter } from './progress';
 const printTime = (time?: number) => {
   if (!time) return '';
   if (time >= 1000) {
@@ -59,28 +58,37 @@ export const restoreBackup = async (
   setMeta?: TaskProgressUpdater,
 ) => {
   logRestoreBenchmark('local:start');
+  const progressReporter = createRestoreProgressReporter(setMeta, 'local');
   let restoreResult: RestoreResult | undefined;
   try {
     setMeta?.(meta => ({
       ...meta,
       isRunning: true,
-      progress: 0 / 4,
-      progressText: getString('backupScreen.downloadingData'),
     }));
+    progressReporter?.(
+      'source',
+      0,
+      getString('backupScreen.copyingBackup'),
+      true,
+    );
 
     await clearBackupCache();
     const localPath = CACHE_DIR_PATH + '-source.zip';
     await NativeFile.copyFile(sourceUri, localPath);
     logRestoreBenchmark('local:copy:done');
+    progressReporter?.(
+      'source',
+      1,
+      getString('backupScreen.copyingBackup'),
+      true,
+    );
 
-    setMeta?.(meta => ({
-      ...meta,
-      progress: 1 / 4,
-      progressText: getString('backupScreen.restoringData'),
-    }));
-
-    await sleep(200);
-
+    progressReporter?.(
+      'extract',
+      0,
+      getString('backupScreen.extractingBackup'),
+      true,
+    );
     const outerArchiveStats = await NativeZipArchive.unzip(
       localPath,
       CACHE_DIR_PATH,
@@ -88,21 +96,32 @@ export const restoreBackup = async (
     logRestoreBenchmark(
       `local:outer-unzip:done ${JSON.stringify(outerArchiveStats)}`,
     );
-
-    setMeta?.(meta => ({
-      ...meta,
-      progress: 2 / 4,
-      progressText: getString('backupScreen.restoringData'),
-    }));
-
-    await sleep(200);
+    progressReporter?.(
+      'extract',
+      1,
+      getString('backupScreen.extractingBackup'),
+      true,
+    );
 
     restoreResult = await restoreData(
       CACHE_DIR_PATH,
-      setMeta,
+      progressReporter,
       logRestoreBenchmark,
     );
     logRestoreBenchmark('local:restore-data:done');
+
+    const selectedFilesText = getString('backupScreen.restoringSelectedFiles');
+    const publishSelectedFilesProgress = (fraction: number, force = false) => {
+      progressReporter?.('selectedFiles', fraction, selectedFilesText, force);
+    };
+    const reportSelectedFileMoves = (completed: number, total: number) => {
+      publishSelectedFilesProgress(
+        0.5 + 0.5 * (total > 0 ? completed / total : 1),
+        completed >= total,
+      );
+    };
+    progressReporter?.('selectedFiles', 0, selectedFilesText, true);
+
     if (restoreResult.manifest.formatVersion === 1) {
       const legacyArchive = CACHE_DIR_PATH + '/' + ZipBackupName.DOWNLOAD;
       if (!(await NativeFile.exists(legacyArchive))) {
@@ -116,10 +135,12 @@ export const restoreBackup = async (
       logRestoreBenchmark(
         `local:legacy-archive-unzip:done ${JSON.stringify(legacyArchiveStats)}`,
       );
+      publishSelectedFilesProgress(0.5, true);
       await restoreLegacyFiles(
         legacyFilesRestorePath,
         restoreResult.novelMappings,
         restoreResult.restoreRunId,
+        reportSelectedFileMoves,
       );
       logRestoreBenchmark('local:downloaded-files:done');
     } else {
@@ -128,6 +149,9 @@ export const restoreBackup = async (
         restoreResult.manifest.sections,
         restoreResult.manifest.formatVersion,
       );
+      if (sections.length === 0) {
+        publishSelectedFilesProgress(0.5, true);
+      }
       if (
         restoreResult.manifest.formatVersion === 3 &&
         restoreResult.manifest.sections.downloadedFiles &&
@@ -137,7 +161,7 @@ export const restoreBackup = async (
       ) {
         throw new Error(getString('backupScreen.invalidBackupFolder'));
       }
-      for (const section of sections) {
+      for (const [index, section] of sections.entries()) {
         const archivePath = `${CACHE_DIR_PATH}/${section.archiveName}`;
         if (!(await NativeFile.exists(archivePath))) {
           throw new Error(getString('backupScreen.invalidBackupFolder'));
@@ -151,6 +175,10 @@ export const restoreBackup = async (
         logRestoreBenchmark(
           `local:selected-archive-unzip:done ${JSON.stringify(archiveStats)}`,
         );
+        publishSelectedFilesProgress(
+          0.5 * ((index + 1) / sections.length),
+          index + 1 === sections.length,
+        );
       }
       logRestoreBenchmark('local:selected-archives:done');
       if (restoreResult.manifest.sections.downloadedFiles) {
@@ -160,21 +188,31 @@ export const restoreBackup = async (
             : novelFilesRestorePath,
           restoreResult.novelMappings,
           restoreResult.restoreRunId,
+          reportSelectedFileMoves,
         );
+      } else {
+        publishSelectedFilesProgress(1, true);
       }
     }
     logRestoreBenchmark('local:downloaded-files:done');
     logRestoreBenchmark('local:selected-files:done');
+
+    progressReporter?.(
+      'finalize',
+      0,
+      getString('backupScreen.finalizingRestore'),
+      true,
+    );
     const missingPluginIds = await finalizeRestoredPlugins(restoreResult);
     const completionText = getRestoreCompletionText(
       restoreResult,
       missingPluginIds,
     );
+    progressReporter?.('finalize', 1, completionText, true);
     logRestoreBenchmark('local:finalize:done');
 
     setMeta?.(meta => ({
       ...meta,
-      progress: 4 / 4,
       isRunning: false,
       progressText: completionText,
       completionText,
