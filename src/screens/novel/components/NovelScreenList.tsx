@@ -423,8 +423,8 @@ const NovelScreenList = ({
     <>
       <LegendList
         ref={listRef}
-        estimatedItemSize={64}
         data={chapters}
+        getFixedItemSize={64}
         recycleItems
         ListEmptyComponent={listEmptyComponent}
         renderItem={renderChapter}
@@ -435,7 +435,7 @@ const NovelScreenList = ({
         onEndReached={getNextChapterBatch}
         onEndReachedThreshold={6}
         onScroll={scrollHandler}
-        //drawDistance={1000}
+        drawDistance={400}
         ListHeaderComponent={listHeader}
       />
       {novel.id !== 'NO_ID' ? (
