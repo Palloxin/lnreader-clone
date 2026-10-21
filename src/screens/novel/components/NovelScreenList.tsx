@@ -424,7 +424,7 @@ const NovelScreenList = ({
       <LegendList
         ref={listRef}
         data={chapters}
-        getFixedItemSize={64}
+        getFixedItemSize={() => 64}
         recycleItems
         ListEmptyComponent={listEmptyComponent}
         renderItem={renderChapter}
