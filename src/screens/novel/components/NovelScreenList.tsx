@@ -433,9 +433,9 @@ const NovelScreenList = ({
         contentContainerStyle={contentContainerStyle}
         refreshControl={refreshControlElement}
         onEndReached={getNextChapterBatch}
-        onEndReachedThreshold={6}
+        onEndReachedThreshold={5}
         onScroll={scrollHandler}
-        drawDistance={400}
+        drawDistance={128}
         ListHeaderComponent={listHeader}
       />
       {novel.id !== 'NO_ID' ? (
